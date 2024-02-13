@@ -2,7 +2,7 @@
 
 ---
 # Dependencies
-* [Exonerate](http://bioconda.github.io/recipes/exonerate/README.html)[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)]
+* [Exonerate](http://bioconda.github.io/recipes/exonerate/README.html)![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)
 
 
 ## Getting started
