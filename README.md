@@ -3,6 +3,8 @@
 ---
 # Dependencies
 * [Exonerate](http://bioconda.github.io/recipes/exonerate/README.html)![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)
+* [SPAdes](http://bioinf.spbau.ru/en/spades) 3.15.5
+
 
 
 ## Getting started
