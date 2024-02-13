@@ -15,6 +15,11 @@
 # https://github.com/JuliaPy/pyjulia/issues/310
 # or solve it in snakemake
 
+__version__ = "0.1"
+
+# =======================================================================================
+#               IMPORTS
+# =======================================================================================
 
 import os
 from pathlib import Path
@@ -22,6 +27,9 @@ import subprocess
 import shutil
 
 
+# =============================================================================
+#                FUNCTIONS
+# =============================================================================
 def run_subprocess(cmd: str):
     try:
         process = subprocess.run(
