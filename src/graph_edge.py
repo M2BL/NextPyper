@@ -81,7 +81,7 @@ class Edge(Sequence):
         """
         if self.orientation == "-":
             self.sequence = self.sequence.reverse_complement()
-            return self
+        return self
 
     def __repr__(self):
         if self.hmm_probe_hit.values():
