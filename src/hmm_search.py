@@ -27,7 +27,14 @@ Node_9 {'probe_3_aa_0': Profile_hits(hmm_name='probe_3_aa_0', domain_hits=[Domai
     'probe_3_aa_10': Profile_hits(hmm_name='probe_3_aa_10', domain_hits=[Domain(profile_start=473, profile_end=598, node_start=1, node_end=126, e_value=1.01e-31)])}
 
 
+The function extract_seq_from_gfa() is used to save node sequences from a GFA graph into a fasta file.
 """
+__version__ = "0.1"
+
+# =======================================================================================
+#               IMPORTS
+# =======================================================================================
+
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -48,6 +55,10 @@ Domain = namedtuple(
     "Domain",
     ["profile_start", "profile_end", "node_start", "node_end", "score", "e_value"],
 )
+
+# =======================================================================================
+#               CLASSES
+# =======================================================================================
 
 
 @dataclass
@@ -247,6 +258,11 @@ class Hmmer_result:
                     except StopIteration:
                         break
         return self
+
+
+# =============================================================================
+#                FUNCTIONS
+# =============================================================================
 
 
 def extract_seq_from_gfa(gfa_path: Path, fasta: str):
