@@ -38,27 +38,23 @@ cluster.save_cluster(
     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/batrachium/exonerate/clusters_2",
 )
 """
+__version__ = "0.1"
 
+# =======================================================================================
+#               IMPORTS
+# =======================================================================================
 
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from io import StringIO
+from itertools import groupby
+import math
+import os
 from pathlib import Path
 import subprocess
-import os
-from io import StringIO
-from collections import defaultdict
-from itertools import groupby
 import sys
-
-from dataclasses import dataclass, field
 from typing import Final, Optional, Self, TypedDict, Literal, Any, Self
 from icecream import ic
-
-import numpy as np
-import numpy.typing as npt
-from collections import deque
-import math
-from sklearn.cluster import DBSCAN
-from sklearn.neighbors import NearestNeighbors
-import matplotlib.pyplot as plt
 
 from Bio import Align
 from Bio import SearchIO
@@ -69,10 +65,17 @@ from Bio.Seq import Seq
 from Bio.SeqUtils import seq1
 from Bio.Align import MultipleSeqAlignment
 from Bio.Phylo.TreeConstruction import DistanceCalculator
-
 from kneed import KneeLocator
+import matplotlib.pyplot as plt
+import numpy as np
+import numpy.typing as npt
+from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 
 
+# =======================================================================================
+#               CLASSES
+# =======================================================================================
 @dataclass
 class Probe_limits:
     """
@@ -671,6 +674,9 @@ class DBcluster:
             SeqIO.write(records, name_fasta, "fasta")
 
 
+# =============================================================================
+#                FUNCTIONS
+# =============================================================================
 def filter_fragment(
     alignment_fragment: Alignment_fragment,
     probes_aa: SeqRecord,
