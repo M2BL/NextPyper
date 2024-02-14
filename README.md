@@ -9,6 +9,24 @@
 * [MAFFT](http://bioconda.github.io/recipes/mafft/README.html) ![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat) 
 
 
+# Pipeline's structure
+1. Read preprocessing: fastp
+2. Read quality report (fastp, fastqc)
+3. Target reads extraction: probe index building, read mapping (minimap/BWA2)
+4. Contig assembly (SPAdes)
+5. Prefixing assemblies (prefixing_seqs) Blunting graphs (get_blunted) and graph simplification (bubble_gun)
+6. Homologs clustering (contig_cluster)
+7. Alignment of clusters (MAFFT)
+8. HMM profile building from alignments (hmm_build)
+9. Graph exploration (graph_edge)
+    1. with HMM profile (graph_edge)
+    2. Minigraph (consensus needs to be extracted from HMM profile)
+    3. SPAligner (works with assembly graphs, is it worth the time investment?)
+10. Filtering of paths (to be implemented)
+11. MSA per probe (MAFFT)
+12. 
+
+
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
