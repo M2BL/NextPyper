@@ -23,8 +23,10 @@
     2. Minigraph (consensus needs to be extracted from HMM profile)
     3. SPAligner (works with assembly graphs, is it worth the time investment?)
 10. Filtering of paths (to be implemented)
+    optional phasing step
 11. MSA per probe (MAFFT)
-12. 
+12. Annotate exon/intron regions
+13. Summary statistics. 
 
 
 ## Getting started
