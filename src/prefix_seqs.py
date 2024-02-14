@@ -20,6 +20,7 @@ from pathlib import Path
 from itertools import repeat
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+import sys
 
 # =============================================================================
 #                FUNCTIONS
@@ -35,3 +36,22 @@ def pref_rec(record: SeqRecord, prefix: str) -> SeqRecord:
     record.id = record.name = prefix + record.name
     record.description = ""
     return record
+
+
+def prefix_hybseq_dir(root_dir: Path, out_dir: Path, sep="_") -> None:
+    """Given a root_folder with hybseq samples and assemblies
+    Prefix the sequences in their assemblies with sample_probe
+    and output them in out_dir
+
+    Note: Temporal solution while implementing Snakemake pipeline
+    """
+
+    for file in root_dir.glob("*/*/*/contigs.fasta"):
+        sample, probe = file.parts[-4:-2]
+        output = out_dir / sample / probe / file.name
+        output.parent.mkdir(parents=True, exist_ok=True)
+        prefix_fasta(file, output, f"{sample}{sep}{probe}{sep}")
+
+
+if __name__ == "__main__":
+    sys.exit(prefix_hybseq_dir(Path(sys.argv[1]), Path(sys.argv[2])))
