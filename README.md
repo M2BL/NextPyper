@@ -30,6 +30,20 @@ Recovery of homologous genes from targeted sequence capture data for higher ploi
 13. Summary statistics. 
 
 
+# Output structure
+
+```
+Outdir/
+├── QC_reads.json
+├── Mapping_stats.tsv
+├── Homolog_stats.tsv
+└── Probe_alns
+    ├── probe1_msa.fasta
+    ├── probe2_msa.fasta
+    ├── probe3_msa.fasta
+    └── ...
+```
+
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
