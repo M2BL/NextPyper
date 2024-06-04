@@ -1,0 +1,28 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+description: Sample table schema definition
+type: object
+properties:
+  sample_name:
+    type: string
+    pattern: (^[A-Za-z0-9]+_[A-Za-z0-9]+_[A-Za-z0-9]+$)
+    description: sample identifier.
+  path_forward:
+    type: string
+    format: uri
+    description: path to fastq(compressed) file containing forward reads.
+    pattern: .*(.fastq.gz|.fq.gz|.fastq|.fq)$
+  path_reverse:
+    type: string
+    format: uri
+    description: path to fastq(compressed) file containing forward reads.
+    pattern: .*(.fastq.gz|.fq.gz|.fastq|.fq)$
+  ploidy:
+    type: string
+    format: uri
+    description: ploidy level of the sample (optional).
+    pattern: [0-9]+
+  
+required:
+  - samplename_name
+  - path_forward
+  - path_reverse
