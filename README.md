@@ -44,47 +44,36 @@ Outdir/
     └── ...
 ```
 
-## Getting started
+# Installation
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+For now install the dependencies in a new conda environment. The installation of `nextpiper` will be contained in this environment. (**To Do:** improve deployment)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+First clone the repository and install it.
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpiper.git
-git branch -M main
-git push -uf origin main
+```bash
+git clone https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpiper.git
+cd nextpiper && pip install -e .
 ```
 
-## Integrate with your tools
+Now you can run `nextpiper` anywhere. 
 
-- [ ] [Set up project integrations](https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpiper/-/settings/integrations)
+## Running the test data
 
-## Collaborate with your team
+Now let us run a minimal test. Starting at the root directory of the repository:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+```bash
+# Make directories for the test and unpack the test data
+mkdir -p minimal_test/test_data && cd minimal_test/test_data
+tar xzf ../../nextpiper/data/test_data.tar.gz
 
-## Test and Deploy
+# Prepare the sample table with the local paths
+ls > ../inter.txt 
+paste <(sed -E 's|(.*)_R[12].*|\1|' < ../inter.txt | uniq) <(grep "R1" ../inter.txt | xargs -I{} echo "$(pwd)/{}") <(grep "R2" ../inter.txt | xargs -I{} echo "$(pwd)/{}") > ../samples.tsv
+cd ..
 
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
+# Run nextpiper 
+nextpiper run --input samples.tsv --output test_out -n
+```
 
 # Editing this README
 
