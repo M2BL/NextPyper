@@ -22,7 +22,7 @@ rule fastp_pe:
         html=outdir / "report/trimmed/{sample}.html",
         json=outdir / "report/trimmed/{sample}.json",
     log:
-        "logs/fastp/{sample}.log",
+        outdir / "logs/fastp/{sample}.log",
     params:
         extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_right",
     threads: 4
