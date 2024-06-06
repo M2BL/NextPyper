@@ -5,10 +5,16 @@ Check out the wiki for a detailed look at customising this file:
 https://github.com/beardymcjohnface/Snaketool/wiki/Customising-your-Snaketool
 """
 
+from pathlib import Path
 import os
 import click
 
-from snaketool_utils.cli_utils import OrderedCommands, run_snakemake, copy_config, echo_click
+from snaketool_utils.cli_utils import (
+    OrderedCommands,
+    run_snakemake,
+    copy_config,
+    echo_click,
+)
 
 
 def snake_base(rel_path):
@@ -145,16 +151,19 @@ Available targets:
         help_option_names=["-h", "--help"], ignore_unknown_options=True
     ),
 )
-@click.option("--input", "_input", help="Input file/directory", type=str, required=True)
+@click.option("--input", "_input", help="Input sample table", type=str, required=True)
+@click.option(
+    "--probes",
+    "probes",
+    help="Probes used in the experiment (fasta)",
+    type=str,
+    required=True,
+)
 @common_options
 def run(**kwargs):
     """Run NextPiper"""
     # Config to add or update in configfile
-    merge_config = {
-        "nextpiper": {
-            "args": kwargs
-        }
-    }
+    merge_config = {"nextpiper": {"args": kwargs}}
 
     # run!
     run_snakemake(

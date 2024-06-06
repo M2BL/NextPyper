@@ -7,7 +7,9 @@ Recovery of homologous genes from targeted sequence capture data for higher ploi
 * [SPAdes](http://bioinf.spbau.ru/en/spades) 3.15.5
 * [GetBlunted](https://github.com/vgteam/GetBlunted)
 * [BubbleGun](https://github.com/fawaz-dabbaghieh/bubble_gun)
-* [MAFFT](http://bioconda.github.io/recipes/mafft/README.html) ![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat) 
+* [MAFFT](http://bioconda.github.io/recipes/mafft/README.html) ![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)
+* [fastp](https://github.com/OpenGene/fastp)
+* [BWA-MEM2](https://github.com/bwa-mem2/bwa-mem2)
 
 
 # Pipeline's structure
@@ -72,7 +74,7 @@ paste <(sed -E 's|(.*)_R[12].*|\1|' < ../inter.txt | uniq) <(grep "R1" ../inter.
 cd ..
 
 # Run nextpiper 
-nextpiper run --input samples.tsv --output test_out -n
+nextpiper run --input samples.tsv --probes ../../nextpiper/data/probes.fasta --output test_out -n
 ```
 
 # Editing this README

@@ -14,7 +14,7 @@ targets = []
 
 
 include: os.path.join(workflow.basedir, "rules", "0_reads_preprocessing", "0.1_trimming.smk")
-
+include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.1_mapping_bwa_mem2.smk")
 
 # Target rules
 @targetRule

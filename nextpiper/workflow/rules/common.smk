@@ -15,6 +15,7 @@ nextpiper_version = "0.0.1"
 report: "../report/workflow.rst"
 
 
+probes = Path(config["args"]["probes"])
 outdir = Path(config["args"]["output"])
 path_samples = config["args"]["_input"]
 cols = ["sample_name", "path_forward", "path_reverse"]
