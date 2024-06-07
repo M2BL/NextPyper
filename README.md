@@ -1,5 +1,5 @@
 # NextPiper
-Recovery of homologous genes from targeted sequence capture data for higher ploidy samples.
+Recovery of homologous genes from targeted sequence capture data in higher ploidy samples.
 
 ---
 # Dependencies
