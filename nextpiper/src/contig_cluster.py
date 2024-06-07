@@ -7,7 +7,24 @@
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
 #       All rights reserved.
+"""
+Functions and classes for clustering contigs according to their pairwise similarity.
+We first align the probe's AA sequence on each contig and record the coordinates of
+the alignments. Contigs are then aligned pairwise along their overlapping probe regions.
+Pairwise distances are used to cluster the contigs using HDBscan (or union-find for small samples).
+Individual clusters can be saved in fasta format.
+#  Usage example:
+    probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
+    contig_fasta = "../test_data/test_clustering/gene_3_all.fasta"
+    # load the data, perform the computation:
+    hdb = HDBcluster(probe_fasta, contig_fasta)
+    # save the results:
+    hdb.save_clusters("../test_data/test_clustering/clusters")
+    The resulting fasta files are named using the suffix of the probe file name
+    and the index of the cluster as suffix, e.g. probe_3_aa_45.fasta.
 
+
+"""
 
 __version__ = "0.1"
 
@@ -15,7 +32,7 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 
-from collections import defaultdict, deque
+from collections import deque
 from dataclasses import dataclass, field
 from io import StringIO
 from itertools import groupby, chain
@@ -27,7 +44,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Union, Optional, Self, TypedDict, Literal, Any, TypeAlias
+from typing import Union, Optional, Self, Literal, TypeAlias
 
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
@@ -88,7 +105,7 @@ def run_miniprot(
     try:
         miniprot = subprocess.run(
             miniprot_cmd,
-            timeout=100,
+            timeout=1000,
             check=True,
             capture_output=True,
             encoding="utf-8",
@@ -133,14 +150,12 @@ class HDBcluster:
     -distance_matrix
     """
 
-    probe_fasta: Path
-    contigs_fasta: Path
+    probe_fasta: str
+    contigs_fasta: str
     treads: int = field(default=8)
     min_probe_contig_sim: float = field(default=0.90)
     min_fragment_cov: float = field(default=0.05)
     min_contig_overlap: int = field(default=300)
-    # run_miniprot: bool = field(default=True)
-    # load_matrix: bool = field(default=False)
     max_clustering_dist: float = field(default=0.05)
     min_cluster_size: int = field(default=3)
     min_contig_length: int = field(default=300)
@@ -151,12 +166,14 @@ class HDBcluster:
     )
     cds_dict: dict[str, Cds] = field(init=False, repr=False, default_factory=dict)
     distance_matrix: npt.ArrayLike = field(init=False, repr=False, default=None)
+    clusters: list[list[str]] = field(init=False, repr=False, default_factory=list)
 
     def __post_init__(self):
+        self.probe_fasta = Path(self.probe_fasta)
+        self.contigs_fasta = Path(self.contigs_fasta)
         assert self.probe_fasta.exists(), f"{self.probe_fasta} does not exist"
         assert self.contigs_fasta.exists(), f"{self.contigs_fasta} does not exist"
         self._parse_fasta()
-        # if self.run_miniprot:
         print("Running miniprot")
         with tempfile.TemporaryDirectory() as tmpdirname:
             for contig, record in self.contigs_dict.items():
@@ -177,6 +194,7 @@ class HDBcluster:
         self._create_distance_matrix()
         toc = time.perf_counter()
         print(f"Computed distances in  {toc - tic:0.4f} seconds")
+        self._get_clusters()
 
     def _parse_fasta(self) -> None:
         """
@@ -314,11 +332,11 @@ class HDBcluster:
         else:
             return True
 
-    def get_clusters(self):
+    def _get_clusters(self) -> Self:
         """
         Run the UnionFind algorithm for dataset with less overlapping contigs than the min_cluster_size value.
         Otherwise, use the HDBSCAN algorithm for clustering and only then run UnionFind to separate connected components.
-        :return:
+        :return: Populate the 'cluster' attribute
         """
         if self._use_UF():
             print("running UF")
@@ -331,6 +349,7 @@ class HDBcluster:
             if len(cluster) == 1:
                 final_clusters.append(cluster)
                 continue
+            # contigs that did not cluster
             missing_idx = [
                 idx
                 for (idx, contig) in enumerate(self.contigs_dict)
@@ -341,10 +360,21 @@ class HDBcluster:
                 missing_idx,
                 axis=1,
             )
+            # Double check that each sequence in a given cluster found by HDBscan
+            # does overlap with at least another sequence from the same cluster.
+            # This check is necessary in case of clusters made out of out-layers.
             new_clusters = self._cluster_unionfind(cluster, new_dist_matrix)
 
             final_clusters.extend(new_clusters)
-        return final_clusters
+        self.clusters = final_clusters
+        return self
+
+    def get_clusters(self) -> list[list[str]]:
+        """
+        Return the nested list of cluster labels (i.e. contig names)
+        :return:
+        """
+        return self.clusters
 
     def save_distance_matrix(self, path: Path) -> None:
         """
@@ -355,9 +385,9 @@ class HDBcluster:
             print(f"saving distance matrix as {path}")
             np.save(Path(path), self.distance_matrix)
 
-    def save_clusters(self, labels: list[str], fasta_folder: str) -> None:
+    def save_clusters(self, fasta_folder: str) -> None:
         """
-        Given a list of labels generated by DBSCAN, save the clusters to a fasta file in the specified folder.
+        Given a list of labels generated by HDBSCAN, save the clusters to a fasta file in the specified folder.
         :param labels: list from DBSCAN with index position that corresponds to the contigs in the keys of
         the 'clean_fragments' dictionary.
         :param fasta_folder: folder where the fasta files are saved.
@@ -368,7 +398,7 @@ class HDBcluster:
         Path(fasta_folder).mkdir(parents=True, exist_ok=True)
         fasta_prefix = self.probe_fasta.stem
         idx = 0
-        for gp in labels:
+        for gp in self.clusters:
             trimmed_records = self._trim_msa(gp)
             if trimmed_records is not None:
                 name = f"{fasta_prefix}_{idx}.fasta"
@@ -379,7 +409,8 @@ class HDBcluster:
 
     def _trim_msa(self, cluster_names: list[str]) -> list[SeqRecord]:
         """
-        Given a list of records, trim them to the smallest region of the probe shared by at least two sequences
+        Given a list of records, trim them to the smallest region of the probe shared by at least two sequences.
+        In case, the group contains a single member, the sequence is trimmed to fit the probe's boundaries.
         :param cluster_names:
         :return:
         """
@@ -440,9 +471,9 @@ class HDBcluster:
             strand = cds.fragments[0].get_strand()
             contig_start = list(fragments[0].get_correspondence().keys())[0]
             contig_end = list(fragments[-1].get_correspondence().keys())[-1]
-            print(
-                f"{contig}, {contig_start=}, {contig_end=}, {cds.mRNA_start=}, {cds.mRNA_end=} {strand=}"
-            )
+            # print(
+            #     f"{contig}, {contig_start=}, {contig_end=}, {cds.mRNA_start=}, {cds.mRNA_end=} {strand=}"
+            # )
             if strand == 1:
                 trim_start, trim_end = cds.mRNA_start, cds.mRNA_end
             else:
@@ -493,7 +524,7 @@ def get_nuc_coordinates(
     :param probe_start:
     :param probe_end:
     :param fragments: list of fragments
-    :return:
+    :return: Return [None, None] if for some reason there are no AA-nt correspondence, otherwise [start, end]
     """
     correspondences = {}
     for fragment in fragments:
@@ -516,12 +547,10 @@ def get_nuc_coordinates(
 
 def main():
     # tempfile.tempdir = "/temp"
-    probe_fasta = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/probe_3_aa.fasta"
-    )
-    contig_fasta = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all.fasta"
-    )
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/probe_3_aa.fasta"
+
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all.fasta"
+
     # contig_fasta = Path(
     #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all_problems.fasta"
     # )
@@ -571,13 +600,12 @@ def main():
     #     clusters_hdbscan,
     #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all_hdbscan_trimmed",
     # )
-    # clusters = db.get_clusters()
+    clusters = db.get_clusters()
 
-    # print(f"clusters before writing are:", clusters)
-    # db.save_clusters(
-    #     clusters,
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/temp",
-    # )
+    print(f"clusters before writing are:", clusters)
+    db.save_clusters(
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/temp",
+    )
 
 
 if __name__ == "__main__":
