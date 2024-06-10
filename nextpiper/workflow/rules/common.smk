@@ -6,8 +6,11 @@ from snakemake.exceptions import WorkflowError
 from snakemake.utils import min_version
 from snakemake.utils import validate
 from pathlib import Path
+import sys
 import os
 import pandas as pd
+
+sys.path.append((Path(workflow.basedir) / "../src/").as_posix())
 
 nextpiper_version = "0.0.1"
 
