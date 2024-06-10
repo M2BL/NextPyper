@@ -336,12 +336,5 @@ def transdecoder_parser(path_to_pep: str, path_to_output: str) -> None:
 
 
 if __name__ == "__main__":
-    pep = "/home/yjkbertrand/Documents/projects/nextpiper/test_data_old/batrachium/targets.fasta.transdecoder_dir/longest_orfs.pep"
-    pep = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_transdecoder/target_1225.pep"
-    # pep = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_transdecoder/target_7047.pep"
-    new_records = td_parser(Path(pep))
-    import os
+    ...
 
-    print(new_records)
-    os.chdir("/home/yjkbertrand/Documents/projects/nextpiper/temp")
-    # SeqIO.write(new_records, "test.fasta", "fasta")
