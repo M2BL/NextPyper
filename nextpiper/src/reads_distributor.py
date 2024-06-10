@@ -8,7 +8,7 @@
 #
 #       All rights reserved.
 """Functions to assign and distribute mapped reads to the corresponding
-probes where where they mapped."""
+probes where they mapped."""
 
 __version__ = "0.1"
 
@@ -53,6 +53,7 @@ def distribute_reads(inbam: Path, outdir: Path):
     """Given a input bam distribute the read pairs into the different
     targets they mapped to."""
 
+    outdir = Path(outdir)
     handle = pysam.AlignmentFile(inbam, "rb")
     assigned_dict = defaultdict(list)
 
