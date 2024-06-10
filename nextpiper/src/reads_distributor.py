@@ -75,3 +75,10 @@ def distribute_reads(inbam: Path, outdir: Path):
         ) as outbam:
             for aln in alns:
                 outbam.write(aln)
+
+
+if __name__ == "__main__":
+    if snakemake is not None:
+        distribute_reads(Path(snakemake.input), Path(snakemake.output))
+    else:
+        ...
