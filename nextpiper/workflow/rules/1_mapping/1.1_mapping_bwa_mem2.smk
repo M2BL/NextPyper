@@ -1,4 +1,4 @@
-targets.append(expand(outdir / "mapped/{samples}.bam", samples=sample_list))
+targets.append(expand(outdir / "mapped/total/{samples}.bam", samples=sample_list))
 
 
 rule probes_symlink:
@@ -23,7 +23,7 @@ rule bwa_mem2_index:
             ".pac",
         ),
     log:
-        outdir / "logs/bwa-mem2_index/probes.log",
+        outdir / "logs/mapped/bwa-mem2_index/probes.log",
     wrapper:
         "v3.11.0/bio/bwa-mem2/index"
 
@@ -36,9 +36,9 @@ rule bwa_mem2_mem:
         ],
         idx=rules.bwa_mem2_index.output,
     output:
-        outdir / "mapped/{sample}.bam",
+        outdir / "mapped/total/{sample}.bam",
     log:
-        outdir / "logs/bwa_mem2/{sample}.log",
+        outdir / "logs/mapped/bwa_mem2/{sample}.log",
     params:
         extra=r"-R '@RG\tID:{sample}\tSM:{sample}'",
         sort="samtools",
