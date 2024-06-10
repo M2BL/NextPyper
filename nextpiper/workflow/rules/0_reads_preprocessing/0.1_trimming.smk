@@ -26,6 +26,8 @@ rule fastp_pe:
     params:
         extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_right",
     threads: 4
+    conda:
+        "../../envs/preprocessing.yaml"
     shell:
         "(fastp --thread {threads} "
         "{params.extra} "
