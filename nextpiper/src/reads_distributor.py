@@ -79,6 +79,6 @@ def distribute_reads(inbam: Path, outdir: Path):
 
 if __name__ == "__main__":
     if snakemake is not None:
-        distribute_reads(Path(snakemake.input), Path(snakemake.output))
+        distribute_reads(str(snakemake.input), str(snakemake.output))
     else:
         ...
