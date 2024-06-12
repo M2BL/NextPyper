@@ -20,7 +20,7 @@ report: "../report/workflow.rst"
 
 probes = Path(config["args"]["probes"])
 outdir = Path(config["args"]["output"])
-path_samples = config["args"]["_input"]
+path_samples = config["args"]["input"]
 cols = ["sample_name", "path_forward", "path_reverse"]
 SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)
 validate(SAMPLE_TABLE, schema="../schemes/sample_table.yaml")
