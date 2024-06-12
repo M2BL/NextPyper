@@ -1,0 +1,6 @@
+name: preprocessing.yaml
+channels:
+    - defaults
+    - bioconda
+dependencies:
+    - fastp=0.23.4

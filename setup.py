@@ -32,9 +32,7 @@ CLASSIFIERS = [
     "Natural Language :: English",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -42,7 +40,7 @@ setup(
     name="nextpiper",
     packages=find_packages(),
     url="https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpiper",
-    python_requires=">=3.10",
+    python_requires=">=3.12",
     description="Recovery of homologous genes from targeted sequence capture data for higher ploidy samples",
     long_description=get_description(),
     long_description_content_type="text/markdown",
@@ -56,6 +54,8 @@ setup(
         "snakemake>=7.14.0",
         "pyyaml>=6.0",
         "Click>=8.1.3",
+        "pandas>=2.2",
+        "biopython>=1.83",
     ],
     entry_points={"console_scripts": ["nextpiper=nextpiper.__main__:main"]},
     include_package_data=True,

@@ -1,0 +1,6 @@
+name: distribute_reads.yaml
+channels:
+    - defaults
+    - bioconda
+dependencies:
+    - pysam=0.22
