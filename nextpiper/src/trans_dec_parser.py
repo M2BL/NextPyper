@@ -27,8 +27,8 @@ from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field, fields
 import re
 from typing import Final, Optional, Self, TypedDict, Literal, Any
-
 from pathlib import Path
+
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
