@@ -192,7 +192,7 @@ class Cds:
     Attributes
     ----------
     -cds_prefix: contig's name.
-    -cds_suffix: the n's cds sequence obtained from a single nucleotide sequence by TransDecoder.
+    -cds_suffix: the nth cds sequence obtained from a single nucleotide sequence by TransDecoder.
     -type: whether the cds contains all elements that define a coding region (start/stop codon...).
     -length:
     -start:
