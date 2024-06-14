@@ -38,6 +38,20 @@ def pref_rec(record: SeqRecord, prefix: str) -> SeqRecord:
     return record
 
 
+def prefix_gfa(input: Path, output: Path, p: str) -> None:
+    """Prefix all the paths in the input gfa with p and write to output."""
+
+    with Path(input).open() as graph_in, Path(output).open("w") as graph_out:
+        for line in graph_in:
+            if line.startswith("P"):
+                kind, name, *rest = line.split("\t")
+                new_line = "\t".join([kind, p + name, "\t".join(rest)])
+            else:
+                new_line = line
+
+            graph_out.write(new_line)
+
+
 def prefix_hybseq_dir(root_dir: Path, out_dir: Path, sep="_") -> None:
     """Given a root_folder with hybseq samples and assemblies
     Prefix the sequences in their assemblies with sample_probe

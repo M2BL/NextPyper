@@ -1,6 +1,7 @@
+name: translating
 channels:
-    - defaults
-    - bioconda
     - conda-forge
+    - bioconda
+    - defaults
 dependencies:
-    - transdecoder
+    - transdecoder=5.7.0

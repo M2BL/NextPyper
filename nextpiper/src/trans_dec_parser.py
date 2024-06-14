@@ -45,6 +45,16 @@ pattern = re.compile(
     re.VERBOSE,
 )
 
+alt_pattern = re.compile(
+    r"""^(?P<name>.*?)\s
+                    type:(?P<type>\w+?)\s
+                    gc:universal\s
+                    [^ ]+:(?P<start>\d+)
+                    -(?P<end>\d+)
+                    \((?P<direction>[+-])\)$""",
+    re.VERBOSE,
+)
+
 # Named tuple that keeps the nodes in a path either as their suffixes or their cds and the sum of their length.
 GraphPath = namedtuple("GraphPath", ["path", "length"])
 
@@ -289,12 +299,17 @@ def td_parser(pep_path: Path) -> list[SeqRecord]:
         cds_name_splt = rec.id.rsplit(".p", 1)
         cds_prefix = cds_name_splt[0]
         cds_suffix = cds_name_splt[1]
-        match = pattern.match(rec.description)
+        if (match := pattern.match(rec.description)) is None:
+            match = alt_pattern.match(rec.description)
+            length = int(match.group("end")) - int(match.group("start"))
+        else:
+            length = int(match.group("length"))
+
         cds = Cds(
             cds_prefix,
             cds_suffix,
             match.group("type"),
-            int(match.group("length")),
+            length,
             int(match.group("start")),
             int(match.group("end")),
             match.group("direction"),
@@ -337,4 +352,3 @@ def transdecoder_parser(path_to_pep: str, path_to_output: str) -> None:
 
 if __name__ == "__main__":
     ...
-
