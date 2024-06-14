@@ -18,7 +18,7 @@ rule transdecoder_longorfs:
 
 rule parse_translation:
     input:
-        pep=outdir / "translated_probes/transdecoder/probes.fasta.transdecoder_dir",
+        pep=outdir / "translated_probes/transdecoder",
     output:
         outdir / "translated_probes/longest_cds.fasta",
     log:
