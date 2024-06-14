@@ -1,5 +1,6 @@
 name: preprocessing.yaml
 channels:
+    - conda-forge
     - bioconda
     - defaults
 dependencies:
