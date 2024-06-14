@@ -1,7 +1,7 @@
 targets.append(expand(outdir / "mapped/per_probe/{samples}", samples=sample_list))
 
 
-rule distribute_reads:
+checkpoint distribute_reads:
     input:
         outdir / "mapped/total/{sample}.bam",
     output:
