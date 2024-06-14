@@ -1,7 +1,8 @@
-name: translating
+name: assembly_spades
 channels:
     - conda-forge
     - bioconda
     - defaults
 dependencies:
-    - transdecoder
+    - spades>=4
+    - samtools
