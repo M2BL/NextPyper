@@ -1,2 +1,0 @@
-[console_scripts]
-nextpiper = nextpiper.__main__:main
