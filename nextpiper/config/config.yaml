@@ -3,4 +3,5 @@ nextpiper:
     args: # Command line args will be (over)written here at runtime
         input:
         output:
+        graph_simplification: false
     # Add customisable config here

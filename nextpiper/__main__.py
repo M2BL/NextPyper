@@ -159,6 +159,14 @@ Available targets:
     type=str,
     required=True,
 )
+@click.option(
+    "--graph_simplification",
+    "graph_simplification",
+    help="Whether to simplying assembly graph after first assembly",
+    is_flag=True,
+    default=False,
+    show_default=True,
+)
 @common_options
 def run(**kwargs):
     """Run NextPiper"""
