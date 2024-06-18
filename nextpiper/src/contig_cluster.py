@@ -259,7 +259,6 @@ class HDBcluster:
         self.distance_matrix = np.nan_to_num(matrix, nan=100)
         return self
 
-    MatrixValue: TypeAlias = Union[float, math.nan]
 
     def _cluster_unionfind(
         self, contig_names: list[str], distance_matrix: npt.ArrayLike
@@ -396,7 +395,7 @@ class HDBcluster:
                 print(f"saving fasta {name_fasta}")
                 idx += 1
 
-    def _trim_msa(self, cluster_names: list[str]) -> list[SeqRecord]:
+    def _trim_msa(self, cluster_names: list[str]) -> Optional[list[SeqRecord]]:
         """
         Given a list of records, trim them to the smallest region of the probe shared by at least two sequences.
         In case, the group contains a single member, the sequence is trimmed to fit the probe's boundaries.
