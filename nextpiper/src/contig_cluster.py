@@ -349,21 +349,10 @@ class HDBcluster:
             if len(cluster) == 1:
                 final_clusters.append(cluster)
                 continue
-            # contigs that did not cluster
-            missing_idx = [
-                idx
-                for (idx, contig) in enumerate(self.contigs_dict)
-                if contig not in cluster
-            ]
-            new_dist_matrix = np.delete(
-                np.delete(self.distance_matrix, missing_idx, axis=0),
-                missing_idx,
-                axis=1,
-            )
             # Double check that each sequence in a given cluster found by HDBscan
             # does overlap with at least another sequence from the same cluster.
             # This check is necessary in case of clusters made out of out-layers.
-            new_clusters = self._cluster_unionfind(cluster, new_dist_matrix)
+            new_clusters = self._cluster_unionfind(cluster, self.distance_matrix)
 
             final_clusters.extend(new_clusters)
         self.clusters = final_clusters
@@ -400,7 +389,7 @@ class HDBcluster:
         idx = 0
         for gp in self.clusters:
             trimmed_records = self._trim_msa(gp)
-            if trimmed_records is not None:
+            if trimmed_records:
                 name = f"{fasta_prefix}_{idx}.fasta"
                 name_fasta = Path(fasta_folder) / name
                 SeqIO.write(trimmed_records, name_fasta, "fasta")
@@ -471,9 +460,6 @@ class HDBcluster:
             strand = cds.fragments[0].get_strand()
             contig_start = list(fragments[0].get_correspondence().keys())[0]
             contig_end = list(fragments[-1].get_correspondence().keys())[-1]
-            # print(
-            #     f"{contig}, {contig_start=}, {contig_end=}, {cds.mRNA_start=}, {cds.mRNA_end=} {strand=}"
-            # )
             if strand == 1:
                 trim_start, trim_end = cds.mRNA_start, cds.mRNA_end
             else:
@@ -535,7 +521,6 @@ def get_nuc_coordinates(
         if (last := correspondences.get(probe_end)) is None:
             probe_end -= 1
         if None not in [first, last]:
-            # print(f"returning {first=}, {last=}")
             return sorted(
                 [
                     first,
@@ -546,72 +531,8 @@ def get_nuc_coordinates(
 
 
 def main():
-    # tempfile.tempdir = "/temp"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/probe_3_aa.fasta"
-
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all.fasta"
-
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all_problems.fasta"
-    # )
-
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_8contigs.fasta"
-    # )
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_hdbscan_problems.fasta"
-    # )
-
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/probe_3_small_cluster.fasta"
-    # )
-    # probe_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/probe_8631_aa.fasta"
-    # )
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_8631_6contigs.fasta"
-    # )
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_8631_all.fasta"
-    # )
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_A10_1_A3_1.fasta"
-    # )
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_8631_node4-11.fasta"
-    # )
-    # contig_fasta = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_8631_node13-14-16-17-18-22.fasta"
-    # )
-    db = HDBcluster(probe_fasta, contig_fasta)
-    # print(db._cluster_unionfind(db.contigs_dict, db.distance_matrix))
-    # clusters_UF = db._cluster_unionfind(db.contigs_dict, db.distance_matrix)
-    # db.save_clusters(
-    #     clusters_UF,
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_8631_all_uf_trimmed",
-    # )
-    # db.save_clusters(
-    #     clusters_UF,
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all_uf_trimmed",
-    # )
-    # print(db._cluster_hdbscan())
-    # clusters_hdbscan = db._cluster_hdbscan(db.contigs_dict, db.distance_matrix)
-    # db.save_clusters(
-    #     clusters_hdbscan,
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all_hdbscan_trimmed",
-    # )
-    clusters = db.get_clusters()
-
-    print(f"clusters before writing are:", clusters)
-    db.save_clusters(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/temp",
-    )
+    ...
 
 
 if __name__ == "__main__":
-    os.chdir("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering")
-    # fragments = CdsParser(
-    #     run_miniprot("probe_8631_aa.fasta", "gene_8631_node3.fasta")
-    # ).get_fragments()
-    # print(fragments)
     main()
