@@ -4,6 +4,7 @@ targets.append(
 targets.append(expand(outdir / "report/trimmed/{samples}.json", samples=sample_list))
 
 
+# The input function map the sample at hand to its input files (specified in the samples table):
 def get_raw_input_fastq_r1(wildcards):
     return sample_dict[wildcards.sample]["path_forward"]
 

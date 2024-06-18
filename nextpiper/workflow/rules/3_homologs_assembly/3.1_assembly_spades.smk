@@ -34,15 +34,19 @@ rule spades_assembly:
         "spades.py -t {threads} {params} -1 {input.in1} -2 {input.in2} -o {output} > {log} 2>&1"
 
 
+# Input function to handle dynamically generated files via checkpoints.
+# See: https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
 def aggregate_asms(wildcards):
     checkpoint_output = checkpoints.distribute_reads.get(**wildcards).output[0]
     return expand(
         outdir / "assembled/spades/{sample}/{probe}",
         sample=wildcards.sample,
         probe=glob_wildcards(os.path.join(checkpoint_output, "{probe}.bam")).probe,
-    )
+    )  # glob_wilcards(path, wildcard_pattern) tries to match the given wildcard to
+    # the closest file generated so far by the workflow.
 
 
+# Collect all the dinamycally generated files (at run time)
 rule collect_assemblies:
     input:
         aggregate_asms,

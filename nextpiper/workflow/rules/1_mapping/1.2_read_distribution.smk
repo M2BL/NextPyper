@@ -1,6 +1,8 @@
 targets.append(expand(outdir / "mapped/per_probe/{samples}", samples=sample_list))
 
 
+# The checkpoint Keyword indicates snakemake to recompute the DAG at this stage.
+# This allows the handling of files that are only known at run time.
 checkpoint distribute_reads:
     input:
         outdir / "mapped/total/{sample}.bam",

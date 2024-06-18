@@ -23,6 +23,7 @@ rule prefix_assemblies:
         prefix_gfa(input.gfa, output.gfa, prefix)
 
 
+## See Rule 3.1 for further explanation
 def aggregate_pref(wildcards):
     checkpoint_output = checkpoints.distribute_reads.get(**wildcards).output[0]
     return expand(
