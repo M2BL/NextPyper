@@ -78,7 +78,6 @@ def distribute_reads(inbam: Path, outdir: Path):
 
 
 if __name__ == "__main__":
-    if snakemake is not None:
+    # Snakemake rule execution by the "script:" directive
+    if "snakemake" in globals():
         distribute_reads(str(snakemake.input), str(snakemake.output))
-    else:
-        ...
