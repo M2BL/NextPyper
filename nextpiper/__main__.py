@@ -151,7 +151,13 @@ Available targets:
         help_option_names=["-h", "--help"], ignore_unknown_options=True
     ),
 )
-@click.option("--input", "input", help="Input sample table", type=str, required=True)
+@click.option(
+    "--input",
+    "input",
+    help="Input sample table",
+    type=click.Path(readable=True),
+    required=True,
+)
 @click.option(
     "--probes",
     "probes",
