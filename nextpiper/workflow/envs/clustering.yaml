@@ -1,0 +1,7 @@
+name: clustering
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+    - miniprot=0.13

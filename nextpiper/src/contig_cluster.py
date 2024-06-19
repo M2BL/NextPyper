@@ -259,7 +259,6 @@ class HDBcluster:
         self.distance_matrix = np.nan_to_num(matrix, nan=100)
         return self
 
-
     def _cluster_unionfind(
         self, contig_names: list[str], distance_matrix: npt.ArrayLike
     ) -> list[str]:
@@ -529,9 +528,22 @@ def get_nuc_coordinates(
     return [None, None]
 
 
-def main():
-    ...
-
-
 if __name__ == "__main__":
-    main()
+    # Snakemake rule execution by the "script:" directive
+    if "snakemake" in globals():
+        print(snakemake.input.probes)
+        print(snakemake.input.contigs)
+        print(snakemake.output[0])
+        hdb = HDBcluster(snakemake.input.probes, snakemake.input.contigs)
+        hdb.save_clusters(snakemake.output[0])
+    else:
+        probes = sys.argv[1]
+        contigs = sys.argv[2]
+        out = sys.argv[3]
+
+        print(f"{probes=}")
+        print(f"{contigs=}")
+        print(f"{out=}")
+
+        hdb = HDBcluster(probes, contigs)
+        hdb.save_clusters(out)

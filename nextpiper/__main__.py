@@ -151,13 +151,27 @@ Available targets:
         help_option_names=["-h", "--help"], ignore_unknown_options=True
     ),
 )
-@click.option("--input", "input", help="Input sample table", type=str, required=True)
+@click.option(
+    "--input",
+    "input",
+    help="Input sample table",
+    type=click.Path(readable=True),
+    required=True,
+)
 @click.option(
     "--probes",
     "probes",
     help="Probes used in the experiment (fasta)",
     type=str,
     required=True,
+)
+@click.option(
+    "--graph_simplification",
+    "graph_simplification",
+    help="Whether to simplying assembly graph after first assembly",
+    is_flag=True,
+    default=False,
+    show_default=True,
 )
 @common_options
 def run(**kwargs):

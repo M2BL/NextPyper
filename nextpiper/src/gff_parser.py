@@ -230,6 +230,9 @@ class Cds:
         assert len(contigs) == 1, "more than one contig is present"
         contig = contigs[0]
         for item in self.data[contig]:
+            if not item.get("Target"):
+                continue
+
             target_splt = item["Target"].split()
             probe_name = target_splt[0]
             query_start = int(target_splt[1])
