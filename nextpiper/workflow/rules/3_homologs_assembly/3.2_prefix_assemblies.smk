@@ -39,4 +39,4 @@ rule collect_prefixed_assemblies:
     output:
         outdir / "logs/assembled/collect_pre/{sample}.chkpt",
     shell:
-        "echo {input} >> {output}"
+        "echo {input} | tr '[:space:]' '\n' >> {output}"

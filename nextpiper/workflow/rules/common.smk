@@ -36,3 +36,8 @@ validate(SAMPLE_TABLE, schema="../schemes/sample_table.yaml")
 probes_list = [probe.name for probe in SeqIO.parse(probes, "fasta")]
 sample_dict = SAMPLE_TABLE.set_index("sample_name").T.to_dict()
 sample_list = list(sample_dict)
+
+
+wildcard_constraints:
+    sample=r"\w+",
+    probe=r"\w+",

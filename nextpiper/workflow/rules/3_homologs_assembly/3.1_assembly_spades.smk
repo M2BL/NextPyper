@@ -5,7 +5,8 @@ targets.append(
 
 rule bam2fastq:
     input:
-        outdir / "mapped/per_probe/{sample}/{probe}.bam",
+        aux=rules.distribute_reads.output,
+        bam=outdir / "mapped/per_probe/{sample}/{probe}.bam",
     output:
         out1=outdir / "assembled/inputs/{sample}/{probe}_R1.fastq",
         out2=outdir / "assembled/inputs/{sample}/{probe}_R2.fastq",
@@ -14,7 +15,7 @@ rule bam2fastq:
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
-        "samtools fastq -1 {output.out1} -2 {output.out2} {input} 2> {log}"
+        "samtools fastq -1 {output.out1} -2 {output.out2} {input.bam} 2> {log}"
 
 
 rule spades_assembly:
@@ -22,7 +23,10 @@ rule spades_assembly:
         in1=outdir / "assembled/inputs/{sample}/{probe}_R1.fastq",
         in2=outdir / "assembled/inputs/{sample}/{probe}_R2.fastq",
     output:
-        directory(outdir / "assembled/spades/{sample}/{probe}"),
+        out_dir=directory(outdir / "assembled/spades/{sample}/{probe}"),
+        contigs=outdir / "assembled/spades/{sample}/{probe}/contigs.fasta",
+        gfa=outdir
+        / "assembled/spades/{sample}/{probe}/assembly_graph_with_scaffolds.gfa",
     params:
         "",
     log:
@@ -31,7 +35,7 @@ rule spades_assembly:
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
-        "spades.py -t {threads} {params} -1 {input.in1} -2 {input.in2} -o {output} > {log} 2>&1"
+        "spades.py -t {threads} {params} -1 {input.in1} -2 {input.in2} -o {output.out_dir} > {log} 2>&1"
 
 
 # Input function to handle dynamically generated files via checkpoints.
@@ -53,4 +57,4 @@ rule collect_assemblies:
     output:
         outdir / "logs/assembled/collect/{sample}.chkpt",
     shell:
-        "echo {input} >> {output}"
+        "echo {input} | tr '[:space:]' '\n' >> {output}"
