@@ -19,7 +19,7 @@ include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.2_read_distribu
 include: os.path.join(workflow.basedir, "rules", "2_probes_translation", "2.1_transdecoder.smk")
 include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.1_assembly_spades.smk")
 include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.2_prefix_assemblies.smk")
-include: os.path.join(workflow.basedir, "rules", "4_clustering", "4.1_cross_sample_merging.smk")
+# include: os.path.join(workflow.basedir, "rules", "4_clustering", "4.1_cross_sample_merging.smk")
 
 # Target rules
 @targetRule
