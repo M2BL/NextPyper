@@ -399,7 +399,7 @@ class HDBcluster:
         Given a list of records, trim them to the smallest region of the probe shared by at least two sequences.
         In case, the group contains a single member, the sequence is trimmed to fit the probe's boundaries.
         :param cluster_names:
-        :return:
+        :return: None is there is no match with a probe on this cluster, otherwise returns the trim sequence(s).
         """
         if len(cluster_names) == 1:
             contig = cluster_names[0]
@@ -508,7 +508,7 @@ def get_nuc_coordinates(
     :param probe_start:
     :param probe_end:
     :param fragments: list of fragments
-    :return: Return [None, None] if for some reason there are no AA-nt correspondence, otherwise [start, end]
+    :return: [None, None] if for some reason there are no AA-nt correspondence, otherwise [start, end]
     """
     correspondences = {}
     for fragment in fragments:
