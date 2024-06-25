@@ -533,8 +533,10 @@ def get_nuc_coordinates(
 if __name__ == "__main__":
     # Snakemake rule execution by the "script:" directive
     if "snakemake" in globals():
-        hdb = HDBcluster(snakemake.input.probes, snakemake.input.contigs)
-        hdb.save_clusters(snakemake.output[0])
+        with open(snakemake.log[0], "w") as f:
+            sys.stderr = sys.stdout = f
+            hdb = HDBcluster(snakemake.input.probes, snakemake.input.contigs)
+            hdb.save_clusters(snakemake.output[0])
     else:
         probes = sys.argv[1]
         contigs = sys.argv[2]
