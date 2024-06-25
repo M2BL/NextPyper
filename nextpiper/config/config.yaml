@@ -4,4 +4,6 @@ nextpiper:
         input:
         output:
         graph_simplification: false
+        taper_params: 
+        trimal_gt:
     # Add customisable config here

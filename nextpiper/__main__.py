@@ -155,14 +155,14 @@ Available targets:
     "--input",
     "input",
     help="Input sample table",
-    type=click.Path(readable=True),
+    type=click.Path(readable=True, exists=True),
     required=True,
 )
 @click.option(
     "--probes",
     "probes",
     help="Probes used in the experiment (fasta)",
-    type=str,
+    type=click.Path(readable=True, exists=True),
     required=True,
 )
 @click.option(
@@ -172,6 +172,19 @@ Available targets:
     is_flag=True,
     default=False,
     show_default=True,
+)
+@click.option(
+    "--taper_parameters",
+    "taper_params",
+    help="Parameters file to use when running TAPER (-p). See TAPER's docs.",
+    type=click.Path(readable=True, exists=True),
+)
+@click.option(
+    "--trimal_gt",
+    "trimal_gt",
+    help="1 - (fraction of sequences with a gap allowed)in Trimal.",
+    type=float,
+    default=0.2,
 )
 @common_options
 def run(**kwargs):
