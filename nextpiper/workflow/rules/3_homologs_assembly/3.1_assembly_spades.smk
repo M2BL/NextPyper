@@ -1,6 +1,4 @@
-targets.append(
-    expand(outdir / "logs/assembled/collect/{samples}.chkpt", samples=sample_list)
-)
+targets.append(outdir / "logs/dones/assembly.done")
 
 
 rule bam2fastq:
@@ -55,6 +53,15 @@ rule collect_assemblies:
     input:
         aggregate_asms,
     output:
-        outdir / "logs/assembled/collect/{sample}.chkpt",
+        chkpt=outdir / "logs/assembled/collect/{sample}.chkpt",
     shell:
-        "echo {input} | tr '[:space:]' '\n' >> {output}"
+        "echo {input} | tr '[:space:]' '\n' >> {output.chkpt}"
+
+
+rule done_asms:
+    input:
+        chkpt=expand(
+            outdir / "logs/assembled/collect/{sample}.chkpt", sample=sample_list
+        ),
+    output:
+        done=touch(outdir / "logs/dones/assembly.done"),

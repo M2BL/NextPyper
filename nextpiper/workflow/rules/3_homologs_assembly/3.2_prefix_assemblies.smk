@@ -1,8 +1,6 @@
 from prefix_seqs import prefix_fasta, prefix_gfa
 
-targets.append(
-    expand(outdir / "logs/assembled/collect_pre/{samples}.chkpt", samples=sample_list)
-)
+targets.append(outdir / "logs/dones/prefixing.done")
 
 
 rule prefix_assemblies:
@@ -37,6 +35,17 @@ rule collect_prefixed_assemblies:
     input:
         aggregate_pref,
     output:
-        outdir / "logs/assembled/collect_pre/{sample}.chkpt",
+        chkpt=outdir / "logs/assembled/collect_pre/{sample}.chkpt",
     shell:
-        "echo {input} | tr '[:space:]' '\n' >> {output}"
+        "echo {input} | tr '[:space:]' '\n' >> {output.chkpt}"
+
+
+# This checkpoint is necessary to reevaluate the DAG and make Snakemake
+# realize that the prefixed asms exist and union_probes() can find them (4.1).
+checkpoint done_prefix:
+    input:
+        chkpt=expand(
+            outdir / "logs/assembled/collect_pre/{sample}.chkpt", sample=sample_list
+        ),
+    output:
+        done=touch(outdir / "logs/dones/prefixing.done"),
