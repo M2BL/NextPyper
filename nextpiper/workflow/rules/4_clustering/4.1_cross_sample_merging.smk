@@ -13,47 +13,42 @@ targets.append(expand(outdir / "clustering/clusters/{probes}", probes=probes_lis
 # This would certainly happen in real life cases.
 
 
-def union_probes(wildcards):
-    probes = {file.parent.name for file in graph_dir.glob("*/*/contigs.fasta")}
-    probe_dict = {
-        probe: list(graph_dir.glob(f"*/{probe}/contigs.fasta")) for probe in probes
-    }
-    return probe_dict[wildcards.probe]
-
-
-checkpoint merge_asms:
-    input:
-        unpack(union_probes),
-    output:
-        outdir / "clustering/sample_merged_input/{probe}.fasta",
-    shell:
-        "cat {input} > {output}"
-
-
 checkpoint split_probes:
     input:
         probes=outdir / "translated_probes/longest_cds.fasta",
     output:
-        directory(outdir / "clustering/split_probes"),
+        expand(outdir / "clustering/split_probes/{probe}.fasta", probe=probes_list),
     run:
-        split_dir = Path(output[0])
+        split_dir = Path(output[0]).parent
         split_dir.mkdir(exist_ok=True, parents=True)
-        for probe in SeqIO.parse(input.probes, "fasta"):
-            SeqIO.write(probe, split_dir / f"{probe.name}.fasta", "fasta")
+        for probe, outfile in zip(SeqIO.parse(input.probes, "fasta"), output):
+            SeqIO.write(probe, outfile, "fasta")
 
 
-def aggregate_probes(wildcards):
-    checkpoint_output = checkpoints.split_probes.get(**wildcards).output[0]
-    return expand(
-        outdir / "clustering/split_probes/{probe}.fasta",
-        probe=glob_wildcards(os.path.join(checkpoint_output, "{probe}.fasta")).probe,
+def union_probes(wildcards):
+    glob_match = glob_wildcards(
+        graph_dir / f"{{sample}}/{wildcards.probe}/contigs.fasta"
     )
+    return expand(
+        graph_dir / "{sample}/{probe}/contigs.fasta",
+        sample=glob_match.sample,
+        probe=wildcards.probe,
+    )
+
+
+rule merge_asms:
+    input:
+        direc=outdir / "logs/dones/prefixing.done",
+        probes=union_probes,
+    output:
+        outfile=outdir / "clustering/sample_merged_input/{probe}.fasta",
+    shell:
+        "cat {input.probes} > {output}"
 
 
 checkpoint clustering:
     input:
         probes=outdir / "clustering/split_probes/{probe}.fasta",
-        # probes=aggregate_probes,
         contigs=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
         directory(outdir / "clustering/clusters/{probe}"),

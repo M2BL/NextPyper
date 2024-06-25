@@ -112,16 +112,20 @@ def run_miniprot(
             encoding="utf-8",
         )
     except FileNotFoundError as exc:
-        print(f"Process failed because the executable could not be found.\n{exc}")
+        print(
+            f"Process failed because the executable could not be found.\n{exc}",
+            file=sys.stderr,
+        )
         raise
     except subprocess.CalledProcessError as exc:
         print(
             f"Process failed because did not return a successful return code. "
-            f"Returned {exc.returncode}\n{exc}"
+            f"Returned {exc.returncode}\n{exc}",
+            file=sys.stderr,
         )
         raise
     except subprocess.TimeoutExpired as exc:
-        print(f"Process timed out.\n{exc}")
+        print(f"Process timed out.\n{exc}", file=sys.stderr)
         raise
     return StringIO(miniprot.stdout)
 
@@ -175,7 +179,7 @@ class HDBcluster:
         assert self.probe_fasta.exists(), f"{self.probe_fasta} does not exist"
         assert self.contigs_fasta.exists(), f"{self.contigs_fasta} does not exist"
         self._parse_fasta()
-        print("Running miniprot")
+        print("Running miniprot", file=sys.stderr)
         with tempfile.TemporaryDirectory() as tmpdirname:
             for contig, record in self.contigs_dict.items():
                 fasta_name = f"{contig}.fas"
@@ -190,11 +194,11 @@ class HDBcluster:
                 )
                 self.cds_dict[contig] = Cds(miniprot_out)
                 print(self.cds_dict[contig])
-        print("building distance matrix")
+        print("building distance matrix", file=sys.stderr)
         tic = time.perf_counter()
         self._create_distance_matrix()
         toc = time.perf_counter()
-        print(f"Computed distances in  {toc - tic:0.4f} seconds")
+        print(f"Computed distances in  {toc - tic:0.4f} seconds", file=sys.stderr)
         self._get_clusters()
 
     def _parse_fasta(self) -> None:
@@ -336,13 +340,13 @@ class HDBcluster:
         :return: Populate the 'cluster' attribute
         """
         if self._use_UF():
-            print("running UF")
+            print("running UF", file=sys.stderr)
             return self._cluster_unionfind(self.contigs_dict)
 
-        print("running HDBSCAN")
+        print("running HDBSCAN", file=sys.stderr)
         clusters = self._cluster_hdbscan(self.contigs_dict)
         final_clusters = []
-        print("running UF")
+        print("running UF", file=sys.stderr)
         for cluster in clusters:
             if len(cluster) == 1:
                 final_clusters.append(cluster)
@@ -369,7 +373,7 @@ class HDBcluster:
         :return:
         """
         if self.distance_matrix is not None:
-            print(f"saving distance matrix as {path}")
+            print(f"saving distance matrix as {path}", file=sys.stderr)
             np.save(Path(path), self.distance_matrix)
 
     def save_clusters(self, fasta_folder: str) -> None:
@@ -379,7 +383,7 @@ class HDBcluster:
         :return:
         """
 
-        print(f"Saving clusters to fasta folder {fasta_folder}")
+        print(f"Saving clusters to fasta folder {fasta_folder}", file=sys.stderr)
         Path(fasta_folder).mkdir(parents=True, exist_ok=True)
         fasta_prefix = self.probe_fasta.stem
         idx = 0
@@ -389,7 +393,7 @@ class HDBcluster:
                 name = f"{fasta_prefix}_{idx}.fasta"
                 name_fasta = Path(fasta_folder) / name
                 SeqIO.write(trimmed_records, name_fasta, "fasta")
-                print(f"saving fasta {name_fasta}")
+                print(f"saving fasta {name_fasta}", file=sys.stderr)
                 idx += 1
 
     def _trim_msa(self, cluster_names: list[str]) -> Optional[list[SeqRecord]]:
@@ -529,9 +533,6 @@ def get_nuc_coordinates(
 if __name__ == "__main__":
     # Snakemake rule execution by the "script:" directive
     if "snakemake" in globals():
-        print(snakemake.input.probes)
-        print(snakemake.input.contigs)
-        print(snakemake.output[0])
         hdb = HDBcluster(snakemake.input.probes, snakemake.input.contigs)
         hdb.save_clusters(snakemake.output[0])
     else:
