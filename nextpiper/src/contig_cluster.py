@@ -160,7 +160,7 @@ class HDBcluster:
     probe_fasta: str
     contigs_fasta: str
     treads: int = field(default=8)
-    min_probe_contig_sim: float = field(default=0.90)
+    min_probe_contig_sim: float = field(default=0.85)
     min_fragment_cov: float = field(default=0.05)
     min_contig_overlap: int = field(default=300)
     max_clustering_dist: float = field(default=0.05)
