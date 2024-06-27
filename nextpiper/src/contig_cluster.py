@@ -153,6 +153,8 @@ class HDBcluster:
     -contigs_dict: dictionary of contig name as key and SeqRecord as value.
     -cds_dict: dictionary of contig name as key and Cds as value.
     -distance_matrix: matrix of pairwise distances indexed on the cds_dict.
+    -clusters: nested list of contig names that have been clustered.
+        Set to the empty list, if no sequence match the probe.
     """
 
     probe_fasta: str
@@ -339,6 +341,9 @@ class HDBcluster:
         Otherwise, use the HDBSCAN algorithm for clustering and only then run UnionFind to separate connected components.
         :return: Populate the 'cluster' attribute
         """
+        # Case no Cds match the probe
+        if set(self.distance_matrix.flatten()) == {0.0, 100.0}:
+            return []
         if self._use_UF():
             print("running UF", file=sys.stderr)
             return self._cluster_unionfind(self.contigs_dict)
@@ -382,9 +387,11 @@ class HDBcluster:
         :param fasta_folder: folder where the fasta files are saved.
         :return:
         """
-
         print(f"Saving clusters to fasta folder {fasta_folder}", file=sys.stderr)
         Path(fasta_folder).mkdir(parents=True, exist_ok=True)
+        if not self.clusters:
+            print("No clusters found.")
+            return
         fasta_prefix = self.probe_fasta.stem
         idx = 0
         for gp in self.clusters:
