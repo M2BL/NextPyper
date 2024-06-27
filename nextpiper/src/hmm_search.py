@@ -138,24 +138,6 @@ class Profile_hits:
 
     hmm_name: str
     domain_hits: list[Domain] = field(default_factory=list, repr=False)
-    # domain: Domain = field(init=False)
-
-
-#
-# @dataclass
-# class Best_path:
-#     path_nodes: list[str] = field(default_factory=list)
-#     path_profiles: list[Profile_hits] = field(default_factory=list)
-#     mean_score: float = field(init=False)
-#
-#     def __post_init__(self):
-#         self.get_mean_score()
-#
-#     def get_mean_score(self) -> Self:
-#         self.mean_score = sum([x.domain.score for x in self.path_profiles]) / len(
-#             self.path_profiles
-#         )
-#         return self
 
 
 @dataclass
@@ -285,35 +267,6 @@ def extract_seq_from_gfa(gfa_path: Path, fasta: str):
 
 
 if __name__ == "__main__":
-    # test star conformation
-    sequences_file = r"/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/H1_C8_nodes.fasta"
-    hmm_file = r"/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/probe_3.hmm"
-    pkl_hmm_file = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/hmm_H1_C8.pkl"
-
-    # test four separated contigs
-    sequences_file = r"/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/H1_B6_nodes.fasta"
-    hmm_file = r"/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/probe_3.hmm"
-    pkl_hmm_file = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/hmm_H1_B6.pkl"
-
-    # test a really complex graph
-    sequences_file = r"/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/H1_A8_nodes.fasta"
-    hmm_file = r"/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/probe_3.hmm"
-    pkl_hmm_file = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/hmm_H1_A8.pkl"
-
-    hmm = Hmmer_result(Path(sequences_file), Path(hmm_file))
-    for k, v in hmm.best_paths.items():
-        print(k, v)
-
-    for k, v in hmm.node_hits.items():
-        print(k, v)
-    import pickle
-
-    pickle.dump(hmm, open(pkl_hmm_file, "ab"))
-
-    # test convert gfa to node sequences
-    # gfa = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_hmm/probe_3/H1_A8_blunted_compacted.gfa"
-    # )
-    # fasta = "H1_A8_nodes.fasta"
+    ...
     #
     # extract_seq_from_gfa(gfa, fasta)
