@@ -21,6 +21,7 @@ include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.1_ass
 include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.2_prefix_assemblies.smk")
 include: os.path.join(workflow.basedir, "rules", "4_clustering", "4.1_cross_sample_merging.smk")
 include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.1_clusters_alignment.smk")
+include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.2_alignment_postprocessing.smk")
 
 
 # Target rules

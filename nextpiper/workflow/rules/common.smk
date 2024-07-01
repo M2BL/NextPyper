@@ -29,7 +29,7 @@ path_samples = config["args"]["input"]
 
 # Program configurations/parameters
 # TAPER
-taper_exec = config["taper_path"]
+taper_exec = Path(workflow.basedir) / config["taper_path"]
 default_taper_params = config["taper_params_path"]
 
 if not (path_taper_params := config["args"]["taper_params"]):
