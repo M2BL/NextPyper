@@ -1,4 +1,4 @@
 nextpiper:
     # Config you don't want users to change
-    taper_path: 
+    taper_path: "../deps/TAPER/correction_multi.jl"
     taper_params_path: "../config/taper_parameters.txt"
