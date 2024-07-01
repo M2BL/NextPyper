@@ -10,8 +10,6 @@
 
 __version__ = "0.1"
 
-import sys
-
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
@@ -165,6 +163,13 @@ class Cds:
                 == len(self.query_AAs)
             ), f"length of target_nucleotides, target_AAs and query_AAs do not match"
 
+    def has_empty_cds(self) -> bool:
+        """
+        True if there is no match with a probe
+        :return:
+        """
+        return not bool(self.fragments)
+
     def _parse_gff(self):
         for line in self.miniprot_output:
             if (
@@ -230,10 +235,9 @@ class Cds:
         assert len(contigs) == 1, "more than one contig is present"
         contig = contigs[0]
         for item in self.data[contig]:
-            if not item.get("Target"):
+            if item.get("Target") is None:
                 continue
-
-            target_splt = item["Target"].split()
+            target_splt = item["Target"].split()  ###error
             probe_name = target_splt[0]
             query_start = int(target_splt[1])
             query_end = int(target_splt[2])
@@ -308,25 +312,6 @@ class Cds:
         return not bool(self.data)
 
 
+
 if __name__ == "__main__":
-    # os.chdir(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/batrachium/exonerate"
-    # )
-    os.chdir(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gff_files"
-    )
-
-    # cds_list = CdsParser(open("test_8631_node3_rc.gff", "r"))
-    # cds_list = CdsParser(open("test_8631_node3.gff", "r"))
-    # cds_list = CdsParser(
-    #     open("test_8631_probe_start_9_intron_1_micorinton1_strand_1.gff", "r")
-    # )
-    cds_list = Cds(open("gene_3_A3_1.gff", "r"))
-
-    print(cds_list)
-    fragments = cds_list.get_fragments()
-    print(len(fragments))
-    for frg in fragments:
-        print(frg)
-    for frg in fragments:
-        print(list(frg.correspondence.items()))
+    ...
