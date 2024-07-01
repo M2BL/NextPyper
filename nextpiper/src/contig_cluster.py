@@ -34,6 +34,7 @@ __version__ = "0.1"
 
 from collections import deque
 from dataclasses import dataclass, field
+from importlib import reload
 from io import StringIO
 from itertools import groupby, chain
 import math
@@ -43,6 +44,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 from typing import Union, Optional, Self, Literal, TypeAlias
 
@@ -54,6 +56,9 @@ import numpy.typing as npt
 from sklearn.cluster import HDBSCAN
 
 from alignment import Alignment_fragment
+import gff_parser
+
+gff_parser = reload(gff_parser)
 from gff_parser import Fragment, Cds
 from interval_tree import IntervalST, Interval
 from union_find import UnionFind
@@ -74,7 +79,6 @@ def validate_sequence(
     """
     Validate if a biopython Seq object is a dna or protein sequence
     :param seq:
-    :record_name:
     :param alphabet:
     :return: None, raises WrongAlphabet exception if failed
     """
@@ -95,7 +99,7 @@ def run_miniprot(
     treads=2,
     min_similarity=0.85,
     min_coverage=0.01,
-) -> StringIO:
+) -> str:
     """
     Wrapper for running miniprot.
     :return:
@@ -112,20 +116,16 @@ def run_miniprot(
             encoding="utf-8",
         )
     except FileNotFoundError as exc:
-        print(
-            f"Process failed because the executable could not be found.\n{exc}",
-            file=sys.stderr,
-        )
+        print(f"Process failed because the executable could not be found.\n{exc}")
         raise
     except subprocess.CalledProcessError as exc:
         print(
             f"Process failed because did not return a successful return code. "
-            f"Returned {exc.returncode}\n{exc}",
-            file=sys.stderr,
+            f"Returned {exc.returncode}\n{exc}"
         )
         raise
     except subprocess.TimeoutExpired as exc:
-        print(f"Process timed out.\n{exc}", file=sys.stderr)
+        print(f"Process timed out.\n{exc}")
         raise
     return StringIO(miniprot.stdout)
 
@@ -146,7 +146,7 @@ class HDBcluster:
     -max_clustering_dist: maximum distance between two contigs to associate them with the union-find algorithm.
     -min_cluster_size: minimum size of clusters for the HDBSCAN algorithm.
     -min_contig_length: minimum length of a contig after trimming.
-    -keep_singletons: if true, keep unclustered contigs.
+    -keep_singletons: if True, keep unclustered contigs.
 
     Post Init
     -probe_record: parsed probe sequence.
@@ -181,7 +181,7 @@ class HDBcluster:
         assert self.probe_fasta.exists(), f"{self.probe_fasta} does not exist"
         assert self.contigs_fasta.exists(), f"{self.contigs_fasta} does not exist"
         self._parse_fasta()
-        print("Running miniprot", file=sys.stderr)
+        print("Running miniprot")
         with tempfile.TemporaryDirectory() as tmpdirname:
             for contig, record in self.contigs_dict.items():
                 fasta_name = f"{contig}.fas"
@@ -196,11 +196,11 @@ class HDBcluster:
                 )
                 self.cds_dict[contig] = Cds(miniprot_out)
                 print(self.cds_dict[contig])
-        print("building distance matrix", file=sys.stderr)
+        print("building distance matrix")
         tic = time.perf_counter()
         self._create_distance_matrix()
         toc = time.perf_counter()
-        print(f"Computed distances in  {toc - tic:0.4f} seconds", file=sys.stderr)
+        print(f"Computed distances in  {toc - tic:0.4f} seconds")
         self._get_clusters()
 
     def _parse_fasta(self) -> None:
@@ -273,6 +273,7 @@ class HDBcluster:
         :return: list of group labels that are the names of the contigs.
         """
         with UnionFind() as UV:
+            # names = list(contig_names.keys())
             for x in range(len(contig_names)):
                 i = list(self.cds_dict.keys()).index(contig_names[x])
                 for y in range(x + 1, len(contig_names)):
@@ -283,7 +284,7 @@ class HDBcluster:
         components = UV.get_components()
         final_groups = []
         for component in components:
-            final_groups.append(sorted([list(contig_names)[c] for c in component]))
+            final_groups.append(sorted([contig_names[c] for c in component]))
         if self.keep_singletons:
             singletons = set(contig_names) - set(list(chain(*final_groups)))
             final_groups.extend([singleton] for singleton in singletons)
@@ -324,6 +325,7 @@ class HDBcluster:
         It is used in case the dataset contains too few sequences to use HDBscan.
         :return:
         """
+
         if len(self.contigs_dict) < self.min_cluster_size:
             return True
         upper_triangle = np.triu(self.distance_matrix)
@@ -341,17 +343,32 @@ class HDBcluster:
         Otherwise, use the HDBSCAN algorithm for clustering and only then run UnionFind to separate connected components.
         :return: Populate the 'cluster' attribute
         """
+        # print(self.distance_matrix)
         # Case no Cds match the probe
+        if all((cds.has_empty_cds() for cds in self.cds_dict.values())):
+            return []
+        # Case matching below thresholds
         if set(self.distance_matrix.flatten()) == {0.0, 100.0}:
+            global_sims = sorted(
+                [cds.get_global_sim() for cds in self.cds_dict.values()]
+            )
+            fill = textwrap.fill(
+                "[Warning] There are matches, but they are not reported as they register as paralogs. "
+                f"There are {len(global_sims)} sequences that match the probe with similarities between {global_sims[0]} and {global_sims[1]}",
+                width=90,
+                subsequent_indent=" " * 11,
+            )
+            print(fill)
             return []
         if self._use_UF():
-            print("running UF", file=sys.stderr)
-            return self._cluster_unionfind(self.contigs_dict)
+            print("running UF")
+            self.clusters = self._cluster_unionfind(list(self.contigs_dict.keys()))
+            return self
 
-        print("running HDBSCAN", file=sys.stderr)
+        print("running HDBSCAN")
         clusters = self._cluster_hdbscan(self.contigs_dict)
         final_clusters = []
-        print("running UF", file=sys.stderr)
+        print("running UF after HDBSCAN")
         for cluster in clusters:
             if len(cluster) == 1:
                 final_clusters.append(cluster)
@@ -363,6 +380,7 @@ class HDBcluster:
 
             final_clusters.extend(new_clusters)
         self.clusters = final_clusters
+        # print(f"{final_clusters=}")
         return self
 
     def get_clusters(self) -> list[list[str]]:
@@ -378,20 +396,22 @@ class HDBcluster:
         :return:
         """
         if self.distance_matrix is not None:
-            print(f"saving distance matrix as {path}", file=sys.stderr)
+            print(f"saving distance matrix as {path}")
             np.save(Path(path), self.distance_matrix)
 
     def save_clusters(self, fasta_folder: str) -> None:
         """
         Given a list of labels generated by HDBSCAN, save the clusters to a fasta file in the specified folder.
+        :param labels: list from DBSCAN with index position that corresponds to the contigs in the keys of
+        the 'clean_fragments' dictionary.
         :param fasta_folder: folder where the fasta files are saved.
         :return:
         """
-        print(f"Saving clusters to fasta folder {fasta_folder}", file=sys.stderr)
-        Path(fasta_folder).mkdir(parents=True, exist_ok=True)
         if not self.clusters:
             print("No clusters found.")
             return
+        print(f"Saving clusters to fasta folder {fasta_folder}")
+        Path(fasta_folder).mkdir(parents=True, exist_ok=True)
         fasta_prefix = self.probe_fasta.stem
         idx = 0
         for gp in self.clusters:
@@ -400,7 +420,7 @@ class HDBcluster:
                 name = f"{fasta_prefix}_{idx}.fasta"
                 name_fasta = Path(fasta_folder) / name
                 SeqIO.write(trimmed_records, name_fasta, "fasta")
-                print(f"saving fasta {name_fasta}", file=sys.stderr)
+                print(f"saving fasta {name_fasta}")
                 idx += 1
 
     def _trim_msa(self, cluster_names: list[str]) -> Optional[list[SeqRecord]]:
