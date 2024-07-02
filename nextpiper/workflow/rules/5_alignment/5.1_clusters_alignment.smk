@@ -7,20 +7,6 @@ def nrecs(fasta):
     return sum(1 for _ in SeqIO.parse(fasta, "fasta"))
 
 
-def get_multiseq(wildcards):
-    checkpoint_output = checkpoints.clustering.get(probe=wildcards.probe).output[0]
-    glob_match = glob_wildcards(
-        Path(checkpoint_output) / f"{wildcards.probe}_{{cluster}}.fasta"
-    )
-
-    raw_files = expand(
-        outdir / "clustering/clusters/{probe}/{probe}_{cluster}.fasta",
-        probe=wildcards.probe,
-        cluster=glob_match.cluster,
-    )
-    return list(chain(file for file in raw_files if nrecs(file) > 1))
-
-
 checkpoint separate_multiseq:
     input:
         outdir / "clustering/clusters/{probe}",
@@ -36,21 +22,12 @@ checkpoint separate_multiseq:
 
 def get_aln_input(wildcards):
     checkpoint_output = checkpoints.separate_multiseq.get(**wildcards).output[0]
-    matches = glob_wildcards(
-        outdir
-        / f"aligned/aln_inputs/{wildcards.probe}/{wildcards.probe}_{{cluster}}.fasta"
-    )
-    return expand(
-        outdir / "aligned/aln_inputs/{probe}/{probe}_{cluster}.fasta",
-        probe=wildcards.probe,
-        cluster=matches.cluster,
-    )
+    return Path(checkpoint_output) / f"{wildcards.probe}_{wildcards.cluster}.fasta"
 
 
 rule mafft:
     input:
-        aux=rules.separate_multiseq.output,  # This way mafft knows it has to wait for separate_multiseq. 
-        clusters=outdir / "aligned/aln_inputs/{probe}/{probe}_{cluster}.fasta",
+        clusters=get_aln_input,
     output:
         alns=outdir / "aligned/cluster_alns/{probe}/{probe}_{cluster}.fasta",
     params:
