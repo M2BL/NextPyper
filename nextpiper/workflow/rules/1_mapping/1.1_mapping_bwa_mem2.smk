@@ -44,6 +44,6 @@ rule bwa_mem2_mem:
         sort="samtools",
         sort_order="queryname",
         sort_extra="",
-    threads: 8
+    threads: 4
     wrapper:
         "v3.11.0/bio/bwa-mem2/mem"
