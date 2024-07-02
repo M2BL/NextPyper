@@ -58,7 +58,7 @@ setup(
         "biopython>=1.83",
         "numpy>=1.26",
         "scikit-learn>=1.5",
-        "pyhmmer<=0.10",
+        "pyhmmer>=0.10",
     ],
     entry_points={"console_scripts": ["nextpiper=nextpiper.__main__:main"]},
     include_package_data=True,
