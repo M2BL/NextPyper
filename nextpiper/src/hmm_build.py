@@ -40,15 +40,23 @@ def hmm_build(
     :param alpha: alphabet used to build HMM profile.
     :return: save the hmm profile into a file.
     """
-    assert alpha in [
+    assert alpha in (
         "dna",
         "amino",
-    ], f"[Error] alphabet must be 'dna' or 'amino' not {alpha}"
+    ), f"[Error] alphabet must be 'dna' or 'amino' not {alpha}"
     alphabet = (
         pyhmmer.easel.Alphabet.amino()
         if alpha == "amino"
         else pyhmmer.easel.Alphabet.dna()
     )
+    with MSAFile(fasta_path, digital=True, alphabet=alphabet, format="afa") as msa_file:
+        msa = msa_file.read()
+        msa.name = str.encode(fasta_path.name.removesuffix(".fasta"))
+        builder = pyhmmer.plan7.Builder(alphabet)
+        background = pyhmmer.plan7.Background(alphabet)
+        hmm, _, _ = builder.build_msa(msa, background)
+        with open(hmm_output_path, "wb") as output_file:
+            hmm.write(output_file)
 
 
 def hmm_consensus(hmm_path: Path, output_path: Path) -> None:
