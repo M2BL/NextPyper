@@ -16,34 +16,39 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-
+import os
 from pathlib import Path
+from typing import Literal
+
 import pyhmmer
 from pyhmmer.easel import MSAFile
 from pyhmmer.plan7 import HMMFile
 
-alphabet = pyhmmer.easel.Alphabet.amino()
 
 # =============================================================================
 #                FUNCTIONS
 # =============================================================================
 
 
-def hmm_build(fasta_path: Path, hmm_output_path: Path) -> None:
+def hmm_build(
+    fasta_path: Path, hmm_output_path: Path, alpha: Literal["dna", "amino"]
+) -> None:
     """
     Build HMM profile from alignment and save it in hmm format.
     :param fasta_path:
     :param hmm_output_path:
+    :param alpha: alphabet used to build HMM profile.
     :return: save the hmm profile into a file.
     """
-    with MSAFile(fasta_path, digital=True, alphabet=alphabet, format="afa") as msa_file:
-        msa = msa_file.read()
-        msa.name = str.encode(fasta_path.name.removesuffix(".fasta"))
-        builder = pyhmmer.plan7.Builder(alphabet)
-        background = pyhmmer.plan7.Background(alphabet)
-        hmm, _, _ = builder.build_msa(msa, background)
-        with open(hmm_output_path, "wb") as output_file:
-            hmm.write(output_file)
+    assert alpha in [
+        "dna",
+        "amino",
+    ], f"[Error] alphabet must be 'dna' or 'amino' not {alpha}"
+    alphabet = (
+        pyhmmer.easel.Alphabet.amino()
+        if alpha == "amino"
+        else pyhmmer.easel.Alphabet.dna()
+    )
 
 
 def hmm_consensus(hmm_path: Path, output_path: Path) -> None:
