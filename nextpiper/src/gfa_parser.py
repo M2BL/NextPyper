@@ -121,23 +121,23 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
     :param min_domain_len: minimum number of matched aa by the hmm profile over the whole length of a contig.
     :return: a dict with edge id as key and hmm id as value.
     """
-    hmm_stat_file = Path(hmm_stat_file)
-    lines = [line for line in open(hmm_stat_file)]
+    with Path(hmm_stat_file).open() as file:
+        lines = file.readlines()
     bgc_candidates = []
     hmms = []
     domain_flag = False
     edge_flag = False
     for idx, line in enumerate(lines):
         if line.startswith("BGC subgraph"):
+            base_name = line.split()[2]
+        if line.startswith("BGC candidate"):
             if hmms:
                 bgc_candidates.append(BGC_candidate(name, hmms, coordinates, edges))
             name = ""
             hmms = []
             coordinates = []
             edges = []
-            name += line.split()[2]
-        if line.startswith("BGC candidate"):
-            name += f"_candidate_{line.split()[2]}"
+            name = f"{base_name}_candidate_{line.split()[2]}"
             hmms = lines[idx + 1].strip().split("-")
             continue
         if line.startswith("Domain coordinates:"):
