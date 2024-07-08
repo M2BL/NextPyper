@@ -5,7 +5,7 @@ targets.append(outdir / "translated_probes/longest_cds.fasta")
 
 rule transdecoder_longorfs:
     input:
-        outdir / "mapped/map_index/probes.fasta",
+        probes.resolve(),
     output:
         directory(outdir / "translated_probes/transdecoder"),
     log:

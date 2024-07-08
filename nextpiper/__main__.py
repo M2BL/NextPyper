@@ -168,7 +168,7 @@ Available targets:
 @click.option(
     "--graph_simplification",
     "graph_simplification",
-    help="Whether to simplying assembly graph after first assembly",
+    help="Whether to simplify assembly graph after first assembly",
     is_flag=True,
     default=False,
     show_default=True,
