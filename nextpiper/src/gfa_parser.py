@@ -26,10 +26,9 @@ __version__ = "0.1"
 # =======================================================================================
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field
-from itertools import chain
-import os
+from operator import itemgetter, attrgetter
+from itertools import chain, groupby
 from pathlib import Path
-import sys
 from typing import Self
 from union_find import UnionFind
 
@@ -198,6 +197,75 @@ def filter_components_hmm(
             dominant_hmm = max(set(hmm_matches), key=hmm_matches.count)
             all_components.append(Component(component, dominant_hmm))
     return all_components
+
+
+def split_into_components(
+    gfa_path: Path, components: list[Component], outdir: Path
+) -> None:
+    """Given an assembly graph and a list of components, look for the components in the graph
+    and write them separately in the output directory specified. The componenets are grouped by
+    hmm so that the structure of the output directory is: <outdir>/<hmm>/<component_i>.gfa .
+
+    :param gfa_path: path to assembly graph to split.
+    :param components: list of components to find in the graph.
+    :param outdir: path where to write the split components.
+    :return:
+    """
+
+    # Helper functions
+    get_hmm = attrgetter("hmm")
+    linked_nodes = itemgetter(1, 3)
+
+    # Make the reverse dictionary edge to named component.
+    node2comp = {
+        edge: f"{hmm}_{i}"
+        for hmm, group in groupby(sorted(components, key=get_hmm), key=get_hmm)
+        for i, comp in enumerate(group)
+        for edge in comp.edges
+    }
+
+    # Make a dictionary that will hold the lines to write for each component
+    comp_lines = defaultdict(list)
+    nodes = [None]
+
+    with gfa_path.open() as file:
+        for line in file:
+            match line[0]:
+                case "H":
+                    header = line
+                case "S":
+                    nodes = line.split()[1:2]
+                case "L" | "J":
+                    nodes = list(linked_nodes(line.split()))
+                case "P":
+                    nodes = [node.rstrip("-+") for node in line.split()[2].split(",")]
+                case _:
+                    raise NotImplementedError(f"ERROR: found line of type {line[0]}")
+
+            main_comp = list(
+                set(comp for node in nodes if (comp := node2comp.get(node)))
+            )
+
+            # Ensure that main component is a single one. More than one should be impossible.
+            if len(main_comp) > 1:
+                raise ValueError(
+                    f"ERROR: {line=} is related to multiple components: {main_comp}, when it should be a single one."
+                )
+
+            # Append that line to the appropiate component.
+            elif len(main_comp) == 1:
+                comp_lines[main_comp[0]].append(line)
+
+            # If zero components, just continue to the next line (implicitly coded).
+
+        # Now write the multiple files for the found components.
+        outdir.mkdir(exist_ok=True, parents=True)
+        for comp, lines in comp_lines.items():
+            probe = comp[: comp.rfind("_")]
+            (outdir / probe).mkdir(exist_ok=True, parents=True)
+            with (outdir / probe / f"{comp}.gfa").open("w") as out_comp:
+                out_comp.write(header)
+                out_comp.write("".join(lines))
 
 
 def main():
