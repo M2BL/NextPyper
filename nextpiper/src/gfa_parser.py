@@ -21,10 +21,11 @@ contains the graph edges that have a hmm match.
 
 __version__ = "0.1"
 
+
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from dataclasses import dataclass, field
 from operator import itemgetter, attrgetter
 from itertools import chain, groupby
@@ -33,22 +34,37 @@ from typing import Self
 from union_find import UnionFind
 
 
-Component_hmm = namedtuple("Component_hmm", ("component", "hmm"))
-
-
 @dataclass
 class BGC_candidate:
+    """
+    Data structure for the parsing of the 'hmm_statistics.txt' file.
+    """
+
     name: str
-    hmms: list[str] = field(default_factory=list)
-    coordinates: list[tuple[int, int]] = field(default_factory=list)
-    edges: list[str] = field(default_factory=list)
+    hmms: list[str]
+    coordinates: list[tuple[int, int]]
+    paths: list[list[str]]
+    edges: list[str] = field(default_factory=list, init=False)
     lengths: list[int] = field(default_factory=list, init=False)
-    edge_to_hmms: dict[str, str] = field(default_factory=dict, init=False)
     max_domain_length: int = field(init=False)
+    dominant_hmm: str = field(init=False)
 
     def __post_init__(self):
+        self._get_edges()
         self._get_lengths()
         self._find_dominant_hmm()
+
+    def _get_edges(self) -> Self:
+        self.edges = list(
+            set(
+                chain(
+                    *[
+                        x.replace("+", "").replace("-", "").split(",")
+                        for x in self.paths
+                    ]
+                )
+            )
+        )
 
     def _get_lengths(self) -> Self:
         for cor in self.coordinates:
@@ -61,29 +77,59 @@ class BGC_candidate:
             hmm_length[self.hmms[idx]] += length
         dominant_hmm = sorted(hmm_length.items(), key=lambda x: x[1], reverse=True)[0]
         self.max_domain_length = dominant_hmm[1]
-        self.edge_to_hmms = {edge: dominant_hmm[0] for edge in self.edges}
+        self.dominant_hmm = dominant_hmm[0]
         return Self
-
-    def get_edge_to_hmm(self) -> dict[str, str]:
-        return self.edge_to_hmms
 
     def get_max_length(self) -> int:
         return self.max_domain_length
 
+    def get_paths(self) -> list[str]:
+        return self.paths
+
+    def get_edges(self) -> list[str]:
+        return self.edges
+
+    def get_subgraph(self) -> str:
+        return self.name
+
+    def get_dominant_hmm(self) -> str:
+        return self.dominant_hmm
+
     def __repr__(self):
-        return f"BGC_candidate(name={self.name}, hmms={set(self.hmms)}, edges={self.edges} lengths={self.lengths}) "
+        return (
+            f"BGC_candidate(name={self.name}, hmms={self.hmms}, edges={self.edges} "
+            f"lengths={self.lengths} paths={self.paths}, dominant hmm={self.dominant_hmm})"
+        )
 
 
 @dataclass
 class Component:
+    """
+    Data structure for the components from the assembly graph that have a match with the probes HMMs.
+    Attributes
+    ----------
+    -edges: the name of the edges that make up the component.
+    -subgraph: the name of the subgraphs from the HMM search.
+    -hmm: the name of the probe that have the most HMM matches in the component.
+    -paths: the list of paths matched by HMM profiles.
+    """
+
     edges: set[str]
+    subgraphs: list[str]
     hmm: str
+    paths: list[list[str]]
 
     def get_edges(self):
         return self.edges
 
+    def get_subgraphs(self):
+        return self.subgraphs
+
     def get_hmm(self):
         return self.hmm
+
+    def get_paths(self):
+        return self.paths
 
 
 def components_from_gfa(gfa_file: str) -> list[set[str]]:
@@ -121,24 +167,43 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
     :return: a dict with edge id as key and hmm id as value.
     """
     with Path(hmm_stat_file).open() as file:
-        lines = file.readlines()
+        lines = list(file.readlines())
+
+    def filter_subgraphs(list_BGS: list[BGC_candidate]) -> list[BGC_candidate]:
+        target = list_BGS[0]
+        paths = target.get_paths()
+        filtered_subgraphs = [target]
+        stack = list_BGS[1:]
+        while stack:
+            target = stack[0]
+            path = target.get_paths()
+            for p in path:
+                if p not in paths:
+                    path.append(p)
+                    filtered_subgraphs.append(target)
+                    break
+            stack = stack[1:]
+        return filtered_subgraphs
+
     bgc_candidates = []
+    subgraphs = None
     hmms = []
+    coordinates = []
+    paths = []
     domain_flag = False
     edge_flag = False
     for idx, line in enumerate(lines):
-        if line.startswith("BGC subgraph"):
+        if line.startswith("BGC subgraph") or idx == len(lines) - 1:
             base_name = line.split()[2]
+            if subgraphs:
+                bgc_candidates.extend(filter_subgraphs(subgraphs))
+            subgraphs = []
+            continue
         if line.startswith("BGC candidate"):
-            if hmms:
-                bgc_candidates.append(BGC_candidate(name, hmms, coordinates, edges))
-            name = ""
-            hmms = []
-            coordinates = []
-            edges = []
             name = f"{base_name}_candidate_{line.split()[2]}"
             hmms = lines[idx + 1].strip().split("-")
             continue
+
         if line.startswith("Domain coordinates:"):
             domain_flag = True
             continue
@@ -147,55 +212,63 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
             edge_flag = True
             continue
         if line.startswith("Path"):
+            if hmms:
+                subgraphs.append(BGC_candidate(name, hmms, coordinates, paths))
+            name = ""
+            hmms = []
+            coordinates = []
+            paths = []
             edge_flag = False
             continue
+
         if domain_flag:
             splt_domain = line.strip().split()
             assert len(splt_domain) == 2, f"[Error] line {line} has the wrong format"
             coordinates.append(tuple(map(int, splt_domain)))
         if edge_flag:
-            edges.extend(
-                line.strip()
-                .replace("-", "")
-                .replace("+", "")
-                .replace(";", "")
-                .split(",")
-            )
-    edge_to_hmms = {}
-    Hmm_length = namedtuple("Hmm_length", ["hmm", "length"])
+            paths.append(line.strip().replace(";", ""))
+
+    edges_dict: dict[str, list[BGC_candidate]] = defaultdict(list)
     for bgc in bgc_candidates:
-        bgc_edge_to_hmms = bgc.get_edge_to_hmm()
-        max_length = bgc.get_max_length()
-        for edge in bgc_edge_to_hmms:
-            hmm = bgc_edge_to_hmms[edge]
-            if edge in edge_to_hmms:
-                length = edge_to_hmms[edge].length
-                if max_length > length:
-                    edge_to_hmms[edge] = Hmm_length(hmm, length)
-            else:
-                edge_to_hmms[edge] = Hmm_length(hmm, max_length)
-    return {
-        key: value.hmm
-        for key, value in edge_to_hmms.items()
-        if value.length > min_domain_len
-    }
+        for edge in bgc.get_edges():
+            edges_dict[edge].append(bgc)
+
+    return edges_dict
 
 
 def filter_components_hmm(
     gfa_file, hmm_stat_file, min_domain_len=20
 ) -> list[Component]:
+    """
+    Filter components from a gfa file based on a hmm profile file.
+    :param gfa_file:
+    :param hmm_stat_file:
+    :param min_domain_len: minimum matching length of the HMM profile on the scaffold in aa.
+    :return:
+    """
     all_components = []
     components = components_from_gfa(gfa_file)
     matched_edges = matched_edges_from_hmm(hmm_stat_file, min_domain_len)
 
     for component in components:
-        hmm_matches = []
+        bgc_matches = []
         for edge in component:
-            if (hmm := matched_edges.get(edge)) is not None:
-                hmm_matches.append(hmm)
-        if hmm_matches:
-            dominant_hmm = max(set(hmm_matches), key=hmm_matches.count)
-            all_components.append(Component(component, dominant_hmm))
+            if (bgc := matched_edges.get(edge)) is not None:
+                bgc_matches.extend(bgc)
+        if bgc_matches:
+            # filter by probe matching length
+            hmm_matches = [
+                bgc.get_dominant_hmm()
+                for bgc in bgc_matches
+                if bgc.get_max_length() > min_domain_len
+            ]
+            if hmm_matches:
+                dominant_hmm = max(set(hmm_matches), key=hmm_matches.count)
+                subgraphs = list(set([bgc.get_subgraph() for bgc in bgc_matches]))
+                paths = list(set(chain(*[bgc.get_paths() for bgc in bgc_matches])))
+                all_components.append(
+                    Component(component, subgraphs, dominant_hmm, paths)
+                )
     return all_components
 
 
@@ -270,14 +343,22 @@ def split_into_components(
 
 def main():
     ...
-    # os.chdir(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping"
-    # )
-    # gfa = "assembly_graph_after_simplification.gfa"
-    # # print(components_from_gfa(gfa))
-    # hmm_stat = "hmm_statistics.txt"
-    # # print(matched_edges_from_hmm(hmm_stat))
-    # print(filter_components_hmm(gfa, hmm_stat))
+    #import os
+
+    #os.chdir(
+    #    "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping"
+    #)
+    #gfa = "assembly_graph_after_simplification.gfa"
+    #hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics_39.txt"
+    #hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics.txt"
+    # print(components_from_gfa(gfa))
+    # gfa = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/assembly_graph_with_scaffolds.gfa"
+    # hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/hmm_statistics.txt"
+
+    # print(matched_edges_from_hmm(hmm_stat))
+
+    #for c in filter_components_hmm(gfa, hmm_stat):
+    #    print(c)
 
 
 if __name__ == "__main__":
