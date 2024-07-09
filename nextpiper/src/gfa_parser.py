@@ -289,13 +289,15 @@ def split_into_components(
     get_hmm = attrgetter("hmm")
     linked_nodes = itemgetter(1, 3)
 
-    # Make the reverse dictionary edge to named component.
-    node2comp = {
-        edge: f"{hmm}_{i}"
+    # Group components by hmm and name them.
+    comp_dict = {
+        f"{hmm}_c{i}": comp
         for hmm, group in groupby(sorted(components, key=get_hmm), key=get_hmm)
         for i, comp in enumerate(group)
-        for edge in comp.edges
     }
+
+    # Make the reverse dictionary edge to named component.
+    node2comp = {edge: name for name, comp in comp_dict.items() for edge in comp.edges}
 
     # Make a dictionary that will hold the lines to write for each component
     comp_lines = defaultdict(list)
@@ -331,6 +333,13 @@ def split_into_components(
 
             # If zero components, just continue to the next line (implicitly coded).
 
+        # Now Populate the different components with the corresponding Paths
+        for name, comp in comp_dict.items():
+            for i, path in enumerate(comp.paths):
+                path_name = f"{name}_p{i}"
+                p_line = "\t".join(["P", path_name, path, "*"]) + "\n"
+                comp_lines[name].append(p_line)
+
         # Now write the multiple files for the found components.
         outdir.mkdir(exist_ok=True, parents=True)
         for comp, lines in comp_lines.items():
@@ -341,24 +350,7 @@ def split_into_components(
                 out_comp.write("".join(lines))
 
 
-def main():
-    ...
-    #import os
-
-    #os.chdir(
-    #    "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping"
-    #)
-    #gfa = "assembly_graph_after_simplification.gfa"
-    #hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics_39.txt"
-    #hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics.txt"
-    # print(components_from_gfa(gfa))
-    # gfa = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/assembly_graph_with_scaffolds.gfa"
-    # hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/hmm_statistics.txt"
-
-    # print(matched_edges_from_hmm(hmm_stat))
-
-    #for c in filter_components_hmm(gfa, hmm_stat):
-    #    print(c)
+def main(): ...
 
 
 if __name__ == "__main__":
