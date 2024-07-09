@@ -167,21 +167,23 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
     :return: a dict with edge id as key and hmm id as value.
     """
     with Path(hmm_stat_file).open() as file:
-        lines = list(file.readlines())
+        lines = file.readlines()
 
     def filter_subgraphs(list_BGS: list[BGC_candidate]) -> list[BGC_candidate]:
         target = list_BGS[0]
         paths = target.get_paths()
         filtered_subgraphs = [target]
+        names = [target.get_subgraph()]
         stack = list_BGS[1:]
         while stack:
             target = stack[0]
             path = target.get_paths()
             for p in path:
                 if p not in paths:
-                    path.append(p)
-                    filtered_subgraphs.append(target)
-                    break
+                    paths.append(p)
+                    if (name := target.get_subgraph()) not in names:
+                        names.append(name)
+                        filtered_subgraphs.append(target)
             stack = stack[1:]
         return filtered_subgraphs
 
@@ -343,22 +345,22 @@ def split_into_components(
 
 def main():
     ...
-    #import os
-
-    #os.chdir(
-    #    "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping"
-    #)
-    #gfa = "assembly_graph_after_simplification.gfa"
-    #hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics_39.txt"
-    #hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics.txt"
-    # print(components_from_gfa(gfa))
-    # gfa = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/assembly_graph_with_scaffolds.gfa"
-    # hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/hmm_statistics.txt"
-
+    # import os
+    #
+    # os.chdir(
+    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping"
+    # )
+    # gfa = "assembly_graph_after_simplification.gfa"
+    # hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics_39.txt"
+    # hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/hmm_statistics.txt"
+    # # print(components_from_gfa(gfa))
+    # # gfa = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/assembly_graph_with_scaffolds.gfa"
+    # # hmm_stat = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/mapping/test_hard/hmm_statistics.txt"
+    #
     # print(matched_edges_from_hmm(hmm_stat))
-
-    #for c in filter_components_hmm(gfa, hmm_stat):
-    #    print(c)
+    #
+    # for c in filter_components_hmm(gfa, hmm_stat):
+    #     print(c)
 
 
 if __name__ == "__main__":
