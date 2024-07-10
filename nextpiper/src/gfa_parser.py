@@ -174,9 +174,9 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
         paths = target.get_paths()
         filtered_subgraphs = [target]
         names = [target.get_subgraph()]
-        stack = list_BGS[1:]
-        while stack:
-            target = stack[0]
+        queue = list_BGS[1:]
+        while queue:
+            target = queue[0]
             path = target.get_paths()
             for p in path:
                 if p not in paths:
@@ -184,7 +184,7 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
                     if (name := target.get_subgraph()) not in names:
                         names.append(name)
                         filtered_subgraphs.append(target)
-            stack = stack[1:]
+            queue = queue[1:]
         return filtered_subgraphs
 
     bgc_candidates = []
