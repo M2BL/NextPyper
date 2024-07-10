@@ -335,7 +335,7 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
 
         # Now Populate the different components with the corresponding Paths
         for name, comp in comp_dict.items():
-            for i, path in enumerate(comp.paths):
+            for i, path in enumerate(comp.paths, 1):
                 path_name = f"{name}_p{i}"
                 p_line = "\t".join(["P", path_name, path, "*"]) + "\n"
                 comp_lines[name].append(p_line)
