@@ -272,12 +272,10 @@ def filter_components_hmm(
     return all_components
 
 
-def split_into_components(
-    gfa_path: Path, components: list[Component], outdir: Path
-) -> None:
+def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -> None:
     """Given an assembly graph and a list of components, look for the components in the graph
-    and write them separately in the output directory specified. The componenets are grouped by
-    hmm so that the structure of the output directory is: <outdir>/<hmm>/<component_i>.gfa .
+    group them by hmm and write them together in the output directory specified. The structure
+    of the output directory is: <outdir>/<hmm>.gfa.
 
     :param gfa_path: path to assembly graph to split.
     :param components: list of components to find in the graph.
@@ -310,10 +308,12 @@ def split_into_components(
                     header = line
                 case "S":
                     nodes = line.split()[1:2]
-                case "L" | "J":
+                case "L":
                     nodes = list(linked_nodes(line.split()))
                 case "P":
                     nodes = [node.rstrip("-+") for node in line.split()[2].split(",")]
+                case "J":
+                    continue
                 case _:
                     raise NotImplementedError(f"ERROR: found line of type {line[0]}")
 
@@ -341,13 +341,17 @@ def split_into_components(
                 comp_lines[name].append(p_line)
 
         # Now write the multiple files for the found components.
+        get_hmm = lambda x: x[0][: x[0].rfind("_")]
+        score_line = lambda line: 0 if line[0] == "S" else 1 if line[0] == "L" else 2
+
         outdir.mkdir(exist_ok=True, parents=True)
-        for comp, lines in comp_lines.items():
-            probe = comp[: comp.rfind("_")]
-            (outdir / probe).mkdir(exist_ok=True, parents=True)
-            with (outdir / probe / f"{comp}.gfa").open("w") as out_comp:
+        for hmm, group in groupby(sorted(comp_lines.items(), key=get_hmm), key=get_hmm):
+            _, lines = zip(*group)
+            with (outdir / f"{hmm}.gfa").open("w") as out_comp:
                 out_comp.write(header)
-                out_comp.write("".join(lines))
+                out_comp.write(
+                    "".join(sorted(chain.from_iterable(lines), key=score_line))
+                )
 
 
 def main(): ...
