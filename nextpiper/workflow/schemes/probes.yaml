@@ -1,0 +1,12 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+description: Probe naming schema definition
+type: object
+properties:
+  probe_name:
+    type: string
+    format: uri
+    pattern: "(^[A-Za-z0-9_]+$)"
+    description: Probe name (AlphaNumeric; the only special character allowed is '_')
+  
+required:
+  - probe_name

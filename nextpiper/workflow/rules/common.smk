@@ -43,8 +43,12 @@ cols = ["sample_name", "path_forward", "path_reverse"]
 SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)
 validate(SAMPLE_TABLE, schema="../schemes/sample_table.yaml")
 
-# Make useful structures for the inputs
+# Validate probe names
 probes_list = [probe.name for probe in SeqIO.parse(probes, "fasta")]
+PROBES = pd.DataFrame({"probe_name": probes_list})
+validate(PROBES, schema="../schemes/probes.yaml")
+
+# Make useful structures for the inputs
 sample_dict = SAMPLE_TABLE.set_index("sample_name").T.to_dict()
 sample_list = list(sample_dict)
 
