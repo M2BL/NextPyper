@@ -23,7 +23,7 @@ rule build_hmms:
     log:
         outdir / "logs/HMM/build/{probe}/{probe}_{cluster}.log",
     run:
-        hmm_build(Path(input[0]), Path(output.prof))
+        hmm_build(Path(input[0]), Path(output.prof), "amino")
         hmm_consensus(Path(output.prof), Path(output.consensus))
 
 

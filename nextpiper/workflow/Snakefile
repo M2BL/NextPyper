@@ -22,9 +22,9 @@ include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.3_probe_guided_
 # include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.1_assembly_spades.smk")
 include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.2_prefix_assemblies.smk")
 include: os.path.join(workflow.basedir, "rules", "4_clustering", "4.1_merging_and_clustering.smk")
-# include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.1_clusters_alignment.smk")
-# include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.2_alignment_postprocessing.smk")
-# include: os.path.join(workflow.basedir, "rules", "6_HMMs", "6.1_hmm_profile_building.smk")
+include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.1_clusters_alignment.smk")
+include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.2_alignment_postprocessing.smk")
+include: os.path.join(workflow.basedir, "rules", "6_HMMs", "6.1_hmm_profile_building.smk")
 
 
 # Target rules
