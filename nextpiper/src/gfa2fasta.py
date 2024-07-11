@@ -55,18 +55,18 @@ def parse_sline(s_line: str) -> Segment:
     return Segment(name, Seq(seq))
 
 
-def get_seq(node: str, segments: dict[str, Segment]) -> Seq:
-    seg = segments[node[:-1]]
-    return seg.seq.reverse_complement() if node.endswith("-") else seg.seq
+def get_seq(edge: str, segments: dict[str, Segment]) -> Seq:
+    seg = segments[edge[:-1]]
+    return seg.seq.reverse_complement() if edge.endswith("-") else seg.seq
 
 
-def link_nodes(node1: str, node2: str, segments: dict[str, Segment], ovlp: int) -> Seq:
-    return get_seq(node1, segments) + get_seq(node2, segments)[ovlp:]
+def link_edges(seq1: Seq, seq2: Seq, ovlp: int) -> Seq:
+    return seq1 + seq2[ovlp:]
 
 
 def get_path_sequence(
     path: SeqPath, segments: dict[str, Segment], ovlp: int | None = None
-):
+) -> Seq:
     """Given a Path encoded in a p_line return the Sequence given by that path
     taken from the corresponding segments (encoded in the s_lines).
 
@@ -75,12 +75,12 @@ def get_path_sequence(
     sequence.
     """
 
-    plink_nodes = partial(link_nodes, segments=segments, ovlp=ovlp)
+    plink_edges = partial(link_edges, ovlp=ovlp)
 
     return (
         get_seq(path.path[0], segments)
         if len(path.path) == 1
-        else reduce(plink_nodes, path.path)
+        else reduce(plink_edges, (get_seq(piece, segments) for piece in path.path))
     )
 
 

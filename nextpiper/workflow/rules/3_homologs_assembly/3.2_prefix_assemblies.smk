@@ -1,33 +1,47 @@
 from prefix_seqs import prefix_fasta, prefix_gfa
+from gfa2fasta import paths2fasta
 
 targets.append(outdir / "logs/dones/prefixing.done")
 
 
-rule prefix_assemblies:
+def get_graph_components(wildcards):
+    w = wildcards
+    checkpoint_output = checkpoints.split_graph_into_hmms.get(
+        sample=wildcards.sample
+    ).output[0]
+    return Path(checkpoint_output) / f"{w.probe}.gfa"
+
+
+rule prefix_components:
     input:
-        contigs=outdir / "assembled/spades/{sample}/{probe}/contigs.fasta",
-        gfa=outdir
-        / "assembled/spades/{sample}/{probe}/assembly_graph_with_scaffolds.gfa",
+        get_graph_components,
     output:
-        contigs=outdir / "assembled/prefixed/{sample}/{probe}/contigs.fasta",
-        gfa=outdir
-        / "assembled/prefixed/{sample}/{probe}/assembly_graph_with_scaffolds.gfa",
-    log:
-        outdir / "logs/assembled/spades/prefixing/{sample}/{probe}.log",
-    threads: 1
+        outdir / "assembled/prefixed/component_graphs/{sample}/{probe}.gfa",
     run:
-        prefix = f"{wildcards.sample}-{wildcards.probe}-"
-        prefix_fasta(input.contigs, output.contigs, prefix)
-        prefix_gfa(input.gfa, output.gfa, prefix)
+        prefix = f"{wildcards.sample}-"
+        prefix_gfa(input[0], output[0], prefix)
+
+
+rule make_path_seqs:
+    input:
+        outdir / "assembled/prefixed/component_graphs/{sample}/{probe}.gfa",
+    output:
+        outdir / "assembled/prefixed/component_seqs/{sample}/{probe}.fasta",
+    run:
+        paths2fasta(Path(input[0]), Path(output[0]))
 
 
 ## See Rule 3.1 for further explanation
 def aggregate_pref(wildcards):
-    checkpoint_output = checkpoints.distribute_reads.get(**wildcards).output[0]
+    checkpoint_output = checkpoints.split_graph_into_hmms.get(
+        sample=wildcards.sample
+    ).output[0]
+    global_match = glob_wildcards(Path(checkpoint_output) / "{probe}.gfa")
+    # print(global_match)
     return expand(
-        outdir / "assembled/prefixed/{sample}/{probe}/contigs.fasta",
-        sample=wildcards.sample,
-        probe=glob_wildcards(os.path.join(checkpoint_output, "{probe}.bam")).probe,
+        outdir
+        / f"assembled/prefixed/component_seqs/{wildcards.sample}/{{probe}}.fasta",
+        probe=global_match.probe,
     )
 
 
