@@ -2,9 +2,7 @@ from pathlib import Path
 from Bio import SeqIO
 from contig_cluster import HDBcluster
 
-graph_dir = outdir / Path(
-    "assembled/simplyfied" if graph_simplification else "assembled/prefixed"
-)
+graph_dir = outdir / Path("assembled/prefixed/component_seqs/")
 
 
 targets.append(expand(outdir / "clustering/clusters/{probes}", probes=probes_list))
@@ -13,26 +11,12 @@ targets.append(expand(outdir / "clustering/clusters/{probes}", probes=probes_lis
 # This would certainly happen in real life cases.
 
 
-checkpoint split_probes:
-    input:
-        probes=outdir / "translated_probes/longest_cds.fasta",
-    output:
-        expand(outdir / "clustering/split_probes/{probe}.fasta", probe=probes_list),
-    run:
-        split_dir = Path(output[0]).parent
-        split_dir.mkdir(exist_ok=True, parents=True)
-        for probe, outfile in zip(SeqIO.parse(input.probes, "fasta"), output):
-            SeqIO.write(probe, outfile, "fasta")
-
-
 def union_probes(wildcards):
-    glob_match = glob_wildcards(
-        graph_dir / f"{{sample}}/{wildcards.probe}/contigs.fasta"
-    )
+    glob_match = glob_wildcards(graph_dir / f"{{sample}}/{wildcards.probe}.fasta")
+
     return expand(
-        graph_dir / "{sample}/{probe}/contigs.fasta",
+        graph_dir / f"{{sample}}/{wildcards.probe}.fasta",
         sample=glob_match.sample,
-        probe=wildcards.probe,
     )
 
 
@@ -48,7 +32,7 @@ rule merge_asms:
 
 checkpoint clustering:
     input:
-        probes=outdir / "clustering/split_probes/{probe}.fasta",
+        probes=outdir / "translated_probes/split_probes/{probe}.fasta",
         contigs=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
         directory(outdir / "clustering/clusters/{probe}"),
