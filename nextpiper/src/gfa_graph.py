@@ -101,7 +101,7 @@ class Assembly_graph:
                         raise NotImplementedError(
                             f"ERROR: found line of type {line[0]}"
                         )
-    def link_edges(self, list[Read]) -> Self:
+    def link_edges(self, links:list[Read]) -> Self:
         return self
 
     def retrieve_path(self, start: int, end: int, path: list[oriented_edge]) -> Seq:
