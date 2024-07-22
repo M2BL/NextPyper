@@ -7,7 +7,7 @@
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
 #       All rights reserved.
-"""
+""" ## ToDo: Change module docstring
 Functions and classes for parsing the gfa of assembly graphs produced by SPAdes with the --custom-hmms flag.
 HMM profiles for probes have been used during the assembly, so that the 'hmm_statistics.txt' file from SPAdes
 contains the graph edges that have a hmm match.
@@ -50,7 +50,7 @@ class EdgeAln:
 
     @property
     def tend(self) -> int:
-        return self.tstart + self.tlen
+        return self.target_start + self.target_len
 
     @property
     def identity(self) -> float: ...
