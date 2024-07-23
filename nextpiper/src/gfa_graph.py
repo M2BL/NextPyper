@@ -19,12 +19,12 @@ __version__ = "0.1"
 # =======================================================================================
 from collections import defaultdict
 from dataclasses import dataclass, field
-from operator import itemgetter, attrgetter
-from itertools import chain, groupby
 from pathlib import Path
-from typing import Self
+from typing import Self, Literal
+import sys
 
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from graph_alns_parser import Read, oriented_edge
 from gfa2fasta import SeqPath
@@ -35,6 +35,16 @@ from gfa2fasta import SeqPath
 # =============================================================================
 
 LinkSupport = dict[tuple[str], int]
+
+
+@dataclass(frozen=True)
+class Path_on_graph:
+    start: int
+    end: int
+    edges: list[oriented_edge]
+
+    def get_parameters(self):
+        return self.edges, self.start, self.end
 
 
 @dataclass
@@ -59,8 +69,11 @@ class Edge:
     def get_length(self) -> int:
         return len(self.seq)
 
-    def retrieve_seq(self, start, end) -> Seq:
-        return self.seq[start:end]
+    def retrieve_seq(self, start: int, end: int, orientation: Literal["+", "-"]) -> Seq:
+        tmp_seq = self.seq[start:end]
+        if orientation == "+":
+            return tmp_seq
+        return tmp_seq.reverse_complement()
 
 
 @dataclass
@@ -136,7 +149,58 @@ class Assembly_graph:
             if path_edges.issuperset(set(link))
         }
 
-    def retrieve_path(self, start: int, end: int, path: list[oriented_edge]) -> Seq: ...
+    def _retrieve_path(
+        self,
+        path: list[oriented_edge],
+        start: int = 0,
+        end: int = -1,
+        extension: str = "",
+        first_edge: bool = True,
+    ) -> Seq:
+        """
+
+        :param path:
+        :param start:
+        :param end:
+        :param extension:
+        :param first_edge:
+        :return:
+        """
+        id = path[0][0]
+        orientation = path[0][1]
+        if len(path) == 1:
+            if (edge := self.edge_dict[id]) is not None:
+                if first_edge:
+                    extension += edge.retrieve_seq(start, end, orientation)
+                else:
+                    extension += edge.retrieve_seq(0, end, orientation)[self.K :]
+                return extension
+            else:
+                sys.exit(f"failed to find edge in graph {path}")
+
+        else:
+            if (edge := self.edge_dict[id]) is not None:
+                if first_edge:
+                    extension += edge.retrieve_seq(start, -1, orientation)
+                else:
+                    extension += edge.retrieve_seq(0, -1, orientation)[self.K :]
+                return self._retrieve_path(path[1:], start, end, extension, False)
+            else:
+                sys.exit(f"failed to find edge in graph {path}")
+
+    def retrieve_path(self, name: str, edge_paths: Path_on_graph) -> SeqRecord:
+        """
+        Retrieve the sequence corresponding to a graph transversoal.
+        :param name: Name of the sequence, should correspond to the name of the consensus sequence or hmm profile.
+        :param edge_paths: Path_on_graph object
+        :return:
+        """
+        return SeqRecord(
+            seq=self._retrieve_path(*edge_paths.get_parameters()),
+            id=name,
+            description="",
+            name="",
+        )
 
 
 # =============================================================================
@@ -150,8 +214,15 @@ def main():
     os.chdir(
         "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/spades/carinata/gold_standard_B_carinata_200_with_hmm_probe"
     )
-    AG = Assembly_graph("assembly_graph_after_simplification.gfa")
-    print(AG)
+    # AG = Assembly_graph("assembly_graph_after_simplification.gfa")
+    AG = Assembly_graph(
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/spades/carinata/gold_standard_B_carinata_200_with_hmm_probe/assembly_graph_after_simplification.gfa"
+    )
+
+    # print(AG)
+    edge_paths = Path_on_graph(0, 10, [("87", "-"), ("13801", "+"), ("6873", "+")])
+    # edge_paths = Path_on_graph(0, 10, [("87", "-")])
+    print(AG.retrieve_path("popol", edge_paths))
 
 
 if __name__ == "__main__":
