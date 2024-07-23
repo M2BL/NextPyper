@@ -36,7 +36,7 @@ from Bio.Seq import Seq
 
 
 class Segment(NamedTuple):
-    name: str
+    id: str
     seq: Seq
 
 
