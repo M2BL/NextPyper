@@ -17,23 +17,26 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from dataclasses import dataclass, field
 from operator import itemgetter, attrgetter
 from itertools import chain, groupby
 from pathlib import Path
-from typing import Self, NewType, List, Dict, Tuple, Optional, Literal
+from typing import Self
 
 from Bio.Seq import Seq
 
-from graph_alns_parser import Read
-
-oriented_edge = ("oriented_edge", tuple[str, Literal["+", "-"]])
+from graph_alns_parser import Read, oriented_edge
+from gfa2fasta import SeqPath
 
 
 # =============================================================================
 #                CLASSES
 # =============================================================================
+
+LinkSupport = dict[tuple[str], int]
+
+
 @dataclass
 class Edge:
     id: str
@@ -68,7 +71,9 @@ class Assembly_graph:
     graph: dict[oriented_edge, list[oriented_edge]] = field(
         default_factory=lambda: defaultdict(list), init=False
     )
-    linked_edges: dict[tuple[str], int] = field(default_factory=lambda: defaultdict(int), init=False)
+    linked_edges: LinkSupport = field(
+        default_factory=lambda: defaultdict(int), init=False
+    )
     rev = {"+": "-", "-": "+"}
 
     def __post_init__(self):
@@ -101,11 +106,37 @@ class Assembly_graph:
                         raise NotImplementedError(
                             f"ERROR: found line of type {line[0]}"
                         )
-    def link_edges(self, list[Read]) -> Self:
+
+    def link_edges(self, reads: list[Read]) -> Self:
+        """Given a list of paired reads, compute the link support that those pairs
+        exhibit. Each pair that connects a composition of edges is added as a
+        supported link, increasing its count in the dictionary. Compositions of
+        a single edge are not taken into account.
+        """
+
+        get_edges = lambda frags: (frag.edge.edge_id for frag in frags)
+
+        for read in reads:
+            edges = get_edges(read.fragments + read.mate.fragments)
+            if len(unique_edges := set(edges)) > 1:
+                self.linked_edges[tuple(sorted(unique_edges))] += 1
+
         return self
 
-    def retrieve_path(self, start: int, end: int, path: list[oriented_edge]) -> Seq:
-        ...
+    def path_support(self, path: SeqPath) -> LinkSupport:
+        "Return the links support that are congruent with the given path."
+
+        if not self.linked_edges:
+            raise ValueError("No link information in the graph to evaluate path.")
+
+        path_edges = {edge[:-1] for edge in path.path}
+        return {
+            link: support
+            for link, support in self.linked_edges.items()
+            if path_edges.issuperset(set(link))
+        }
+
+    def retrieve_path(self, start: int, end: int, path: list[oriented_edge]) -> Seq: ...
 
 
 # =============================================================================
