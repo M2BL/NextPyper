@@ -102,7 +102,7 @@ class BGC_candidate:
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class Component:
     """
     Data structure for the components from the assembly graph that have a match with the probes HMMs.
