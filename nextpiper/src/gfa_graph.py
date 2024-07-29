@@ -220,20 +220,7 @@ class Assembly_graph:
 
 
 def main():
-    import os
-
-    os.chdir(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/spades/carinata/gold_standard_B_carinata_200_with_hmm_probe"
-    )
-    # AG = Assembly_graph("assembly_graph_after_simplification.gfa")
-    AG = Assembly_graph(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/spades/carinata/gold_standard_B_carinata_200_with_hmm_probe/assembly_graph_after_simplification.gfa"
-    )
-
-    # print(AG)
-    edge_paths = Path_on_graph(0, 10, [("87", "-"), ("13801", "+"), ("6873", "+")])
-    # edge_paths = Path_on_graph(0, 10, [("87", "-")])
-    print(AG.retrieve_path("popol", edge_paths))
+    ...
 
 
 if __name__ == "__main__":
