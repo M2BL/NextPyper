@@ -64,6 +64,7 @@ def link_edges(seq1: Seq, seq2: Seq, ovlp: int) -> Seq:
     return seq1 + seq2[ovlp:]
 
 # add docstring for the attributes
+# change 'ovlp' to 'K' for consistency with the 'gfa_gaph' module.
 def get_path_sequence(
     path: SeqPath, segments: dict[str, Segment], ovlp: int | None = None
 ) -> Seq:
@@ -84,6 +85,9 @@ def get_path_sequence(
     )
 
 # change name to path_to_fasta
+# are you sure 'gfa' should be a Path object and not a string? It would be better to create the Path object in the function
+# to avoid issues in SnakeMake.
+# change 'ovlp' to 'K' for consistency with the 'gfa_gaph' module.
 def paths2fasta(gfa: Path, out_fasta: Path) -> None:
     """Given a gfa file, write sequences encoded in its P lines
     to the given outfile path in fasta format."""
@@ -91,7 +95,7 @@ def paths2fasta(gfa: Path, out_fasta: Path) -> None:
     s_lines = []
     p_lines = []
     ovlp = None
-
+    assert gfa.exists(), f"Graph file {gfa} not found"
     with gfa.open() as file:
         for line in file:
             match line[0]:
