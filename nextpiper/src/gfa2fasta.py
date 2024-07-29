@@ -34,12 +34,12 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-
+# add docstring
 class Segment(NamedTuple):
     id: str
     seq: Seq
 
-
+# add docstring
 class SeqPath(NamedTuple):
     name: str
     path: tuple[str, ...]
@@ -54,16 +54,16 @@ def parse_sline(s_line: str) -> Segment:
     _, name, seq, *_ = s_line.split()
     return Segment(name, Seq(seq))
 
-
+# add docstring
 def get_seq(edge: str, segments: dict[str, Segment]) -> Seq:
     seg = segments[edge[:-1]]
     return seg.seq.reverse_complement() if edge.endswith("-") else seg.seq
 
-
+# add docstring
 def link_edges(seq1: Seq, seq2: Seq, ovlp: int) -> Seq:
     return seq1 + seq2[ovlp:]
 
-
+# add docstring for the attributes
 def get_path_sequence(
     path: SeqPath, segments: dict[str, Segment], ovlp: int | None = None
 ) -> Seq:
@@ -71,7 +71,7 @@ def get_path_sequence(
     taken from the corresponding segments (encoded in the s_lines).
 
     If ovlp is given, the graph is assumned to have overlaps of the given size
-    between its segments, and hence it will be accounted for to reconstruct the
+    between its segments, and hence it will be accounted for when reconstructing the
     sequence.
     """
 
@@ -83,7 +83,7 @@ def get_path_sequence(
         else reduce(plink_edges, (get_seq(piece, segments) for piece in path.path))
     )
 
-
+# change name to path_to_fasta
 def paths2fasta(gfa: Path, out_fasta: Path) -> None:
     """Given a gfa file, write sequences encoded in its P lines
     to the given outfile path in fasta format."""
