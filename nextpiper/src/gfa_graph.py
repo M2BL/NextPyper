@@ -31,10 +31,6 @@ from Bio.SeqRecord import SeqRecord
 from graph_alns_parser import Read, OrientedEdge
 from gfa2fasta import SeqPath
 
-# ToDo: This type is still used for the edges dictionary used in the Assembly_graph
-# ToDo: which uses regular tuples. Should those be replaced by the NamedTuple version?
-oriented_edge = NewType("oriented_edge", tuple[str, Literal["+", "-"]])
-
 
 # =============================================================================
 #                CLASSES
@@ -118,7 +114,7 @@ class Assembly_graph:
     gfa_filename: str
     K: int = field(init=False)
     edge_dict: dict[str, Edge] = field(default_factory=dict, init=False)
-    graph: dict[oriented_edge, list[oriented_edge]] = field(
+    graph: dict[OrientedEdge, list[OrientedEdge]] = field(
         default_factory=lambda: defaultdict(list), init=False
     )
     linked_edges: LinkSupport = field(
@@ -173,13 +169,13 @@ class Assembly_graph:
 
         return self
 
-    def path_support(self, path: SeqPath) -> LinkSupport:
+    def path_support(self, path: Path_on_graph) -> LinkSupport:
         "Return the links support that are congruent with the given path."
 
         if not self.linked_edges:
             raise ValueError("No link information in the graph to evaluate path.")
 
-        path_edges = {edge[:-1] for edge in path.path}
+        path_edges = {edge.id for edge in path.edges}
         return {
             link: support
             for link, support in self.linked_edges.items()

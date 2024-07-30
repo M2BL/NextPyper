@@ -34,10 +34,12 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
+
 # add docstring
 class Segment(NamedTuple):
     id: str
     seq: Seq
+
 
 # add docstring
 class SeqPath(NamedTuple):
@@ -54,29 +56,31 @@ def parse_sline(s_line: str) -> Segment:
     _, name, seq, *_ = s_line.split()
     return Segment(name, Seq(seq))
 
+
 # add docstring
 def get_seq(edge: str, segments: dict[str, Segment]) -> Seq:
     seg = segments[edge[:-1]]
     return seg.seq.reverse_complement() if edge.endswith("-") else seg.seq
 
+
 # add docstring
-def link_edges(seq1: Seq, seq2: Seq, ovlp: int) -> Seq:
-    return seq1 + seq2[ovlp:]
+def link_edges(seq1: Seq, seq2: Seq, K: int) -> Seq:
+    return seq1 + seq2[K:]
+
 
 # add docstring for the attributes
-# change 'ovlp' to 'K' for consistency with the 'gfa_gaph' module.
 def get_path_sequence(
-    path: SeqPath, segments: dict[str, Segment], ovlp: int | None = None
+    path: SeqPath, segments: dict[str, Segment], K: int | None = None
 ) -> Seq:
     """Given a Path encoded in a p_line return the Sequence given by that path
     taken from the corresponding segments (encoded in the s_lines).
 
-    If ovlp is given, the graph is assumned to have overlaps of the given size
+    If K is given, the graph is assumed to have overlaps of the given size
     between its segments, and hence it will be accounted for when reconstructing the
     sequence.
     """
 
-    plink_edges = partial(link_edges, ovlp=ovlp)
+    plink_edges = partial(link_edges, K=K)
 
     return (
         get_seq(path.path[0], segments)
@@ -84,17 +88,17 @@ def get_path_sequence(
         else reduce(plink_edges, (get_seq(piece, segments) for piece in path.path))
     )
 
+
 # change name to path_to_fasta
 # are you sure 'gfa' should be a Path object and not a string? It would be better to create the Path object in the function
 # to avoid issues in SnakeMake.
-# change 'ovlp' to 'K' for consistency with the 'gfa_gaph' module.
 def paths2fasta(gfa: Path, out_fasta: Path) -> None:
     """Given a gfa file, write sequences encoded in its P lines
     to the given outfile path in fasta format."""
 
     s_lines = []
     p_lines = []
-    ovlp = None
+    K = None
     assert gfa.exists(), f"Graph file {gfa} not found"
     with gfa.open() as file:
         for line in file:
@@ -102,18 +106,18 @@ def paths2fasta(gfa: Path, out_fasta: Path) -> None:
                 case "S":
                     s_lines.append(line)
                 case "L":
-                    if not ovlp:
-                        ovlp = int(line.split()[5].rstrip("M"))
+                    if not K:
+                        K = int(line.split()[5].rstrip("M"))
                 case "P":
                     p_lines.append(line)
                 case _:
                     continue
 
-    segments = {seg.name: seg for line in s_lines if (seg := parse_sline(line))}
+    segments = {seg.id: seg for line in s_lines if (seg := parse_sline(line))}
     paths = [parse_pline(line) for line in p_lines]
     reqs_gen = (
         SeqRecord(
-            seq=get_path_sequence(path, segments, ovlp),
+            seq=get_path_sequence(path, segments, K),
             id=path.name,
             name="",
             description="",
