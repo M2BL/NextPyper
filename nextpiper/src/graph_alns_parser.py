@@ -33,14 +33,14 @@ from operator import itemgetter
 from itertools import groupby
 from pathlib import Path
 
-oriented_edge = namedtuple("oriented_edge", ("edge_id", "orientation"))
+OrientedEdge = namedtuple("OrientedEdge", ("id", "orientation"))
 
 
 @dataclass
 class EdgeAln:
 
     name: str
-    edge: oriented_edge
+    edge: OrientedEdge
     query_start: int
     query_len: int
     target_start: int
@@ -62,7 +62,7 @@ class EdgeAln:
     def from_line(cls, line: str) -> "EdgeAln":
         get_fields = itemgetter(1, 6, 10, 3, 4, 7, 8)
         fname, edge, cigar, *coords = get_fields(line.split())
-        edge = oriented_edge(edge[:-1], edge[-1])
+        edge = OrientedEdge(edge[:-1], edge[-1])
 
         return cls(fname, edge, *list(map(int, coords)), cigar)
 
