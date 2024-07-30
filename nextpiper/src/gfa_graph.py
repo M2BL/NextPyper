@@ -17,18 +17,17 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from dataclasses import dataclass, field
-from operator import itemgetter, attrgetter
-from itertools import chain, groupby
 from pathlib import Path
-from typing import Self, NewType, List, Dict, Tuple, Optional, Literal
+from typing import Self, NewType, Literal, Optional, Tuple
 import sys
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from graph_alns_parser import Read
+from graph_alns_parser import Read, oriented_edge
+from gfa2fasta import SeqPath
 
 oriented_edge = NewType("oriented_edge", tuple[str, Literal["+", "-"]])
 
@@ -36,7 +35,10 @@ oriented_edge = NewType("oriented_edge", tuple[str, Literal["+", "-"]])
 # =============================================================================
 #                CLASSES
 # =============================================================================
-@dataclass(frozen=True)
+LinkSupport = dict[tuple[str], int]
+
+
+@dataclass(slots=True)
 class Path_on_graph:
     """
         Encodes the path on the graph matching either a sequence (SPAligner) or a hmm profile (PathRacer).
@@ -45,14 +47,18 @@ class Path_on_graph:
     -start: coordinate of the starting position on the first edge.
     -end: coordinate of the ending position on the last edge.
     -edges: list of 'oriented_edge' tuples.
+    -length: length of the path on the graph.
+    -score: blast score computed from the cigar.
     """
 
     start: int
     end: int
     edges: list[oriented_edge]
+    length: Optional[int] = field(default=None)
+    score: Optional[int] = field(default=None)
 
     def get_parameters(self):
-        return self.edges, self.start, self.end
+        return self.edges, self.start, self.end, self.length, self.score
 
 
 @dataclass
@@ -110,7 +116,7 @@ class Assembly_graph:
     -K: k-mer used during SPAdes assembly (edge overlap value).
     -edge_dict: edge number mapping to their respective Edge objects. Used for sequence retrieval.
     -graph: encoding of the graph structure, with an edge mapping.
-        Each node represented symmetrically as (1,+)->(2,+) and (2,-)->(1,-).
+        Each node represented symmetrically as (1,+)->[(2,+),(3,+)] and (2,-)->[(1,-)].
     -linked_edges: information about non-adjacent edges, that are connected through mate-reads.
     ----------
     """
@@ -121,7 +127,7 @@ class Assembly_graph:
     graph: dict[oriented_edge, list[oriented_edge]] = field(
         default_factory=lambda: defaultdict(list), init=False
     )
-    linked_edges: dict[tuple[str], int] = field(
+    linked_edges: LinkSupport = field(
         default_factory=lambda: defaultdict(int), init=False
     )
     rev = {"+": "-", "-": "+"}
@@ -157,8 +163,34 @@ class Assembly_graph:
                             f"ERROR: found line of type {line[0]}"
                         )
 
-    def link_edges(self, links: list[Read]) -> Self:
+    def link_edges(self, reads: list[Read]) -> Self:
+        """Given a list of paired reads, compute the link support that those pairs
+        exhibit. Each pair that connects a composition of edges is added as a
+        supported link, increasing its count in the dictionary. Compositions of
+        a single edge are not taken into account.
+        """
+
+        get_edges = lambda frags: (frag.edge.edge_id for frag in frags)
+
+        for read in reads:
+            edges = get_edges(read.fragments + read.mate.fragments)
+            if len(unique_edges := set(edges)) > 1:
+                self.linked_edges[tuple(sorted(unique_edges))] += 1
+
         return self
+
+    def path_support(self, path: SeqPath) -> LinkSupport:
+        "Return the links support that are congruent with the given path."
+
+        if not self.linked_edges:
+            raise ValueError("No link information in the graph to evaluate path.")
+
+        path_edges = {edge[:-1] for edge in path.path}
+        return {
+            link: support
+            for link, support in self.linked_edges.items()
+            if path_edges.issuperset(set(link))
+        }
 
     def _retrieve_path(
         self,
@@ -207,7 +239,7 @@ class Assembly_graph:
         :return:
         """
         return SeqRecord(
-            seq=self._retrieve_path(*edge_paths.get_parameters()),
+            seq=self._retrieve_path(*edge_paths.get_parameters()[:3]),
             id=name,
             description="",
             name="",
@@ -221,7 +253,6 @@ class Assembly_graph:
 
 def main():
     ...
-
 
 if __name__ == "__main__":
     main()
