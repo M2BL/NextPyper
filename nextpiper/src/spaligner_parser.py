@@ -19,16 +19,15 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 from dataclasses import dataclass, field
+from itertools import groupby
 from pathlib import Path
 from typing import Self
 
 from gfa_graph import Path_on_graph
-
+from graph_alns_parser import OrientedEdge
 # =============================================================================
 #                CLASSES
 # =============================================================================
-
-from itertools import groupby
 
 
 @dataclass
@@ -101,7 +100,7 @@ class Gpa_consensus:
         start = int(target[3])
         length = int(target[4])
         end = start + length
-        edges = [target[6]]
+        edges = [OrientedEdge(target[6][:-1], target[6][-1])]
         cigar = target[10]
         if not pile:
             new_path = Path_on_graph(
@@ -114,7 +113,7 @@ class Gpa_consensus:
             hit = target[2]
             end = int(target[3]) + int(target[4])
             if hit == current_hit:
-                edges.append(target[6])
+                edges.append(OrientedEdge(target[6][:-1], target[6][-1]))
                 length += int(target[4])
                 cigar += target[10]
             else:
@@ -125,7 +124,7 @@ class Gpa_consensus:
                 current_hit = hit
                 start = int(target[3])
                 length = int(target[4])
-                edges = [target[6]]
+                edges = [OrientedEdge(target[6][:-1], target[6][-1])]
                 cigar = target[10]
             pile = pile[1:]
             if not pile:
@@ -142,7 +141,12 @@ class Gpa_consensus:
 # =============================================================================
 #                FUNCTIONS
 # =============================================================================
-def main(): ...
+def main():
+    c = Cigar("299=1X109=1X5=1X66=1X328=1X311=1X47=1X1=1X210=1X210=")
+    gpa = Gpa_consensus(
+        "/home/yjkbertrand/programs/Short-Pair/spaliner_gpa/alignment.gpa"
+    )
+    print(gpa.get_matching_paths())
 
 
 if __name__ == "__main__":
