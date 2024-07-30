@@ -17,8 +17,10 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field
+from operator import itemgetter, attrgetter
+from itertools import chain, groupby
 from pathlib import Path
 from typing import Self, NewType, Literal, Optional, Tuple
 import sys
@@ -40,17 +42,6 @@ LinkSupport = dict[tuple[str], int]
 
 @dataclass(slots=True)
 class Path_on_graph:
-    """
-        Encodes the path on the graph matching either a sequence (SPAligner) or a hmm profile (PathRacer).
-    Attributes
-    ----------
-    -start: coordinate of the starting position on the first edge.
-    -end: coordinate of the ending position on the last edge.
-    -edges: list of 'oriented_edge' tuples.
-    -length: length of the path on the graph.
-    -score: blast score computed from the cigar.
-    """
-
     start: int
     end: int
     edges: list[oriented_edge]
@@ -251,8 +242,8 @@ class Assembly_graph:
 # =============================================================================
 
 
-def main():
-    ...
+def main(): ...
+
 
 if __name__ == "__main__":
     main()
