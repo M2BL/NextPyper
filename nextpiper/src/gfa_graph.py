@@ -164,7 +164,7 @@ class Assembly_graph:
         a single edge are not taken into account.
         """
 
-        get_edges = lambda frags: (frag.edge.edge_id for frag in frags)
+        get_edges = lambda frags: (frag.edge.id for frag in frags)
 
         for read in reads:
             edges = get_edges(read.fragments + read.mate.fragments)
