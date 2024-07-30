@@ -105,7 +105,7 @@ class Gpa_consensus:
         cigar = target[10]
         if not pile:
             new_path = Path_on_graph(
-                start, end, edges, length, Cigar(cigar).get_distance()
+                current_hit, start, end, edges, length, Cigar(cigar).get_distance()
             )
             self.matching_paths.append(new_path)
 
@@ -119,7 +119,7 @@ class Gpa_consensus:
                 cigar += target[10]
             else:
                 new_path = Path_on_graph(
-                    start, end, edges, length, Cigar(cigar).get_distance()
+                    current_hit, start, end, edges, length, Cigar(cigar).get_distance()
                 )
                 self.matching_paths.append(new_path)
                 current_hit = hit
@@ -130,7 +130,7 @@ class Gpa_consensus:
             pile = pile[1:]
             if not pile:
                 new_path = Path_on_graph(
-                    start, end, edges, length, Cigar(cigar).get_distance()
+                    current_hit, start, end, edges, length, Cigar(cigar).get_distance()
                 )
                 self.matching_paths.append(new_path)
         return self
@@ -142,8 +142,7 @@ class Gpa_consensus:
 # =============================================================================
 #                FUNCTIONS
 # =============================================================================
-def main():
-    ...
+def main(): ...
 
 
 if __name__ == "__main__":

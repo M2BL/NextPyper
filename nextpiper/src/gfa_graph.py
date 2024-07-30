@@ -42,6 +42,7 @@ LinkSupport = dict[tuple[str], int]
 
 @dataclass(slots=True)
 class Path_on_graph:
+    name: str
     start: int
     end: int
     edges: list[oriented_edge]
@@ -49,7 +50,7 @@ class Path_on_graph:
     score: Optional[int] = field(default=None)
 
     def get_parameters(self):
-        return self.edges, self.start, self.end, self.length, self.score
+        return self.name, self.edges, self.start, self.end, self.length, self.score
 
 
 @dataclass
@@ -222,16 +223,16 @@ class Assembly_graph:
             else:
                 sys.exit(f"failed to find edge in graph {path}")
 
-    def retrieve_path(self, name: str, edge_paths: Path_on_graph) -> SeqRecord:
+    def retrieve_path(self, path: Path_on_graph) -> SeqRecord:
         """
         Retrieve the sequence corresponding to a graph transversal.
         :param name: Name of the sequence, should correspond to the name of the consensus sequence or hmm profile.
-        :param edge_paths: Path_on_graph object
+        :param path: Path_on_graph object
         :return:
         """
         return SeqRecord(
-            seq=self._retrieve_path(*edge_paths.get_parameters()[:3]),
-            id=name,
+            seq=self._retrieve_path(*path.get_parameters()[1:4]),
+            id=path.name,
             description="",
             name="",
         )
