@@ -143,10 +143,7 @@ class Gpa_consensus:
 #                FUNCTIONS
 # =============================================================================
 def main():
-    c = Cigar("299=1X109=1X5=1X66=1X328=1X311=1X47=1X1=1X210=1X210=")
-    gpa = Gpa_consensus(
-        "/home/yjkbertrand/programs/Short-Pair/spaliner_gpa/alignment.gpa"
-    )
+    ...
 
 
 if __name__ == "__main__":
