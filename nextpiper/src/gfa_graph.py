@@ -148,6 +148,8 @@ class Assembly_graph:
                         self.graph[(node_id2, self.rev[pos2])].append(
                             (node_id1, self.rev[pos1])
                         )
+                    case "P":
+                        continue
                     case _:
                         raise NotImplementedError(
                             f"ERROR: found line of type {line[0]}"
@@ -214,9 +216,9 @@ class Assembly_graph:
         else:
             if (edge := self.edge_dict[id]) is not None:
                 if first_edge:
-                    extension += edge.retrieve_seq(start, -1, orientation)
+                    extension += edge.retrieve_seq(start, None, orientation)
                 else:
-                    extension += edge.retrieve_seq(0, -1, orientation)[self.K :]
+                    extension += edge.retrieve_seq(0, None, orientation)[self.K :]
                 return self._retrieve_path(path[1:], start, end, extension, False)
             else:
                 sys.exit(f"failed to find edge in graph {path}")
