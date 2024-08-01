@@ -354,7 +354,7 @@ class HDBcluster:
             return []
         # Case matching no clustering or low thresholds
         if set(self.distance_matrix.flatten()) == {0.0, 100.0}:
-            valid_cds = [name for name, cds in self.cds_dict.items() if cds.get_global_sim() > self.min_probe_contig_sim]
+            valid_cds = [name for name, cds in self.cds_dict.items() if cds.get_global_sim() >= self.min_probe_contig_sim]
             # case there are only unclustered sequences.
             if valid_cds:
                 self.clusters = [[x] for x in valid_cds]
