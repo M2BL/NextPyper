@@ -1,11 +1,9 @@
 from hmm_build import hmm_build
 
-targets.append(
-    expand(outdir / "translated_probes/probe_profiles/{probe}.hmm", probe=probes_list)
-)
+targets.append(outdir / "logs/dones/probe_hmms.done")
 
 
-checkpoint split_probes:
+rule split_probes:
     input:
         probes=outdir / "translated_probes/longest_cds.fasta",
     output:
@@ -28,3 +26,12 @@ rule build_probe_hmms:
         outdir / "logs/translated_probes/probe_profiles/{probe}.log",
     run:
         hmm_build(Path(input[0]), Path(output[0]), "amino")
+
+
+rule done_probe_hmms:
+    input:
+        chkpt=expand(
+            outdir / "translated_probes/probe_profiles/{probe}.hmm", probe=probes_list
+        ),
+    output:
+        done=touch(outdir / "logs/dones/probe_hmms.done"),
