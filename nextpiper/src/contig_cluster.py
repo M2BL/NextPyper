@@ -104,7 +104,6 @@ def run_miniprot(
     Wrapper for running miniprot.
     :return:
     """
-
     miniprot_cmd = f"miniprot -t{treads} --gff --aln --outn 1 --outs {min_similarity} --outc {min_coverage} {contig_path} {probe_path}".split()
 
     try:
@@ -346,15 +345,27 @@ class HDBcluster:
         # print(self.distance_matrix)
         # Case no Cds match the probe
         if all((cds.has_empty_cds() for cds in self.cds_dict.values())):
+            fill = textwrap.fill(
+                f"[Warning] There are no matches, between the probe and the contigs at similarity {self.min_probe_contig_sim=}.",
+                width=90,
+                subsequent_indent=" " * 11,
+            )
+            print(fill)
             return []
-        # Case matching below thresholds
+        # Case matching no clustering or low thresholds
         if set(self.distance_matrix.flatten()) == {0.0, 100.0}:
+            valid_cds = [name for name, cds in self.cds_dict.items() if cds.get_global_sim() >= self.min_probe_contig_sim]
+            # case there are only unclustered sequences.
+            if valid_cds:
+                self.clusters = [[x] for x in valid_cds]
+                return self
+            # report a warning about only paralogs
             global_sims = sorted(
-                [cds.get_global_sim() for cds in self.cds_dict.values()]
+                [cds.get_global_sim() for cds in self.cds_dict.values() if cds.get_global_sim() < self.min_probe_contig_sim]
             )
             fill = textwrap.fill(
                 "[Warning] There are matches, but they are not reported as they register as paralogs. "
-                f"There are {len(global_sims)} sequences that match the probe with similarities between {global_sims[0]} and {global_sims[1]}",
+                f"There are {len(global_sims)} sequences that match the probe with similarities between {global_sims[0]} and {global_sims[-1]}",
                 width=90,
                 subsequent_indent=" " * 11,
             )
@@ -410,7 +421,7 @@ class HDBcluster:
         if not self.clusters:
             print("No clusters found.")
             return
-        print(f"Saving clusters to fasta folder {fasta_folder}")
+        print(f"Saving clusters {self.clusters=} to fasta folder {fasta_folder}")
         Path(fasta_folder).mkdir(parents=True, exist_ok=True)
         fasta_prefix = self.probe_fasta.stem
         idx = 0
@@ -575,3 +586,9 @@ if __name__ == "__main__":
 
         hdb = HDBcluster(probes, contigs)
         hdb.save_clusters(out)
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/tests/probe.fasta"
+    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/tests/seqs.fasta"
+    # # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/perfect_set_sequences/Arath_probe6660_aa.fasta"
+    # # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/perfect_set_sequences/probe6660.fasta"
+    # db = HDBcluster(probe_fasta, contig_fasta)
+    # db.save_clusters("/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/tests")
