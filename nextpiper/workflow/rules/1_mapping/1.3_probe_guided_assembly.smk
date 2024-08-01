@@ -9,20 +9,22 @@ rule spades_assembly:
     input:
         in1=outdir / "trimmed/{sample}_R1.fastq",
         in2=outdir / "trimmed/{sample}_R2.fastq",
-        hmms=outdir / "translated_probes/probe_profiles",
+        approv=outdir / "logs/dones/probe_hmms.done",
     output:
         out_dir=directory(outdir / "assembled/spades/{sample}"),
         contigs=outdir / "assembled/spades/{sample}/scaffolds.fasta",
         gfa=outdir / "assembled/spades/{sample}/assembly_graph_after_simplification.gfa",
+        stats=outdir / "assembled/spades/{sample}/hmm_statistics.txt",
     params:
-        "--only-assembler ",
+        params="--only-assembler --cov-cutoff auto",
+        hmms=outdir / "translated_probes/probe_profiles",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
     threads: 8
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
-        "spades.py -t {threads} {params} -1 {input.in1} -2 {input.in2} --custom-hmms {input.hmms} -o {output.out_dir} > {log} 2>&1"
+        "spades.py -t {threads} {params.params} -1 {input.in1} -2 {input.in2} --custom-hmms {params.hmms} -o {output.out_dir} > {log} 2>&1"
 
 
 checkpoint split_graph_into_hmms:
