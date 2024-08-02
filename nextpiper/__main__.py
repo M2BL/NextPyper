@@ -8,6 +8,7 @@ https://github.com/beardymcjohnface/Snaketool/wiki/Customising-your-Snaketool
 from pathlib import Path
 import os
 import click
+import sys
 
 from snaketool_utils.cli_utils import (
     OrderedCommands,
@@ -15,6 +16,9 @@ from snaketool_utils.cli_utils import (
     copy_config,
     echo_click,
 )
+
+sys.path.append(str((Path(__file__).parent / "workflow/scripts").resolve()))
+from sample_table import make_table
 
 
 def snake_base(rel_path):
@@ -144,6 +148,12 @@ Available targets:
     print_targets   List available targets
 """
 
+# ToDo: Refine this help message
+sample_table_msg = """
+The data directory is expected to have raw paired reads 
+per sample (forward, reverse).
+"""
+
 
 @click.command(
     epilog=help_msg_extra,
@@ -214,7 +224,32 @@ def citation(**kwargs):
     print_citation()
 
 
+@click.option(
+    "--input",
+    "input",
+    help="Path to data directory",
+    type=click.Path(readable=True, exists=True),
+    required=True,
+)
+@click.option(
+    "--output",
+    help="Output sample table",
+    type=click.Path(writable=True, readable=True),
+    default="sample.tsv",
+    show_default=True,
+)
+@click.command(epilog=sample_table_msg)
+def make_sample_table(**kwargs):
+    """Generate a sample table given a data directory"""
+
+    datadir = Path(kwargs["input"])
+    outfile = Path(kwargs["output"])
+
+    make_table(datadir, outfile)
+
+
 cli.add_command(run)
+cli.add_command(make_sample_table)
 cli.add_command(config)
 cli.add_command(citation)
 
