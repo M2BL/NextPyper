@@ -1,0 +1,7 @@
+name: Saute
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+    - skesa=2.5.1

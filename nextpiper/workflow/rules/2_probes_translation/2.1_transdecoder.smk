@@ -10,7 +10,7 @@ rule transdecoder_longorfs:
         outdir / "translated_probes/transdecoder/longest_orfs.pep",
     params:
         out_folder=lambda wildcards, output: Path(output[0]).parent,
-        min_len=0,
+        min_len=100,  ## Todo: find a good compromise for this parameter
     log:
         outdir / "logs/translated_probes/transdecoder.log",
     conda:
@@ -19,6 +19,7 @@ rule transdecoder_longorfs:
         "TransDecoder.LongOrfs -m {params.min_len} -t {input} -O {params.out_folder} 2> {log}"
 
 
+# ToDo: Review the current parsing, with too many orfs it is taking forever
 rule parse_translation:
     input:
         pep=outdir / "translated_probes/transdecoder/longest_orfs.pep",
