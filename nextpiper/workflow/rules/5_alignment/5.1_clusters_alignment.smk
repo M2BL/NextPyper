@@ -27,9 +27,9 @@ def get_aln_input(wildcards):
 
 rule mafft:
     input:
-        clusters=get_aln_input,
+        get_aln_input,
     output:
-        alns=outdir / "aligned/cluster_alns/{probe}/{probe}_{cluster}.fasta",
+        outdir / "aligned/cluster_alns/{probe}/{probe}_{cluster}.fasta",
     params:
         "--auto --adjustdirection",
     log:
@@ -37,7 +37,7 @@ rule mafft:
     conda:
         "../../envs/alignment.yaml"
     shell:
-        "mafft {params} {input.clusters} > {output.alns} 2> {log}"
+        "mafft {params} {input} > {output} 2> {log}"
 
 
 def aggregate_alns(wildcards):

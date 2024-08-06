@@ -7,7 +7,7 @@ rule taper:
     output:
         outdir / "aligned/taper/{probe}/{probe}_{cluster}.fasta",
     params:
-        str(taper_exec) + " -m - -a - -p " + str(path_taper_params),
+        f"{taper_exec} -m - -a - -p {path_taper_params} ",
     log:
         outdir / "logs/aligned/taper/{probe}/{probe}_{cluster}.log",
     conda:
@@ -22,9 +22,9 @@ rule trimal:
     output:
         outdir / "aligned/trimal/{probe}/{probe}_{cluster}.fasta",
     params:
-        "-gt " + str(trimal_gt),  # discard columns that have more than than 80% of gaps
+        f"-gt {trimal_gt}",  # discard columns that have more than than 80% of gaps
     log:
-        outdir / "logs/aligned/taper/{probe}/{probe}_{cluster}.log",
+        outdir / "logs/aligned/trimal/{probe}/{probe}_{cluster}.log",
     conda:
         "../../envs/alignment.yaml"
     shell:

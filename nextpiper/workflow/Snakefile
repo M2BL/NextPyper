@@ -26,6 +26,8 @@ include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.1_clusters_al
 include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.2_alignment_postprocessing.smk")
 include: os.path.join(workflow.basedir, "rules", "6_HMMs", "6.1_hmm_profile_building.smk")
 include: os.path.join(workflow.basedir, "rules", "7_variants_on_graph", "7.1_saute_assembly.smk")
+include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.3_variants_alignment.smk")
+include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.4_var_alns_postprocessing.smk")
 
 
 # Target rules

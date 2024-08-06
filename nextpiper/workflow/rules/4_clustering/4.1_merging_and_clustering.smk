@@ -1,7 +1,3 @@
-from pathlib import Path
-from Bio import SeqIO
-from contig_cluster import HDBcluster
-
 graph_dir = outdir / Path("assembled/prefixed/component_seqs/")
 
 

@@ -354,14 +354,22 @@ class HDBcluster:
             return []
         # Case matching no clustering or low thresholds
         if set(self.distance_matrix.flatten()) == {0.0, 100.0}:
-            valid_cds = [name for name, cds in self.cds_dict.items() if cds.get_global_sim() >= self.min_probe_contig_sim]
+            valid_cds = [
+                name
+                for name, cds in self.cds_dict.items()
+                if cds.get_global_sim() >= self.min_probe_contig_sim
+            ]
             # case there are only unclustered sequences.
             if valid_cds:
                 self.clusters = [[x] for x in valid_cds]
                 return self
             # report a warning about only paralogs
             global_sims = sorted(
-                [cds.get_global_sim() for cds in self.cds_dict.values() if cds.get_global_sim() < self.min_probe_contig_sim]
+                [
+                    cds.get_global_sim()
+                    for cds in self.cds_dict.values()
+                    if cds.get_global_sim() < self.min_probe_contig_sim
+                ]
             )
             fill = textwrap.fill(
                 "[Warning] There are matches, but they are not reported as they register as paralogs. "
@@ -575,6 +583,12 @@ if __name__ == "__main__":
             sys.stderr = sys.stdout = f
             hdb = HDBcluster(snakemake.input.probes, snakemake.input.contigs)
             hdb.save_clusters(snakemake.output[0])
+            ## ToDo: Check that files are being created here
+
+            if len(tuple(Path(snakemake.output[0]).glob("*.fasta"))):
+                ## Create a dummy file fasta
+                ...
+
     else:
         probes = sys.argv[1]
         contigs = sys.argv[2]
