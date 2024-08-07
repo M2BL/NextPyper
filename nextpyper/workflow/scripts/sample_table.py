@@ -37,8 +37,8 @@ def make_table(data_dir: Path, out_table: Path, sep: str = "\t") -> None:
             sample = os.path.commonprefix([file1.name, file2.name])
 
             ## Do name processing magic
-            if sample.endswith("_R"):
-                sample = sample.removesuffix("_R")
+            if sample.endswith("R"):
+                sample = sample.removesuffix("R")
             sample = sample.rstrip("._-")
 
             table.write(f"{sample}{sep}{file1.resolve()}{sep}{file2.resolve()}\n")
