@@ -294,8 +294,8 @@ def pairwise_aligner(
 
 
 def main():
-    pickle_file = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_8631_6contigs.pkl"
-    # pickle_file = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_8631_all.pkl"
+    pickle_file = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/test_clustering/gene_8631_6contigs.pkl"
+    # pickle_file = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/test_clustering/gene_8631_all.pkl"
 
     cds_dict = pickle.load(
         open(
@@ -303,7 +303,7 @@ def main():
             "rb",
         )
     )
-    probe = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/probe_8631_aa.fasta"
+    probe = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/test_clustering/probe_8631_aa.fasta"
     probe_record = list(SeqIO.parse(probe, "fasta"))[0]
     print(cds_dict)
 
@@ -328,7 +328,7 @@ def main():
             fasta = f"test_aln_{idx}.fasta"
 
             aln_frag.write_alignment(
-                f"/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/{fasta}"
+                f"/home/yjkbertrand/Documents/projects/nextpyper/test_data/test_clustering/{fasta}"
             )
             print(f"saved {fasta}")
             idx += 1
@@ -339,7 +339,7 @@ def main():
     # print(aln_frag.get_distance())
     # print("writing alignment")
     # aln_frag.write_alignment(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/test_aln.fasta"
+    #     "/home/yjkbertrand/Documents/projects/nextpyper/test_data/test_clustering/test_aln.fasta"
     # )
 
 

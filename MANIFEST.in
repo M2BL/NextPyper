@@ -1,4 +1,4 @@
-include nextpiper/nextpiper.LICENSE
-include nextpiper/nextpiper.CITATION
-include nextpiper/nextpiper.VERSION
-recursive-include nextpiper *
+include nextpyper/nextpyper.LICENSE
+include nextpyper/nextpyper.CITATION
+include nextpyper/nextpyper.VERSION
+recursive-include nextpyper *

@@ -600,9 +600,9 @@ if __name__ == "__main__":
 
         hdb = HDBcluster(probes, contigs)
         hdb.save_clusters(out)
-    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/tests/probe.fasta"
-    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/tests/seqs.fasta"
-    # # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/perfect_set_sequences/Arath_probe6660_aa.fasta"
-    # # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/perfect_set_sequences/probe6660.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/tests/probe.fasta"
+    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/tests/seqs.fasta"
+    # # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/perfect_set_sequences/Arath_probe6660_aa.fasta"
+    # # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/perfect_set_sequences/probe6660.fasta"
     # db = HDBcluster(probe_fasta, contig_fasta)
-    # db.save_clusters("/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/tests")
+    # db.save_clusters("/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/tests")

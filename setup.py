@@ -6,8 +6,8 @@ def get_version():
     with open(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "nextpiper",
-            "nextpiper.VERSION",
+            "nextpyper",
+            "nextpyper.VERSION",
         )
     ) as f:
         return f.readline().strip()
@@ -37,9 +37,9 @@ CLASSIFIERS = [
 ]
 
 setup(
-    name="nextpiper",
+    name="nextpyper",
     packages=find_packages(),
-    url="https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpiper",
+    url="https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpyper",
     python_requires=">=3.12",
     description="Recovery of homologous genes from targeted sequence capture data for higher ploidy samples",
     long_description=get_description(),
@@ -48,7 +48,7 @@ setup(
     author="Simón Villanueva Corrales",
     author_email="simon.corrales@ibot.cas.cz",
     data_files=get_data_files(),
-    py_modules=["nextpiper"],
+    py_modules=["nextpyper"],
     install_requires=[
         "snaketool-utils>=0.0.4",
         "snakemake>=7.14.0",
@@ -60,6 +60,6 @@ setup(
         "scikit-learn>=1.5",
         "pyhmmer>=0.10",
     ],
-    entry_points={"console_scripts": ["nextpiper=nextpiper.__main__:main"]},
+    entry_points={"console_scripts": ["nextpyper=nextpyper.__main__:main"]},
     include_package_data=True,
 )

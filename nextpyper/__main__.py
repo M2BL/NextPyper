@@ -1,5 +1,5 @@
 """
-Entrypoint for NextPiper
+Entrypoint for NextPyper
 
 Check out the wiki for a detailed look at customising this file:
 https://github.com/beardymcjohnface/Snaketool/wiki/Customising-your-Snaketool
@@ -28,14 +28,14 @@ def snake_base(rel_path):
 
 def get_version():
     """Read and print the version from the version file"""
-    with open(snake_base("nextpiper.VERSION"), "r") as f:
+    with open(snake_base("nextpyper.VERSION"), "r") as f:
         version = f.readline()
     return version
 
 
 def print_citation():
     """Read and print the Citation information from the citation file"""
-    with open(snake_base("nextpiper.CITATION"), "r") as f:
+    with open(snake_base("nextpyper.CITATION"), "r") as f:
         for line in f:
             echo_click(line)
 
@@ -56,7 +56,7 @@ def common_options(func):
             "--output",
             help="Output directory",
             type=click.Path(dir_okay=True, writable=True, readable=True),
-            default="nextpiper.out",
+            default="nextpyper.out",
             show_default=True,
         ),
         click.option(
@@ -101,7 +101,7 @@ def common_options(func):
         ),
         click.option(
             "--log",
-            default="nextpiper.log",
+            default="nextpyper.log",
             callback=default_to_output,
             hidden=True,
         ),
@@ -125,24 +125,24 @@ def cli():
     """Recovery of homologous genes from targeted sequence capture data for higher ploidy samples
     \b
     For more options, run:
-    nextpiper command --help"""
+    nextpyper command --help"""
     pass
 
 
 help_msg_extra = """
 \b
 CLUSTER EXECUTION:
-nextpiper run ... --profile [profile]
+nextpyper run ... --profile [profile]
 For information on Snakemake profiles see:
 https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles
 \b
 RUN EXAMPLES:
-Required:           nextpiper run --input [file]
-Specify threads:    nextpiper run ... --threads [threads]
-Disable conda:      nextpiper run ... --no-use-conda 
-Change defaults:    nextpiper run ... --snake-default="-k --nolock"
-Add Snakemake args: nextpiper run ... --dry-run --keep-going --touch
-Specify targets:    nextpiper run ... all print_targets
+Required:           nextpyper run --input [file]
+Specify threads:    nextpyper run ... --threads [threads]
+Disable conda:      nextpyper run ... --no-use-conda 
+Change defaults:    nextpyper run ... --snake-default="-k --nolock"
+Add Snakemake args: nextpyper run ... --dry-run --keep-going --touch
+Specify targets:    nextpyper run ... all print_targets
 Available targets:
     all             Run everything (default)
     print_targets   List available targets
@@ -198,9 +198,9 @@ per sample (forward, reverse).
 )
 @common_options
 def run(**kwargs):
-    """Run NextPiper"""
+    """Run NextPyper"""
     # Config to add or update in configfile
-    merge_config = {"nextpiper": {"args": kwargs}}
+    merge_config = {"nextpyper": {"args": kwargs}}
 
     # run!
     run_snakemake(

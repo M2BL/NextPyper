@@ -467,11 +467,11 @@ class Gfa:
 
 
 if __name__ == "__main__":
-    test_graph = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/batrachium/test_data/probe_3/mapping/minigraph/H1_C8_blunted_compacted.gfa"
+    test_graph = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/batrachium/test_data/probe_3/mapping/minigraph/H1_C8_blunted_compacted.gfa"
     gfa = Gfa(test_graph)
     import pickle
 
-    hmm_file = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/batrachium/test_data/probe_3/mapping/minigraph/hmm_H1_C8.pkl"
+    hmm_file = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/batrachium/test_data/probe_3/mapping/minigraph/hmm_H1_C8.pkl"
     hmm = pickle.load(open(hmm_file, "rb"))
     gfa.load_hmm(hmm.node_hits)
     for k, v in gfa.get_edges().items():

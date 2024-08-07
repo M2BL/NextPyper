@@ -1,4 +1,4 @@
-# NextPiper
+# NextPyper
 Recovery of homologous genes from targeted sequence capture data in higher ploidy samples.
 
 ---
@@ -48,16 +48,16 @@ Outdir/
 
 # Installation
 
-For now install the dependencies in a new conda environment. The installation of `nextpiper` will be contained in this environment. (**To Do:** improve deployment)
+For now install the dependencies in a new conda environment. The installation of `nextpyper` will be contained in this environment. (**To Do:** improve deployment)
 
 First clone the repository and install it.
 
 ```bash
-git clone https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpiper.git
-cd nextpiper && pip install -e .
+git clone https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpyper.git
+cd nextpyper && pip install -e .
 ```
 
-Now you can run `nextpiper` anywhere. 
+Now you can run `nextpyper` anywhere. 
 
 ## Running the test data
 
@@ -66,15 +66,15 @@ Now let us run a minimal test. Starting at the root directory of the repository:
 ```bash
 # Make directories for the test and unpack the test data
 mkdir -p minimal_test/test_data && cd minimal_test/test_data
-tar xzf ../../nextpiper/data/test_data.tar.gz
+tar xzf ../../nextpyper/data/test_data.tar.gz
 
 # Prepare the sample table with the local paths
 ls > ../inter.txt 
 paste <(sed -E 's|(.*)_R[12].*|\1|' < ../inter.txt | uniq) <(grep "R1" ../inter.txt | xargs -I{} echo "$(pwd)/{}") <(grep "R2" ../inter.txt | xargs -I{} echo "$(pwd)/{}") > ../samples.tsv
 cd ..
 
-# Run nextpiper 
-nextpiper run --input samples.tsv --probes ../../nextpiper/data/probes.fasta --output test_out -n
+# Run nextpyper 
+nextpyper run --input samples.tsv --probes ../../nextpyper/data/probes.fasta --output test_out -n
 ```
 
 # Editing this README

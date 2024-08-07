@@ -14,7 +14,7 @@ from Bio import SeqIO
 
 sys.path.append((Path(workflow.basedir) / "../src/").as_posix())
 
-nextpiper_version = "0.0.1"
+nextpyper_version = "0.0.1"
 
 
 report: "../report/workflow.rst"

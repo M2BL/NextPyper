@@ -76,13 +76,12 @@ def align_clean(
         run_subprocess(trimal_cmd)
 
 
-def main():
-    ...
+def main(): ...
 
 
 if __name__ == "__main__":
     os.chdir(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/batrachium/exonerate/clusters_2"
+        "/home/yjkbertrand/Documents/projects/nextpyper/test_data/batrachium/exonerate/clusters_2"
     )
     alignment = Path.cwd() / "probe_3_aa_1.fasta"
     taper_parameters = Path.cwd() / "taper_parameters.txt"
