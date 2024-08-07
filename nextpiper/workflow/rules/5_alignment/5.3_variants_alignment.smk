@@ -14,13 +14,13 @@ checkpoint group_variants_by_probe:
     output:
         directory(outdir / "var_aligned/aln_input"),
     run:
-        pattern = re.compile("Contig_(\w+)_(\d+)")
+        pattern = re.compile(r"Contig_(?P<probe>\w+)_(?P<cluster>\d+)")
         probe_recs = defaultdict(list)
 
         for sample_path in input:
             sample_path = Path(sample_path)
             for rec in SeqIO.parse(sample_path, "fasta"):
-                probe = pattern.match(rec.name)[1]
+                probe = pattern.match(rec.name)["probe"]
                 rec.name = rec.name.replace(":", "-")
                 probe_recs[probe].append(pref_rec(rec, f"{sample_path.parent.stem}_"))
 

@@ -8,6 +8,7 @@ from snakemake.utils import validate
 from pathlib import Path
 import sys
 import os
+import re
 import pandas as pd
 from Bio import SeqIO
 
@@ -51,6 +52,11 @@ validate(PROBES, schema="../schemes/probes.yaml")
 # Make useful structures for the inputs
 sample_dict = SAMPLE_TABLE.set_index("sample_name").T.to_dict()
 sample_list = list(sample_dict)
+
+# Define pattern for matching final sequences
+saute_seq_pattern = re.compile(
+    r"(?P<sample>\w+)_Contig_(?P<probe>\w+)_(?P<cluster>\d+)-(?P<saute_info>[\d-]+)"
+)
 
 
 wildcard_constraints:
