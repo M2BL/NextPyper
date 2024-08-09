@@ -11,12 +11,12 @@ properties:
     type: string
     format: uri
     description: path to fastq(compressed) file containing forward reads.
-    pattern: ".*(.fastq.gz|.fq.gz|.fastq|.fq)$"
+    pattern: ".*(.fastq.bz2|.fq.bz2|.fastq.gz|.fq.gz|.fastq|.fq)$"
   path_reverse:
     type: string
     format: uri
     description: path to fastq(compressed) file containing forward reads.
-    pattern: ".*(.fastq.gz|.fq.gz|.fastq|.fq)$"
+    pattern: ".*(.fastq.bz2|.fq.bz2|.fastq.gz|.fq.gz|.fastq|.fq)$"
   ploidy:
     type: string
     format: uri
