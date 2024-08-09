@@ -40,5 +40,6 @@ def make_table(data_dir: Path, out_table: Path, sep: str = "\t") -> None:
             if sample.endswith("R"):
                 sample = sample.removesuffix("R")
             sample = sample.rstrip("._-")
+            sample.replace("-", "_")
 
             table.write(f"{sample}{sep}{file1.resolve()}{sep}{file2.resolve()}\n")
