@@ -10,7 +10,8 @@ rule transdecoder_longorfs:
         outdir / "translated_probes/transdecoder/longest_orfs.pep",
     params:
         out_folder=lambda wildcards, output: Path(output[0]).parent,
-        min_len=100,  ## Todo: find a good compromise for this parameter
+        # min_len=100,  ## Todo: find a good compromise for this parameter
+        min_len=min(min_probe_size, 50),
     log:
         outdir / "logs/translated_probes/transdecoder.log",
     conda:

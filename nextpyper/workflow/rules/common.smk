@@ -45,7 +45,9 @@ SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)
 validate(SAMPLE_TABLE, schema="../schemes/sample_table.yaml")
 
 # Validate probe names
-probes_list = [probe.name for probe in SeqIO.parse(probes, "fasta")]
+probes_size = {probe.name: len(probe) for probe in SeqIO.parse(probes, "fasta")}
+min_probe_size = min(probes_size.values())
+probes_list = list(probes_size.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
 validate(PROBES, schema="../schemes/probes.yaml")
 
