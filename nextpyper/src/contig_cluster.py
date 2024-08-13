@@ -104,7 +104,7 @@ def run_miniprot(
     Wrapper for running miniprot.
     :return:
     """
-    miniprot_cmd = f"miniprot -t{treads} --gff --aln --outn 1 --outs {min_similarity} --outc {min_coverage} {contig_path} {probe_path}".split()
+    miniprot_cmd = f"miniprot -t {treads} --gff --aln --outn 1 --outs {min_similarity} --outc {min_coverage} {contig_path} {probe_path}".split()
 
     try:
         miniprot = subprocess.run(
