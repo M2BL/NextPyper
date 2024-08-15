@@ -27,6 +27,7 @@ graph_simplification = config["args"]["graph_simplification"]
 probes = Path(config["args"]["probes"])
 outdir = Path(config["args"]["output"])
 path_samples = config["args"]["input"]
+max_threads = config["args"]["threads"]
 
 # Program configurations/parameters
 # TAPER

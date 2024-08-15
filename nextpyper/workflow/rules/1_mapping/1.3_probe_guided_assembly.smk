@@ -20,7 +20,7 @@ rule spades_assembly:
         hmms=outdir / "translated_probes/probe_profiles",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
-    threads: 8
+    threads: max(1, max_threads // len(sample_list))
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
