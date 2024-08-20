@@ -41,6 +41,8 @@ use rule mafft as mafft_vars with:
         get_vars_for_aln,
     output:
         alns=outdir / "var_aligned/var_alns/{probe}.fasta",
+    params:
+        "--auto ",
     log:
         outdir / "logs/var_aligned/var_alns/{probe}.log",
 
