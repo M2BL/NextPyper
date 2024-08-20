@@ -21,6 +21,7 @@ from operator import attrgetter
 from collections import defaultdict
 from itertools import groupby
 import pysam
+from typing import Optional
 
 # =============================================================================
 #                FUNCTIONS
@@ -33,7 +34,8 @@ which_mapq = lambda aln1, aln2: (
 )
 
 
-def assign_alns(alns: tuple[pysam.AlignedSegment]) -> str | None:
+def assign_alns(alns: tuple[pysam.AlignedSegment]) -> Optional[str]:
+    """Add docstring"""
     if len(alns) > 2:
         raise ValueError(f"Multi mapping not implemented yet {alns}")
     else:
