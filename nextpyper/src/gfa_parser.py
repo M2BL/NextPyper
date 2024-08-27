@@ -111,13 +111,13 @@ class Component:
     -edges: the name of the edges that make up the component.
     -subgraph: the name of the subgraphs from the HMM search.
     -hmm: the name of the probe that have the most HMM matches in the component.
-    -paths: the list of paths matched by HMM profiles.
+    -paths: the list of paths matched by HMM profiles. Each path is represented as a string.
     """
 
     edges: set[str]
     subgraphs: list[str]
     hmm: str
-    paths: list[list[str]]
+    paths: list[str]
 
     def get_edges(self):
         return self.edges
@@ -251,7 +251,7 @@ def filter_components_hmm(
     :param gfa_file:
     :param hmm_stat_file:
     :param min_domain_len: minimum matching length of the HMM profile on the scaffold in aa.
-    :return:
+    :return: a list of components with path that match at least one probe over 'min_domain_len- amino acids.
     """
     all_components = []
     components = components_from_gfa(gfa_file)
