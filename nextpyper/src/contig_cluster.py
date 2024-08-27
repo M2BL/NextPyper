@@ -84,7 +84,7 @@ def validate_sequence(
     """
     alphabets = {
         "dna": re.compile("^[acgtn]*$", re.I),
-        "protein": re.compile("^[acdefghiklmnpqrstvwy*]*$", re.I),
+        "protein": re.compile("^[acdefghiklmnpqrstvwyx*]*$", re.I),
     }
 
     if alphabets[alphabet].search(str(seq)) is not None:
