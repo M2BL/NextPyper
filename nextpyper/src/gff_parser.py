@@ -144,7 +144,7 @@ class Cds:
 
     def __repr__(self):
         if self.fragments:
-            return f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=})"
+            return f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=}, strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()})"
         else:
             return f"Cds()"
 
@@ -280,8 +280,6 @@ class Cds:
                 break
             target_AA = self.target_AAs[idx]
             query_AA = self.query_AAs[idx]
-            # if query_AA in AAs:
-            #     last_AA = query_AA
             if target_nuc == "-":
                 idx += 1
                 continue

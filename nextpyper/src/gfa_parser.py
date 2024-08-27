@@ -170,6 +170,9 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
         lines = file.readlines()
 
     def filter_subgraphs(list_BGS: list[BGC_candidate]) -> list[BGC_candidate]:
+        """
+        Remove duplicated subgraphs from a list of BGS candidates.
+        """
         target = list_BGS[0]
         paths = target.get_paths()
         filtered_subgraphs = [target]
@@ -195,7 +198,7 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
     domain_flag = False
     edge_flag = False
     for idx, line in enumerate(lines):
-        if line.startswith("BGC subgraph") or idx == len(lines) - 1:
+        if line.startswith("BGC subgraph"):
             base_name = line.split()[2]
             if subgraphs:
                 bgc_candidates.extend(filter_subgraphs(subgraphs))
@@ -222,13 +225,15 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
             paths = []
             edge_flag = False
             continue
-
         if domain_flag:
             splt_domain = line.strip().split()
             assert len(splt_domain) == 2, f"[Error] line {line} has the wrong format"
             coordinates.append(tuple(map(int, splt_domain)))
         if edge_flag:
             paths.append(line.strip().replace(";", ""))
+    # process the last subgraph
+    if subgraphs:
+        bgc_candidates.extend(filter_subgraphs(subgraphs))
 
     edges_dict: dict[str, list[BGC_candidate]] = defaultdict(list)
     for bgc in bgc_candidates:
