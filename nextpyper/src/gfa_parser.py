@@ -42,7 +42,7 @@ class BGC_candidate:
     name: str
     hmms: list[str] = field(default_factory=list)
     coordinates: list[tuple[int, int]] = field(default_factory=list)
-    paths: list[list[str]] = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)
     edges: list[str] = field(default_factory=list, init=False)
     lengths: list[int] = field(default_factory=list, init=False)
     max_domain_length: int = field(init=False)
@@ -64,6 +64,7 @@ class BGC_candidate:
                 )
             )
         )
+        return self
 
     def _get_lengths(self) -> Self:
         for cor in self.coordinates:
@@ -77,7 +78,7 @@ class BGC_candidate:
         dominant_hmm = sorted(hmm_length.items(), key=lambda x: x[1], reverse=True)[0]
         self.max_domain_length = dominant_hmm[1]
         self.dominant_hmm = dominant_hmm[0]
-        return Self
+        return self
 
     def get_max_length(self) -> int:
         return self.max_domain_length
