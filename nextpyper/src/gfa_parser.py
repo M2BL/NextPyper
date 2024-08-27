@@ -39,11 +39,10 @@ class BGC_candidate:
     """
     Data structure for the parsing of the 'hmm_statistics.txt' file.
     """
-
     name: str
-    hmms: list[str]
-    coordinates: list[tuple[int, int]]
-    paths: list[list[str]]
+    hmms: list[str] = field(default_factory=list)
+    coordinates: list[tuple[int, int]] = field(default_factory=list)
+    paths: list[list[str]] = field(default_factory=list)
     edges: list[str] = field(default_factory=list, init=False)
     lengths: list[int] = field(default_factory=list, init=False)
     max_domain_length: int = field(init=False)
@@ -102,7 +101,7 @@ class BGC_candidate:
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class Component:
     """
     Data structure for the components from the assembly graph that have a match with the probes HMMs.
@@ -114,10 +113,10 @@ class Component:
     -paths: the list of paths matched by HMM profiles. Each path is represented as a string.
     """
 
-    edges: set[str]
-    subgraphs: list[str]
     hmm: str
-    paths: list[str]
+    edges: set[str] = field(default_factory=set)
+    subgraphs: list[str] = field(default_factory=list)
+    paths: list[list[str]] = field(default_factory=list)
 
     def get_edges(self):
         return self.edges
@@ -274,7 +273,7 @@ def filter_components_hmm(
                 subgraphs = list(set([bgc.get_subgraph() for bgc in bgc_matches]))
                 paths = list(set(chain(*[bgc.get_paths() for bgc in bgc_matches])))
                 all_components.append(
-                    Component(component, subgraphs, dominant_hmm, paths)
+                    Component(dominant_hmm, component, subgraphs, paths)
                 )
     return all_components
 
