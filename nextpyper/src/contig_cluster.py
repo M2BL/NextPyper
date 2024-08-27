@@ -587,7 +587,9 @@ if __name__ == "__main__":
 
             if len(tuple(Path(snakemake.output[0]).glob("*.fasta"))):
                 ## Create a dummy file fasta
-                ...
+                outdir = Path(snakemake.output[0])
+                outdir.mkdir(parents=True, exist_ok=True)
+                (outdir / f"{Path(snakemake.input.probes).stem}_0.fasta").touch()
 
     else:
         probes = sys.argv[1]
