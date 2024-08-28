@@ -166,7 +166,7 @@ class Alignment_fragment:
                         last,
                     ]
                 )
-        return
+        return [None, None]
 
     def _produce_alignment(self) -> Self:
         """
