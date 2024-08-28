@@ -260,22 +260,21 @@ def filter_components_hmm(
     for component in components:
         bgc_matches = []
         for edge in component:
-            if (bgc := matched_edges.get(edge)) is not None:
-                bgc_matches.extend(bgc)
-        if bgc_matches:
-            # filter by probe matching length
-            hmm_matches = [
-                bgc.get_dominant_hmm()
-                for bgc in bgc_matches
-                if bgc.get_max_length() > min_domain_len
-            ]
-            if hmm_matches:
-                dominant_hmm = max(set(hmm_matches), key=hmm_matches.count)
-                subgraphs = list(set([bgc.get_subgraph() for bgc in bgc_matches]))
-                paths = list(set(chain(*[bgc.get_paths() for bgc in bgc_matches])))
-                all_components.append(
-                    Component(dominant_hmm, component, subgraphs, paths)
+            if (bgc_list := matched_edges.get(edge)) is not None:
+                #  filter by probe matching length
+                bgc_matches.extend(
+                    [bgc for bgc in bgc_list if bgc.get_max_length() > min_domain_len]
                 )
+
+        if bgc_matches:
+            hmm_matches = [bgc.get_dominant_hmm() for bgc in bgc_matches]
+            dominant_hmm = max(set(hmm_matches), key=hmm_matches.count)
+            subgraphs = list(set([bgc.get_subgraph() for bgc in bgc_matches]))
+            paths = list(set(chain(*[bgc.get_paths() for bgc in bgc_matches])))
+            all_components.append(
+                Component(dominant_hmm, component, subgraphs, paths)
+            )
+
     return all_components
 
 
