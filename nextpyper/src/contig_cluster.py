@@ -357,7 +357,8 @@ class HDBcluster:
             valid_cds = [
                 name
                 for name, cds in self.cds_dict.items()
-                if cds.get_global_sim() >= self.min_probe_contig_sim
+                if not cds.is_empty()
+                and cds.get_global_sim() >= self.min_probe_contig_sim
             ]
             # case there are only unclustered sequences.
             if valid_cds:
