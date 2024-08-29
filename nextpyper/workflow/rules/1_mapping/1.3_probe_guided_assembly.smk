@@ -17,6 +17,7 @@ rule spades_assembly:
         stats=outdir / "assembled/spades/{sample}/hmm_statistics.txt",
     params:
         params="--only-assembler --cov-cutoff auto",
+        # params="--only-assembler --cov-cutoff auto -k 55,77", #ToDo: Consider for Speed-up
         hmms=outdir / "translated_probes/probe_profiles",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
