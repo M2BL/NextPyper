@@ -13,20 +13,27 @@ import pandas as pd
 from Bio import SeqIO
 
 sys.path.append((Path(workflow.basedir) / "../src/").as_posix())
+sys.path.append((Path(workflow.basedir) / "scripts").as_posix())
 
 nextpyper_version = "0.0.1"
+
+from multi_seq_probes import group_probes, NoGroupingError
 
 
 report: "../report/workflow.rst"
 
 
+SCHEMES_DIR = Path(workflow.basedir) / "../schemes"
+
 # Parameters of the run
 graph_simplification = config["args"]["graph_simplification"]
 
 # Read inputs
-probes = Path(config["args"]["probes"])
+probes_path = Path(config["args"]["probes"])
 outdir = Path(config["args"]["output"])
 path_samples = config["args"]["input"]
+pattern = config["args"]["probe_pattern"]
+multi_probes = config["args"]["multi_probes"]
 max_threads = config["args"]["threads"]
 
 # Program configurations/parameters
@@ -43,14 +50,29 @@ trimal_gt = config["args"]["trimal_gt"]
 # Validate Sample table
 cols = ["sample_name", "path_forward", "path_reverse"]
 SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)
-validate(SAMPLE_TABLE, schema="../schemes/sample_table.yaml")
+validate(SAMPLE_TABLE, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
 
-# Validate probe names
-probes_size = {probe.name: len(probe) for probe in SeqIO.parse(probes, "fasta")}
+# Validate probes
+probes = list(SeqIO.parse(probes_path, "fasta"))
+probes_size = {probe.id: len(probe) for probe in probes}
 min_probe_size = min(list(probes_size.values())) // 3
 probes_list = list(probes_size.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
-validate(PROBES, schema="../schemes/probes.yaml")
+validate(PROBES, schema=(SCHEMES_DIR / "probes.yaml").resolve())
+
+# Multi-seq probe set
+if multi_probes:
+    try:
+        probe_hier = {
+            probe: [rec.id for rec in recs]
+            for probe, recs in group_probes(probes, pattern).items()
+        }
+        all_probes_list = probes_list
+        probes_list = list(probe_hier.keys())
+    except NoGrouping:
+        # Single-sequence probe set
+        multi_probes = False
+
 
 # Make useful structures for the inputs
 sample_dict = SAMPLE_TABLE.set_index("sample_name").T.to_dict()

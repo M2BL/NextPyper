@@ -3,6 +3,8 @@ nextpyper:
     args: # Command line args will be (over)written here at runtime
         input:
         output:
+        probe_pattern: (\d{4})$
+        multi_probes:
         graph_simplification: false
         taper_params: 
         trimal_gt:
