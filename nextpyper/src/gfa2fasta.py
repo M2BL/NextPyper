@@ -89,33 +89,32 @@ def get_path_sequence(
     )
 
 
-# change name to path_to_fasta
-# are you sure 'gfa' should be a Path object and not a string? It would be better to create the Path object in the function
-# to avoid issues in SnakeMake.
-def paths2fasta(gfa: Path, out_fasta: Path) -> None:
-    """Given a gfa file, write sequences encoded in its P lines
-    to the given outfile path in fasta format."""
-
+def parse_graph_lines(graph_lines: list[str]) -> tuple[list[str], list[str], int]:
     s_lines = []
     p_lines = []
     K = None
-    assert gfa.exists(), f"Graph file {gfa} not found"
-    with gfa.open() as file:
-        for line in file:
-            match line[0]:
-                case "S":
-                    s_lines.append(line)
-                case "L":
-                    if not K:
-                        K = int(line.split()[5].rstrip("M"))
-                case "P":
-                    p_lines.append(line)
-                case _:
-                    continue
+    for line in graph_lines:
+        match line[0]:
+            case "S":
+                s_lines.append(line)
+            case "L":
+                if not K:
+                    K = int(line.split()[5].rstrip("M"))
+            case "P":
+                p_lines.append(line)
+            case _:
+                continue
+
+    return s_lines, p_lines, K
+
+
+def paths_to_recs(graph_lines: list[str]) -> list[SeqRecord]:
+    s_lines, p_lines, K = parse_graph_lines(graph_lines)
 
     segments = {seg.id: seg for line in s_lines if (seg := parse_sline(line))}
     paths = [parse_pline(line) for line in p_lines]
-    reqs_gen = (
+
+    return [
         SeqRecord(
             seq=get_path_sequence(path, segments, K),
             id=path.name,
@@ -123,5 +122,13 @@ def paths2fasta(gfa: Path, out_fasta: Path) -> None:
             description="",
         )
         for path in paths
-    )
-    SeqIO.write(reqs_gen, out_fasta, "fasta")
+    ]
+
+
+def paths_to_fasta(gfa: Path, out_fasta: Path) -> None:
+    """Given a gfa file, write sequences encoded in its P lines
+    to the given outfile path in fasta format."""
+
+    assert gfa.exists(), f"Graph file {gfa} not found"
+    with gfa.open() as file:
+        SeqIO.write(paths_to_recs(file), out_fasta, "fasta")
