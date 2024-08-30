@@ -378,7 +378,8 @@ def split_into_hmms(
 
             # Write sequences (.fasta)
             if write_seqs:
-                SeqIO.write(paths_to_recs(subgraph), outdir / f"{hmm}.fasta", "fasta")
+                outfile = outdir / f"{hmm}.fasta"
+                SeqIO.write(paths_to_recs(subgraph, suffix_KC=True), outfile, "fasta")
 
 
 def main(): ...

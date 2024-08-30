@@ -28,7 +28,7 @@ __version__ = "0.1"
 # =======================================================================================
 
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 from functools import reduce, partial
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -39,6 +39,7 @@ from Bio.Seq import Seq
 class Segment(NamedTuple):
     id: str
     seq: Seq
+    tags: dict[str, Any]
 
 
 # add docstring
@@ -52,9 +53,24 @@ def parse_pline(p_line: str) -> SeqPath:
     return SeqPath(name, tuple(path.split(",")))
 
 
+def parse_tags(tag: str) -> tuple[str, Any]:
+    id, type, value = tag.split(":")
+    match type:
+        case "f":
+            value = float(value)
+        case "i":
+            value = int(value)
+        case "Z" | "H":
+            ...
+        case _:
+            raise ValueError(f"Found tag of {type=}")
+
+    return id, value
+
+
 def parse_sline(s_line: str) -> Segment:
-    _, name, seq, *_ = s_line.split()
-    return Segment(name, Seq(seq))
+    _, name, seq, *tags = s_line.split()
+    return Segment(name, Seq(seq), dict(map(parse_tags, tags)))
 
 
 # add docstring
@@ -108,16 +124,20 @@ def parse_graph_lines(graph_lines: list[str]) -> tuple[list[str], list[str], int
     return s_lines, p_lines, K
 
 
-def paths_to_recs(graph_lines: list[str]) -> list[SeqRecord]:
+def paths_to_recs(graph_lines: list[str], suffix_KC=False) -> list[SeqRecord]:
     s_lines, p_lines, K = parse_graph_lines(graph_lines)
 
     segments = {seg.id: seg for line in s_lines if (seg := parse_sline(line))}
     paths = [parse_pline(line) for line in p_lines]
 
+    if suffix_KC:
+        KCs = {name: seg.tags.get("KC", 0) for name, seg in segments.items()}
+        tot_KC = lambda path: f"_KC{sum(KCs[p[:-1]] for p in path.path)}"
+
     return [
         SeqRecord(
             seq=get_path_sequence(path, segments, K),
-            id=path.name,
+            id=f"{path.name}{tot_KC(path) if suffix_KC else ''}",
             name="",
             description="",
         )
