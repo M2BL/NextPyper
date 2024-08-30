@@ -38,3 +38,24 @@ checkpoint clustering:
         "../../envs/clustering.yaml"
     script:
         "../../../src/contig_cluster.py"
+
+
+def get_input_done_clustering(wildcards):
+    aux = checkpoints.clustering.get(wildcards.probe).output[0]
+
+    glob_match = glob_wildcards(
+        Path(checkpoint_output) / f"{wildcards.probe}_{{cluster}}.fasta"
+    )
+
+    return expand(
+        outdir / "clustering/clusters/{probe}/{probe}_{cluster}.hmm",
+        probe=wildcards.probe,
+        cluster=glob_match.cluster,
+    )
+
+
+checkpoint done_clustering:
+    input:
+        get_input_done_clustering,
+    output:
+        done=touch(outdir / "logs/dones/clustering.done"),

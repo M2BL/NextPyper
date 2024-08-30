@@ -38,7 +38,7 @@ def get_vars_for_aln(wildcards):
 
 use rule mafft as mafft_vars with:
     input:
-        get_vars_for_aln,
+        alns=get_vars_for_aln,
     output:
         alns=outdir / "var_aligned/var_alns/{probe}.fasta",
     params:
