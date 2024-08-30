@@ -1,4 +1,4 @@
-from hmm_build import hmm_build
+from hmm_build import hmm_build, hmm_consensus
 
 targets.append(outdir / "logs/dones/probe_hmms.done")
 
@@ -54,6 +54,19 @@ rule build_probe_hmms:
         outdir / "logs/translated_probes/probe_profiles/{probe}.log",
     run:
         hmm_build(Path(input[0]), Path(output[0]), "amino")
+
+
+if multi_probes:
+
+    rule build_probe_consensus:
+        input:
+            outdir / "translated_probes/probe_profiles/{probe}.hmm",
+        output:
+            consensus=outdir / "translated_probes/probe_consensus/{probe}.fasta",
+        log:
+            outdir / "logs/translated_probes/probe_consensus/{probe}.log",
+        run:
+            hmm_consensus(Path(input[0]), Path(output[0]))
 
 
 rule done_probe_hmms:
