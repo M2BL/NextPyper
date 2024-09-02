@@ -38,3 +38,17 @@ checkpoint clustering:
         "../../envs/clustering.yaml"
     script:
         "../../../src/contig_cluster.py"
+
+
+rule vsearch_clustering:
+    input:
+        cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
+    output:
+        msaout=outdir / "clustering/clusters/{probe}.fasta",
+    log:
+        outdir / "logs/clustering/{probe}.log",
+    params:
+        extra="--id 0.95 --minseqlength 5",
+    threads: 1
+    wrapper:
+        "v4.3.0/bio/vsearch"
