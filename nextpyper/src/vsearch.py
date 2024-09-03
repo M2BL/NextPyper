@@ -37,12 +37,15 @@ from Bio.Align import MultipleSeqAlignment
 #               EXCEPTIOMS
 # =======================================================================================
 
+
 class EmptyConsensus(Exception):
     """Exception raised when the Vsearch consensus sequence is only made up of indels"""
+
 
 # =======================================================================================
 #               FUNCTIONS
 # =======================================================================================
+
 
 def get_vsearch_representative_consensus(vsearch_file: Path) -> list[SeqRecord]:
     """
@@ -91,7 +94,9 @@ def get_vsearch_regular_consensus(vsearch_file: Path) -> list[SeqRecord]:
 
 
 def _generate_kmer_consensus(
-    msa: MultipleSeqAlignment, cluster_nbr: int, assembly_method:Literal['SAUTE', 'SPAdes']
+    msa: MultipleSeqAlignment,
+    cluster_nbr: int,
+    assembly_method: Literal["SAUTE", "SPAdes"],
 ) -> Optional[SeqRecord]:
     """
     From a given cluster generate a kmer weighted majority rule consensus.
@@ -132,16 +137,28 @@ def _generate_kmer_consensus(
             for record in msa[:-1]
         ]
 
-    SequenceBoundaries = namedtuple('SequenceBoundaries', ['start', 'end'])
+    SequenceBoundaries = namedtuple("SequenceBoundaries", ["start", "end"])
+
     # for each sequence find the start and end of the sequence, remove its weight if the idx is in the flanking region
-    def find_start_end(seq:Seq) -> SequenceBoundaries:
+    def find_start_end(seq: Seq) -> SequenceBoundaries:
         sequence = list(str(seq))
-        if set(sequence) == {'-'}:
+        if set(sequence) == {"-"}:
             return SequenceBoundaries(None, None)
         length = len(sequence)
         revseq = sequence[::-1]
-        return SequenceBoundaries(next(i for i, nucleotide in enumerate(sequence) if nucleotide in ['A', 'T', 'C', 'G']),
-                                   length - next(i for i, nucleotide in enumerate(revseq) if nucleotide in ['A', 'T', 'C', 'G']))
+        return SequenceBoundaries(
+            next(
+                i
+                for i, nucleotide in enumerate(sequence)
+                if nucleotide in ["A", "T", "C", "G"]
+            ),
+            length
+            - next(
+                i
+                for i, nucleotide in enumerate(revseq)
+                if nucleotide in ["A", "T", "C", "G"]
+            ),
+        )
 
     #  For each sequence find where in the alignment, the nucleotides start and end.
     #  Store in dict with keys the index of the sequence in the msa.
@@ -165,7 +182,7 @@ def _generate_kmer_consensus(
         if weights:
             consensus.append(Counter(weights).most_common(1)[0][0])
 
-    if set(consensus) == {'-'} or not consensus:
+    if set(consensus) == {"-"} or not consensus:
         raise EmptyConsensus
 
     return SeqRecord(
@@ -176,7 +193,9 @@ def _generate_kmer_consensus(
     )
 
 
-def get_vsearch_kmer_consensus(vsearch_file: Path, assembly_method:Literal['SAUTE', 'SPAdes']) -> list[SeqRecord]:
+def get_vsearch_kmer_consensus(
+    vsearch_file: Path, assembly_method: Literal["SAUTE", "SPAdes"]
+) -> list[SeqRecord]:
     """
     Generate a consensus sequence from a Vsearch cluster by weighting each position by the Kmer count
     and creating a column wise majority consensus. Columns containing a majority of gaps are skipped, except for
@@ -200,7 +219,9 @@ def get_vsearch_kmer_consensus(vsearch_file: Path, assembly_method:Literal['SAUT
             cluster.append(target)
             msa = MultipleSeqAlignment(cluster)
             try:
-                final_consensuses.append(_generate_kmer_consensus(msa, idx, assembly_method))
+                final_consensuses.append(
+                    _generate_kmer_consensus(msa, idx, assembly_method)
+                )
                 cluster = []
             except EmptyConsensus:
                 pass
@@ -212,18 +233,21 @@ def get_vsearch_kmer_consensus(vsearch_file: Path, assembly_method:Literal['SAUT
     return final_consensuses
 
 
-
 if __name__ == "__main__":
-    os.chdir("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final")
+    os.chdir(
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final"
+    )
     # fragments = CdsParser(
     #     run_miniprot("probe_8631_aa.fasta", "gene_8631_node3.fasta")
     # ).get_fragments()
     # print(fragments)
     vsearch_result = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/vsearch_6487_aln.fasta")
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/vsearch_6487_aln.fasta"
+    )
     out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/vsearch_6487_con_test.fasta"
     vsearch_result = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/empty.fasta")
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/empty.fasta"
+    )
     out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/empty_con.fasta"
-    records_con = get_vsearch_kmer_consensus(Path(vsearch_result), 'SPAdes')
-    SeqIO.write(records_con, out, 'fasta')
+    records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SPAdes")
+    SeqIO.write(records_con, out, "fasta")
