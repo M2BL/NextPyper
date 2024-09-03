@@ -317,6 +317,7 @@ def split_into_hmms(
     # Make a dictionary that will hold the lines to write for each component
     comp_lines = defaultdict(list)
     nodes = [None]
+    K = None
 
     with gfa_path.open() as file:
         for line in file:
@@ -326,6 +327,8 @@ def split_into_hmms(
                 case "S":
                     nodes = line.split()[1:2]
                 case "L":
+                    if not K:
+                        K = int(line.split()[5].rstrip("M"))
                     nodes = list(linked_nodes(line.split()))
                 case "P":
                     nodes = [node.rstrip("-+") for node in line.split()[2].split(",")]
@@ -372,14 +375,14 @@ def split_into_hmms(
 
             # Write graphs (.gfa)
             if write_graphs:
-                with (outdir / f"{hmm}.gfa").open("w") as out_comp:
-                    out_comp.write(header)
-                    out_comp.write("".join(subgraph))
+                with (outdir / f"{hmm}.gfa").open("w") as file:
+                    file.write(header)
+                    file.write("".join(subgraph))
 
             # Write sequences (.fasta)
             if write_seqs:
-                outfile = outdir / f"{hmm}.fasta"
-                SeqIO.write(paths_to_recs(subgraph, suffix_KC=True), outfile, "fasta")
+                file = outdir / f"{hmm}.fasta"
+                SeqIO.write(paths_to_recs(subgraph, suffix_KC=True, K=K), file, "fasta")
 
 
 def main(): ...

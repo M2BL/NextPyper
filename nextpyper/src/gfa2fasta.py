@@ -105,10 +105,12 @@ def get_path_sequence(
     )
 
 
-def parse_graph_lines(graph_lines: list[str]) -> tuple[list[str], list[str], int]:
+def parse_graph_lines(
+    graph_lines: list[str], K: int | None = None
+) -> tuple[list[str], list[str], int]:
     s_lines = []
     p_lines = []
-    K = None
+
     for line in graph_lines:
         match line[0]:
             case "S":
@@ -124,20 +126,39 @@ def parse_graph_lines(graph_lines: list[str]) -> tuple[list[str], list[str], int
     return s_lines, p_lines, K
 
 
-def paths_to_recs(graph_lines: list[str], suffix_KC=False) -> list[SeqRecord]:
-    s_lines, p_lines, K = parse_graph_lines(graph_lines)
+def paths_to_recs(
+    graph_lines: list[str], suffix_KC=False, K: int | None = None
+) -> list[SeqRecord]:
+    """Given a list with gfa lines, parse and generate Sequences encoded in its
+    paths (P lines) and return them as SeqRecord objects.
+
+    If suffix_KC is true, compute and include in the sequence name the Kmer count
+    for the encoded sequence according to the KC values of the edges that compose it.
+    """
+
+    def path_depth(path_segs: list[Segment], K: int) -> float:
+
+        tot_kc = sum(seg.tags.get("KC", 0) for seg in path_segs)
+        len_path = sum(len(seg.seq) for seg in path_segs)
+
+        return tot_kc / (len_path - (len(path_segs)) * K)
+
+    s_lines, p_lines, newK = parse_graph_lines(graph_lines)
+    if K is None:
+        K = newK
 
     segments = {seg.id: seg for line in s_lines if (seg := parse_sline(line))}
     paths = [parse_pline(line) for line in p_lines]
 
     if suffix_KC:
-        KCs = {name: seg.tags.get("KC", 0) for name, seg in segments.items()}
-        tot_KC = lambda path: f"_KC{sum(KCs[p[:-1]] for p in path.path)}"
+        get_depth = (
+            lambda path: f"_DP{path_depth([segments[p[:-1]] for p in path.path], K):.2f}"
+        )
 
     return [
         SeqRecord(
             seq=get_path_sequence(path, segments, K),
-            id=f"{path.name}{tot_KC(path) if suffix_KC else ''}",
+            id=f"{path.name}{get_depth(path) if suffix_KC else ''}",
             name="",
             description="",
         )
