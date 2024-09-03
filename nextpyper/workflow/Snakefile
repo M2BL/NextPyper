@@ -20,15 +20,15 @@ include: os.path.join(workflow.basedir, "rules", "2_probes_translation", "2.1_tr
 include: os.path.join(workflow.basedir, "rules", "2_probes_translation", "2.2_probe_profiles.smk")
 include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.3_probe_guided_assembly.smk")
 # include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.1_assembly_spades.smk")
-include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.2_prefix_assemblies.smk")
+# include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.2_prefix_assemblies.smk")
 include: os.path.join(workflow.basedir, "rules", "4_clustering", "4.1_merging_and_clustering.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.1_clusters_alignment.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.2_alignment_postprocessing.smk")
-include: os.path.join(workflow.basedir, "rules", "6_HMMs", "6.1_hmm_profile_building.smk")
+# include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.1_clusters_alignment.smk")
+# include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.2_alignment_postprocessing.smk")
+# include: os.path.join(workflow.basedir, "rules", "6_HMMs", "6.1_hmm_profile_building.smk")
 include: os.path.join(workflow.basedir, "rules", "7_variants_on_graph", "7.1_saute_assembly.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.3_variants_alignment.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.4_var_alns_postprocessing.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.5_sorting_alignments.smk")
+# include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.3_variants_alignment.smk")
+# include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.4_var_alns_postprocessing.smk")
+# include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.5_sorting_alignments.smk")
 
 
 # Target rules
