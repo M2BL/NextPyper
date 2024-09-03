@@ -17,13 +17,13 @@ sys.path.append((Path(workflow.basedir) / "scripts").as_posix())
 
 nextpyper_version = "0.0.1"
 
-from multi_seq_probes import group_probes, NoGroupingError
+from multi_seq_probes import group_probes, NoGrouping
 
 
 report: "../report/workflow.rst"
 
 
-SCHEMES_DIR = Path(workflow.basedir) / "../schemes"
+SCHEMES_DIR = Path(workflow.basedir) / "schemes"
 
 # Parameters of the run
 graph_simplification = config["args"]["graph_simplification"]
