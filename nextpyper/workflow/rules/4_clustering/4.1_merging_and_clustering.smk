@@ -51,7 +51,7 @@ rule vsearch_consensus_parsing:
     log:
         outdir / "logs/clustering/consensus/{probe}.log",
     run:
-        with open(log[0]) as outlog:
+        with open(log[0], "w") as outlog:
             sys.stdout = sys.stderr = outlog
             recs = get_vsearch_kmer_consensus(Path(input[0]), "SPAdes")
             SeqIO.write(recs, Path(output[0]), "fasta")
