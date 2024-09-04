@@ -140,7 +140,7 @@ def _generate_kmer_consensus(
 
     # for each sequence find the start and end of the sequence, remove its weight if the idx is in the flanking region
     def find_start_end(seq: Seq) -> SequenceBoundaries:
-        sequence = list(str(seq))
+        sequence = list(str(seq).upper())
         if set(sequence) == {"-"}:
             return SequenceBoundaries(None, None)
         length = len(sequence)
