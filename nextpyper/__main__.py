@@ -185,7 +185,7 @@ validate_probes_msg = """
     "--multi-probes/--single-probes",
     "multi_probes",
     help="Whether the probe set has multiple or a single sequence per probe ",
-    default=False,
+    default=True,
     show_default=True,
 )
 @click.option(
