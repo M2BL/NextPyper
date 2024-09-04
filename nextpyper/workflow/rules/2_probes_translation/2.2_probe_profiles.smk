@@ -19,10 +19,10 @@ rule split_probes:
                 SeqIO.write(probe, outfile, "fasta")
         else:
             probe_recs = list(SeqIO.parse(input.probes, "fasta"))
-            grouped_probes = group_probes(recs, pattern)
+            grouped_probes = group_probes(probe_recs, pattern)
             out_dict = {Path(out).stem: out for out in output}
 
-            for probe, recs in probe_recs.items():
+            for probe, recs in grouped_probes.items():
                 SeqIO.write(recs, out_dict[probe], "fasta")
 
 
