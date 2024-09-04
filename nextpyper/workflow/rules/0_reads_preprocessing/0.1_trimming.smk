@@ -24,8 +24,8 @@ rule fastp_pe:
     output:
         trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq",
         trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq",
-        html=outdir / "log/trimmed/{sample}.html",
-        json=outdir / "log/trimmed/{sample}.json",
+        html=outdir / "logs/trimmed/{sample}.html",
+        json=outdir / "logs/trimmed/{sample}.json",
     log:
         outdir / "logs/fastp/{sample}.log",
     params:
