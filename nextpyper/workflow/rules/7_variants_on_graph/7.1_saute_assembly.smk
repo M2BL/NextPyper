@@ -14,8 +14,8 @@ rule merge_consensus_probes:
 
 rule saute_assembly:
     input:
-        reads1=outdir / "trimmed/{sample}_R1.fastq",
-        reads2=outdir / "trimmed/{sample}_R2.fastq",
+        reads1=outdir / "preprocessed/filtered/{sample}_R1.fastq",
+        reads2=outdir / "preprocessed/filtered/{sample}_R2.fastq",
         consensus=outdir / "saute/consensus.fasta",
     output:
         all_vars=outdir / "saute/target_assembly/{sample}/all_vars.fasta",

@@ -1,7 +1,11 @@
 targets.append(
-    expand(outdir / "trimmed/{samples}_R{dir}.fastq", samples=sample_list, dir=[1, 2])
+    expand(
+        outdir / "preprocessed/trimmed/{samples}_R{dir}.fastq",
+        samples=sample_list,
+        dir=[1, 2],
+    )
 )
-targets.append(expand(outdir / "report/trimmed/{samples}.json", samples=sample_list))
+targets.append(expand(outdir / "log/trimmed/{samples}.json", samples=sample_list))
 
 
 # The input function map the sample at hand to its input files (specified in the samples table):
@@ -18,10 +22,10 @@ rule fastp_pe:
         in1=get_raw_input_fastq_r1,
         in2=get_raw_input_fastq_r2,
     output:
-        trim1=outdir / "trimmed/{sample}_R1.fastq",
-        trim2=outdir / "trimmed/{sample}_R2.fastq",
-        html=outdir / "report/trimmed/{sample}.html",
-        json=outdir / "report/trimmed/{sample}.json",
+        trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq",
+        trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq",
+        html=outdir / "log/trimmed/{sample}.html",
+        json=outdir / "log/trimmed/{sample}.json",
     log:
         outdir / "logs/fastp/{sample}.log",
     params:
@@ -36,3 +40,25 @@ rule fastp_pe:
         "--out1 {output.trim1} --out2 {output.trim2} "
         "--html {output.html} "
         "--json {output.json} ) 2> {log} "
+
+
+rule matching_probes:
+    input:
+        input=[
+            outdir / "preprocessed/trimmed/{sample}_R1.fastq",
+            outdir / "preprocessed/trimmed/{sample}_R2.fastq",
+        ],
+        ref=probes_path.resolve(),
+    output:
+        outm=[
+            outdir / "preprocessed/filtered/{sample}_R1.fastq",
+            outdir / "preprocessed/filtered/{sample}_R2.fastq",
+        ],
+    log:
+        outdir / "logs/preprocessing/bbduk/{sample}.log",
+    params:
+        command="bbduk.sh",
+        k=19,
+    threads: 4
+    wrapper:
+        "v4.3.0/bio/bbtools"

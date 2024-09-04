@@ -7,8 +7,8 @@ targets.append(
 
 rule spades_assembly:
     input:
-        in1=outdir / "trimmed/{sample}_R1.fastq",
-        in2=outdir / "trimmed/{sample}_R2.fastq",
+        in1=outdir / "preprocessed/filtered/{sample}_R1.fastq",
+        in2=outdir / "preprocessed/filtered/{sample}_R2.fastq",
         approv=outdir / "logs/dones/probe_hmms.done",
     output:
         out_dir=directory(outdir / "assembled/spades/{sample}"),
