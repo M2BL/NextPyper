@@ -26,6 +26,8 @@ rule split_probes:
                 SeqIO.write(recs, out_dict[probe], "fasta")
 
 
+if multi_probes:
+
 rule mafft_probes:
     input:
         outdir / "translated_probes/split_probes/{probe}.fasta",
