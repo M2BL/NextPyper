@@ -110,7 +110,9 @@ def _generate_kmer_consensus(
         prefix = msa[0].id.rsplit("_", 1)[0].replace("*", "")
     else:
         # To be modified
-        prefix = msa[0].id[: msa[0].id.rfind("_")].replace("*", "")
+        idx = msa.id.find("-")
+        prefix = msa.id[1:idx] + msa.id[idx:].rsplit("_", 3)[0]
+
     print(f"{prefix=}")
     #  Case a single sequence with the consensus.
     if len(msa) == 2:
