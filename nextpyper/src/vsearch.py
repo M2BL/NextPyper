@@ -212,8 +212,7 @@ def get_vsearch_kmer_consensus(
     while pile:
         target = pile[0]
         pile = pile[1:]
-        if not pile:
-            break
+
         if target.id.startswith("consensus"):
             cluster.append(target)
             msa = MultipleSeqAlignment(cluster)
@@ -228,7 +227,8 @@ def get_vsearch_kmer_consensus(
                 idx += 1
         else:
             cluster.append(target)
-
+        if not pile:
+            break
     return final_consensuses
 
 
@@ -241,12 +241,9 @@ if __name__ == "__main__":
     # ).get_fragments()
     # print(fragments)
     vsearch_result = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/vsearch_6487_aln.fasta"
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/vsearch_small/vsearch_out_5716.fasta"
     )
-    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/vsearch_6487_con_test.fasta"
-    vsearch_result = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/empty.fasta"
-    )
-    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/empty_con.fasta"
+    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/vsearch_small/vsearch_5716_con.fasta"
+
     records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SPAdes")
     SeqIO.write(records_con, out, "fasta")
