@@ -110,9 +110,7 @@ def _generate_kmer_consensus(
         prefix = msa[0].id.rsplit("_", 1)[0].replace("*", "")
     else:
         # To be modified
-        idx = msa.id.find("-")
-        prefix = msa.id[1:idx] + msa.id[idx:].rsplit("_", 3)[0]
-
+        prefix = msa[0].id[: msa[0].id.rfind("_")].replace("*", "")
     print(f"{prefix=}")
     #  Case a single sequence with the consensus.
     if len(msa) == 2:
@@ -135,7 +133,7 @@ def _generate_kmer_consensus(
         # Extract for each sequence the k-mer count, do not normalize by length as for SPAdes the
         # normalization has been done during the scaffold creation from the contigs.
         kmers = [
-            float(record.id.split("_")[-1].removeprefix("DP")) for record in msa[:-1]
+            int(record.id.split("_")[-1].removeprefix("DP")) for record in msa[:-1]
         ]
 
     SequenceBoundaries = namedtuple("SequenceBoundaries", ["start", "end"])
@@ -242,10 +240,14 @@ if __name__ == "__main__":
     #     run_miniprot("probe_8631_aa.fasta", "gene_8631_node3.fasta")
     # ).get_fragments()
     # print(fragments)
+    # vsearch_result = Path(
+    #     "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/vsearch_small/vsearch_out_5716.fasta"
+    # )
+    # out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/vsearch_small/vsearch_5716_con.fasta"
     vsearch_result = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/vsearch_small/vsearch_out_5716.fasta"
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_panpa/Hedypnois_rhagadioloides_6128.fasta"
     )
-    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/vsearch_small/vsearch_5716_con.fasta"
-
-    records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SPAdes")
+    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_panpa/Hedypnois_rhagadioloides_6128_con.fasta"
+    records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SAUTE")
     SeqIO.write(records_con, out, "fasta")
+
