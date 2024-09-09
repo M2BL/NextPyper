@@ -46,7 +46,7 @@ import sys
 import tempfile
 import textwrap
 import time
-from typing import Union, Optional, Self, Literal, TypeAlias
+from typing import Optional, Self, Literal, TypeAlias
 
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
@@ -65,7 +65,7 @@ from union_find import UnionFind
 
 
 # =======================================================================================
-#               CLASSES
+#               EXCEPTIOMS
 # =======================================================================================
 
 
@@ -73,25 +73,37 @@ class WrongAlphabet(Exception):
     """Exception raised when no assembled contig overlap with the probe"""
 
 
-def validate_sequence(
-    seq: Seq, record_name: str, alphabet: Literal["dna", "protein"] = "dna"
-) -> None:
-    """
-    Validate if a biopython Seq object is a dna or protein sequence
-    :param seq:
-    :param alphabet:
-    :return: None, raises WrongAlphabet exception if failed
-    """
-    alphabets = {
-        "dna": re.compile("^[acgtn]*$", re.I),
-        "protein": re.compile("^[acdefghiklmnpqrstvwy*]*$", re.I),
-    }
+# =======================================================================================
+#               FUNCTIONS
+# =======================================================================================
 
-    if alphabets[alphabet].search(str(seq)) is not None:
-        return
-    else:
-        raise WrongAlphabet(f"[error] The sequence {record_name} is not {alphabet}")
 
+def get_nuc_coordinates(
+    probe_start: int, probe_end: int, fragments: list[Fragment]
+) -> list[Optional[int]]:
+    """
+    Given a start and end position on a probe in AA space, return the nucleotide coordinates of start and end.
+    :param probe_start:
+    :param probe_end:
+    :param fragments: list of fragments
+    :return: [None, None] if for some reason there are no AA-nt correspondence, otherwise [start, end]
+    """
+    correspondences = {}
+    for fragment in fragments:
+        correspondences.update(fragment.get_correspondence())
+    while probe_start < probe_end:
+        if (first := correspondences.get(probe_start)) is None:
+            probe_start += 1
+        if (last := correspondences.get(probe_end)) is None:
+            probe_end -= 1
+        if None not in [first, last]:
+            return sorted(
+                [
+                    first,
+                    last,
+                ]
+            )
+    return [None, None]
 
 def run_miniprot(
     probe_path: Path,
@@ -99,11 +111,12 @@ def run_miniprot(
     treads=2,
     min_similarity=0.85,
     min_coverage=0.01,
-) -> str:
+) -> StringIO:
     """
     Wrapper for running miniprot.
     :return:
     """
+
     miniprot_cmd = f"miniprot -t {treads} --gff --aln --outn 1 --outs {min_similarity} --outc {min_coverage} {contig_path} {probe_path}".split()
 
     try:
@@ -129,31 +142,50 @@ def run_miniprot(
     return StringIO(miniprot.stdout)
 
 
+def validate_sequence(
+    seq: Seq, record_name: str, alphabet: Literal["dna", "protein"] = "dna"
+) -> None:
+    """
+    Validate if a biopython Seq object is a dna or protein sequence
+    :param seq:
+    :param record_name: name of the fasta file
+    :param alphabet:
+    :return: None, raises WrongAlphabet exception if failed
+    """
+    alphabets = {
+        "dna": re.compile("^[acgtn]*$", re.I),
+        "protein": re.compile("^[acdefghiklmnpqrstvwy*]*$", re.I),
+    }
+
+    if alphabets[alphabet].search(str(seq)) is not None:
+        return
+    else:
+        raise WrongAlphabet(f"[error] The sequence {record_name} is not {alphabet}")
+
+
+# =======================================================================================
+#               CLASSES
+# =======================================================================================
+
+
 @dataclass
-class HDBcluster:
+class ProbeCds:
     """
     Data structure for the fragment object produced by the parsing of the miniprot output.
     Each fragment is one exon.
     Attributes
     ----------
-    -probe_fasta: path to the amino acid probe fasta file.
+    -probe_fasta: path to the amino acid probes fasta file.
     -contigs_fasta: path to the nucleotide contigs fasta file.
     -treads: for miniprot.
     -min_probe_contig_sim: mapping similarity for miniprot.
     -min_fragment_cov: fraction of the probe covered by a contig for miniprot.
-    -min_contig_overlap: minimum overlap between two contigs to compute a distance.
-    -max_clustering_dist: maximum distance between two contigs to associate them with the union-find algorithm.
-    -min_cluster_size: minimum size of clusters for the HDBSCAN algorithm.
-    -min_contig_length: minimum length of a contig after trimming.
-    -keep_singletons: if True, keep unclustered contigs.
+    -min_contig_length: minimum length of a contig after trimming, if the sequences are saved.
 
     Post Init
     -probe_record: parsed probe sequence.
     -contigs_dict: dictionary of contig name as key and SeqRecord as value.
     -cds_dict: dictionary of contig name as key and Cds as value.
-    -distance_matrix: matrix of pairwise distances indexed on the cds_dict.
-    -clusters: nested list of contig names that have been clustered.
-        Set to the empty list, if no sequence match the probe.
     """
 
     probe_fasta: str
@@ -161,18 +193,12 @@ class HDBcluster:
     treads: int = field(default=8)
     min_probe_contig_sim: float = field(default=0.85)
     min_fragment_cov: float = field(default=0.05)
-    min_contig_overlap: int = field(default=300)
-    max_clustering_dist: float = field(default=0.05)
-    min_cluster_size: int = field(default=3)
     min_contig_length: int = field(default=300)
-    keep_singletons: bool = field(default=True)
     probe_record: SeqRecord = field(init=False, repr=False)
     contigs_dict: dict[str, list[SeqRecord]] = field(
         init=False, repr=False, default_factory=dict
     )
     cds_dict: dict[str, Cds] = field(init=False, repr=False, default_factory=dict)
-    distance_matrix: npt.ArrayLike = field(init=False, repr=False, default=None)
-    clusters: list[list[str]] = field(init=False, repr=False, default_factory=list)
 
     def __post_init__(self):
         self.probe_fasta = Path(self.probe_fasta)
@@ -195,12 +221,6 @@ class HDBcluster:
                 )
                 self.cds_dict[contig] = Cds(miniprot_out)
                 print(self.cds_dict[contig])
-        print("building distance matrix")
-        tic = time.perf_counter()
-        self._create_distance_matrix()
-        toc = time.perf_counter()
-        print(f"Computed distances in  {toc - tic:0.4f} seconds")
-        self._get_clusters()
 
     def _parse_fasta(self) -> None:
         """
@@ -222,6 +242,160 @@ class HDBcluster:
             record.name = ""
             validate_sequence(record.seq, self.contigs_fasta.name, "dna")
             self.contigs_dict[key] = record
+
+    def _trim_msa(self, cluster_names: list[str]) -> Optional[list[SeqRecord]]:
+        """
+        Given a list of records, trim them to the smallest region of the probe shared by at least two sequences.
+        In case, the group contains a single member, the sequence is trimmed to fit the probe's boundaries.
+        :param cluster_names:
+        :return: None is there is no match with a probe on this cluster, otherwise returns the trim sequence(s).
+        """
+        if len(cluster_names) == 1:
+            contig = cluster_names[0]
+            cds = self.cds_dict[contig]
+            record = self.contigs_dict[contig]
+            if cds.is_empty():
+                return
+            if cds.get_global_sim() < self.min_probe_contig_sim:
+                return
+            strand = cds.fragments[0].get_strand()
+            if strand == 1:
+                trim_start, trim_end = cds.mRNA_start, cds.mRNA_end
+            else:
+                trim_start, trim_end = cds.mRNA_end, cds.mRNA_start
+            if abs(trim_end - trim_start) < self.min_contig_length:
+                return
+
+            if strand == -1:
+                new_record = SeqRecord(
+                    record.seq[trim_end:trim_start].reverse_complement(),
+                    id=contig,
+                    name="",
+                    description="",
+                )
+            else:
+                new_record = SeqRecord(
+                    record.seq[trim_start:trim_end],
+                    id=contig,
+                    name="",
+                    description="",
+                )
+            return [new_record]
+
+        trimmed_records = []
+        interval_tree = IntervalST()
+        #  Find overlapping edges.
+        for contig in cluster_names:
+            cds = self.cds_dict[contig]
+            if cds.is_empty():
+                continue
+            fragments = cds.get_fragments()
+            start = list(fragments[0].get_correspondence().keys())[0]
+            end = list(fragments[-1].get_correspondence().keys())[-1]
+            interval_tree.put(Interval(start, end), contig)
+        common_intervals = interval_tree.get_all_intersections()
+        probe_start = min([overlap.get_start() for overlap in common_intervals])
+        probe_end = max([overlap.get_end() for overlap in common_intervals])
+
+        #  Trim the sequences
+        for contig in cluster_names:
+            cds = self.cds_dict[contig]
+            if cds.is_empty():
+                continue
+            record = self.contigs_dict[contig]
+            fragments = cds.get_fragments()
+            strand = cds.fragments[0].get_strand()
+            contig_start = list(fragments[0].get_correspondence().keys())[0]
+            contig_end = list(fragments[-1].get_correspondence().keys())[-1]
+            if strand == 1:
+                trim_start, trim_end = cds.mRNA_start, cds.mRNA_end
+            else:
+                trim_start, trim_end = cds.mRNA_end, cds.mRNA_start
+            # Case contig within core region
+            if probe_start < contig_start < contig_end < probe_end:
+                pass
+            if contig_start <= probe_start:
+                first, last = get_nuc_coordinates(probe_start, contig_end, fragments)
+                if None in [first, last]:
+                    continue
+                trim_start = first if strand == 1 else last
+
+            if probe_end <= contig_end:
+                first, last = get_nuc_coordinates(
+                    contig_start, probe_end - 1, fragments
+                )
+                if None in [first, last]:
+                    continue
+                trim_end = last if strand == 1 else first
+
+            if abs(trim_end - trim_start) < self.min_contig_length:
+                continue
+
+            if strand == -1:
+                new_record = SeqRecord(
+                    record.seq[trim_end:trim_start].reverse_complement(),
+                    id=contig,
+                    name="",
+                    description="",
+                )
+            else:
+                new_record = SeqRecord(
+                    record.seq[trim_start:trim_end],
+                    id=contig,
+                    name="",
+                    description="",
+                )
+            trimmed_records.append(new_record)
+        return trimmed_records
+
+
+@dataclass
+class HDBcluster(ProbeCds):
+    """
+    Data structure for the fragment object produced by the parsing of the miniprot output.
+    Each fragment is one exon. The sequences are clustered with HDBscan. Clustered sequences are processed. Low similarity
+    to the probe and short sequences are sieved out. The resulting sequences can be saved as fasta.
+    by simi
+    Attributes
+    ----------
+    -probe_fasta: path to the amino acid probe fasta file.
+    -contigs_fasta: path to the nucleotide contigs fasta file.
+    -treads: for miniprot.
+    -min_probe_contig_sim: mapping similarity for miniprot.
+    -min_fragment_cov: fraction of the probe covered by a contig for miniprot.
+    -min_contig_overlap: minimum overlap between two contigs to compute a distance.
+    -max_clustering_dist: maximum distance between two contigs to associate them with the union-find algorithm.
+    -min_cluster_size: minimum size of clusters for the HDBSCAN algorithm.
+    -min_contig_length: minimum length of a contig after trimming.
+    -keep_singletons: if True, keep unclustered contigs.
+
+    Post Init
+    -distance_matrix: matrix of pairwise distances indexed on the cds_dict.
+    -clusters: nested list of contig names that have been clustered.
+        Set to the empty list, if no sequence match the probe.
+    """
+
+    probe_fasta: str
+    contigs_fasta: str
+    treads: int = field(default=8)
+    min_probe_contig_sim: float = field(default=0.85)
+    min_fragment_cov: float = field(default=0.05)
+    min_contig_overlap: int = field(default=300)
+    max_clustering_dist: float = field(default=0.05)
+    min_cluster_size: int = field(default=3)
+    min_contig_length: int = field(default=300)
+    keep_singletons: bool = field(default=True)
+    distance_matrix: npt.ArrayLike = field(init=False, repr=False, default=None)
+    clusters: list[list[str]] = field(init=False, repr=False, default_factory=list)
+
+    def __post_init__(self):
+        super().__post_init__()
+        print("building distance matrix")
+        tic = time.perf_counter()
+        self._create_distance_matrix()
+        toc = time.perf_counter()
+        print(f"Computed distances in  {toc - tic:0.4f} seconds")
+        self._get_clusters()
 
     def _create_distance_matrix(
         self,
@@ -345,36 +519,15 @@ class HDBcluster:
         # print(self.distance_matrix)
         # Case no Cds match the probe
         if all((cds.has_empty_cds() for cds in self.cds_dict.values())):
-            fill = textwrap.fill(
-                f"[Warning] There are no matches, between the probe and the contigs at similarity {self.min_probe_contig_sim=}.",
-                width=90,
-                subsequent_indent=" " * 11,
-            )
-            print(fill)
             return []
-        # Case matching no clustering or low thresholds
+        # Case matching below thresholds
         if set(self.distance_matrix.flatten()) == {0.0, 100.0}:
-            valid_cds = [
-                name
-                for name, cds in self.cds_dict.items()
-                if not cds.is_empty()
-                and cds.get_global_sim() >= self.min_probe_contig_sim
-            ]
-            # case there are only unclustered sequences.
-            if valid_cds:
-                self.clusters = [[x] for x in valid_cds]
-                return self
-            # report a warning about only paralogs
             global_sims = sorted(
-                [
-                    cds.get_global_sim()
-                    for cds in self.cds_dict.values()
-                    if cds.get_global_sim() < self.min_probe_contig_sim
-                ]
+                [cds.get_global_sim() for cds in self.cds_dict.values()]
             )
             fill = textwrap.fill(
                 "[Warning] There are matches, but they are not reported as they register as paralogs. "
-                f"There are {len(global_sims)} sequences that match the probe with similarities between {global_sims[0]} and {global_sims[-1]}",
+                f"There are {len(global_sims)} sequences that match the probe with similarities between {global_sims[0]} and {global_sims[1]}",
                 width=90,
                 subsequent_indent=" " * 11,
             )
@@ -400,7 +553,6 @@ class HDBcluster:
 
             final_clusters.extend(new_clusters)
         self.clusters = final_clusters
-        # print(f"{final_clusters=}")
         return self
 
     def get_clusters(self) -> list[list[str]]:
@@ -430,7 +582,7 @@ class HDBcluster:
         if not self.clusters:
             print("No clusters found.")
             return
-        print(f"Saving clusters {self.clusters=} to fasta folder {fasta_folder}")
+        print(f"Saving clusters to fasta folder {fasta_folder}")
         Path(fasta_folder).mkdir(parents=True, exist_ok=True)
         fasta_prefix = self.probe_fasta.stem
         idx = 0
@@ -443,167 +595,58 @@ class HDBcluster:
                 print(f"saving fasta {name_fasta}")
                 idx += 1
 
-    def _trim_msa(self, cluster_names: list[str]) -> Optional[list[SeqRecord]]:
-        """
-        Given a list of records, trim them to the smallest region of the probe shared by at least two sequences.
-        In case, the group contains a single member, the sequence is trimmed to fit the probe's boundaries.
-        :param cluster_names:
-        :return: None is there is no match with a probe on this cluster, otherwise returns the trim sequence(s).
-        """
-        if len(cluster_names) == 1:
-            contig = cluster_names[0]
-            cds = self.cds_dict[contig]
-            record = self.contigs_dict[contig]
-            if cds.is_empty():
-                return
-            if cds.get_global_sim() < self.min_probe_contig_sim:
-                return
-            strand = cds.fragments[0].get_strand()
-            if strand == 1:
-                trim_start, trim_end = cds.mRNA_start, cds.mRNA_end
-            else:
-                trim_start, trim_end = cds.mRNA_end, cds.mRNA_start
-            if abs(trim_end - trim_start) < self.min_contig_length:
-                return
 
-            if strand == -1:
-                new_record = SeqRecord(
-                    record.seq[trim_end:trim_start].reverse_complement(),
-                    id=contig,
-                    name="",
-                    description="",
-                )
-            else:
-                new_record = SeqRecord(
-                    record.seq[trim_start:trim_end],
-                    id=contig,
-                    name="",
-                    description="",
-                )
-            return [new_record]
+# if __name__ == "__main__":
+#     # Snakemake rule execution by the "script:" directive
+#     if "snakemake" in globals():
+#         with open(snakemake.log[0], "w") as f:
+#             sys.stderr = sys.stdout = f
+#             hdb = HDBcluster(snakemake.input.probes, snakemake.input.contigs)
+#             hdb.save_clusters(snakemake.output[0])
+#             ## ToDo: Check that files are being created here
+#
+#             if len(tuple(Path(snakemake.output[0]).glob("*.fasta"))):
+#                 ## Create a dummy file fasta
+#                 ...
+#
+#     else:
+#         probes = sys.argv[1]
+#         contigs = sys.argv[2]
+#         out = sys.argv[3]
+#
+#         print(f"{probes=}")
+#         print(f"{contigs=}")
+#         print(f"{out=}")
+#
+#         hdb = HDBcluster(probes, contigs)
+#         hdb.save_clusters(out)
 
-        trimmed_records = []
-        interval_tree = IntervalST()
-        #  Find overlapping edges.
-        for contig in cluster_names:
-            cds = self.cds_dict[contig]
-            if cds.is_empty():
-                continue
-            fragments = cds.get_fragments()
-            start = list(fragments[0].get_correspondence().keys())[0]
-            end = list(fragments[-1].get_correspondence().keys())[-1]
-            interval_tree.put(Interval(start, end), contig)
-        common_intervals = interval_tree.get_all_intersections()
-        probe_start = min([overlap.get_start() for overlap in common_intervals])
-        probe_end = max([overlap.get_end() for overlap in common_intervals])
+def main():
+    # tempfile.tempdir = "/temp"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/probe_3_aa.fasta"
 
-        #  Trim the sequences
-        for contig in cluster_names:
-            cds = self.cds_dict[contig]
-            if cds.is_empty():
-                continue
-            record = self.contigs_dict[contig]
-            fragments = cds.get_fragments()
-            strand = cds.fragments[0].get_strand()
-            contig_start = list(fragments[0].get_correspondence().keys())[0]
-            contig_end = list(fragments[-1].get_correspondence().keys())[-1]
-            if strand == 1:
-                trim_start, trim_end = cds.mRNA_start, cds.mRNA_end
-            else:
-                trim_start, trim_end = cds.mRNA_end, cds.mRNA_start
-            # Case contig within core region
-            if probe_start < contig_start < contig_end < probe_end:
-                pass
-            if contig_start <= probe_start:
-                first, last = get_nuc_coordinates(probe_start, contig_end, fragments)
-                if None in [first, last]:
-                    continue
-                trim_start = first if strand == 1 else last
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_10248.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering/gene_3_all.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043_contigs.fasta"
 
-            if probe_end <= contig_end:
-                first, last = get_nuc_coordinates(
-                    contig_start, probe_end - 1, fragments
-                )
-                if None in [first, last]:
-                    continue
-                trim_end = last if strand == 1 else first
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/perfect_set_sequences/Arath_probe6660_aa.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/brassica/perfect_set_sequences/probe6660.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/fumaria/simulations/Myears_1M/per_probe/Arath_probe4471.fasta"
+    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/gold_standards/fumaria/simulations/Myears_1M/per_probe/probe4471.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/probe_10245.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs/probe_10245_contigs.fasta"
+    db = HDBcluster(probe_fasta, contig_fasta)
+    # print(db._cluster_unionfind(db.contigs_dict, db.distance_matrix))
+    # clusters_UF = db._cluster_unionfind(db.contigs_dict, db.distance_matrix)
 
-            if abs(trim_end - trim_start) < self.min_contig_length:
-                continue
-
-            if strand == -1:
-                new_record = SeqRecord(
-                    record.seq[trim_end:trim_start].reverse_complement(),
-                    id=contig,
-                    name="",
-                    description="",
-                )
-            else:
-                new_record = SeqRecord(
-                    record.seq[trim_start:trim_end],
-                    id=contig,
-                    name="",
-                    description="",
-                )
-            trimmed_records.append(new_record)
-        return trimmed_records
-
-
-def get_nuc_coordinates(
-    probe_start: int, probe_end: int, fragments: list[Fragment]
-) -> Optional[list[int, int]]:
-    """
-    Given a start and end position on a probe in AA space, return the nucleotide coordinates of start and end.
-    :param probe_start:
-    :param probe_end:
-    :param fragments: list of fragments
-    :return: [None, None] if for some reason there are no AA-nt correspondence, otherwise [start, end]
-    """
-    correspondences = {}
-    for fragment in fragments:
-        correspondences.update(fragment.get_correspondence())
-    while probe_start < probe_end:
-        if (first := correspondences.get(probe_start)) is None:
-            probe_start += 1
-        if (last := correspondences.get(probe_end)) is None:
-            probe_end -= 1
-        if None not in [first, last]:
-            return sorted(
-                [
-                    first,
-                    last,
-                ]
-            )
-    return [None, None]
+    db.save_clusters("/home/yjkbertrand/Documents/projects/nextpiper/test_data/bugs")
 
 
 if __name__ == "__main__":
-    # Snakemake rule execution by the "script:" directive
-    if "snakemake" in globals():
-        with open(snakemake.log[0], "w") as f:
-            sys.stderr = sys.stdout = f
-            hdb = HDBcluster(snakemake.input.probes, snakemake.input.contigs)
-            hdb.save_clusters(snakemake.output[0])
-            ## ToDo: Check that files are being created here
-
-            if len(tuple(Path(snakemake.output[0]).glob("*.fasta"))):
-                ## Create a dummy file fasta
-                ...
-
-    else:
-        probes = sys.argv[1]
-        contigs = sys.argv[2]
-        out = sys.argv[3]
-
-        print(f"{probes=}")
-        print(f"{contigs=}")
-        print(f"{out=}")
-
-        hdb = HDBcluster(probes, contigs)
-        hdb.save_clusters(out)
-    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/tests/probe.fasta"
-    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/tests/seqs.fasta"
-    # # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/perfect_set_sequences/Arath_probe6660_aa.fasta"
-    # # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/perfect_set_sequences/probe6660.fasta"
-    # db = HDBcluster(probe_fasta, contig_fasta)
-    # db.save_clusters("/home/yjkbertrand/Documents/projects/nextpyper/test_data/gold_standards/brassica/tests")
+    os.chdir("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering")
+    # fragments = CdsParser(
+    #     run_miniprot("probe_8631_aa.fasta", "gene_8631_node3.fasta")
+    # ).get_fragments()
+    # print(fragments)
+    main()

@@ -32,6 +32,8 @@ from itertools import chain, groupby
 from pathlib import Path
 from typing import Self
 from union_find import UnionFind
+from gfa2fasta import paths_to_recs
+from Bio import SeqIO
 
 
 @dataclass
@@ -39,6 +41,7 @@ class BGC_candidate:
     """
     Data structure for the parsing of the 'hmm_statistics.txt' file.
     """
+
     name: str
     hmms: list[str] = field(default_factory=list)
     coordinates: list[tuple[int, int]] = field(default_factory=list)
@@ -271,14 +274,19 @@ def filter_components_hmm(
             dominant_hmm = max(set(hmm_matches), key=hmm_matches.count)
             subgraphs = list(set([bgc.get_subgraph() for bgc in bgc_matches]))
             paths = list(set(chain(*[bgc.get_paths() for bgc in bgc_matches])))
-            all_components.append(
-                Component(dominant_hmm, component, subgraphs, paths)
-            )
+            all_components.append(Component(dominant_hmm, component, subgraphs, paths))
 
     return all_components
 
 
-def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -> None:
+def split_into_hmms(
+    gfa_path: Path,
+    components: list[Component],
+    outdir: Path,
+    prefix: str = "",
+    write_graphs: bool = True,
+    write_seqs: bool = False,
+) -> None:
     """Given an assembly graph and a list of components, look for the components in the graph
     group them by hmm and write them together in the output directory specified. The structure
     of the output directory is: <outdir>/<hmm>.gfa.
@@ -286,6 +294,9 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
     :param gfa_path: path to assembly graph to split.
     :param components: list of components to find in the graph.
     :param outdir: path where to write the split components.
+    :param prefix: prefix to add to the path/sequence names.
+    :param write_graphs: Whether to write a gfa for each component found.
+    :param write_seqs: Whether to write a fasta per component with its corresponding sequences.
     :return:
     """
 
@@ -306,6 +317,7 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
     # Make a dictionary that will hold the lines to write for each component
     comp_lines = defaultdict(list)
     nodes = [None]
+    K = None
 
     with gfa_path.open() as file:
         for line in file:
@@ -315,6 +327,8 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
                 case "S":
                     nodes = line.split()[1:2]
                 case "L":
+                    if not K:
+                        K = int(line.split()[5].rstrip("M"))
                     nodes = list(linked_nodes(line.split()))
                 case "P":
                     nodes = [node.rstrip("-+") for node in line.split()[2].split(",")]
@@ -346,22 +360,29 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
                 if any(p[:-1] not in comp.edges for p in path.split(",")):
                     continue
 
-                path_name = f"{name}_p{i}"
+                path_name = f"{prefix}{name}_p{i}"
                 p_line = "\t".join(["P", path_name, path, "*"]) + "\n"
                 comp_lines[name].append(p_line)
 
         # Now write the multiple files for the found components.
         get_hmm = lambda x: x[0][: x[0].rfind("_")]
         score_line = lambda line: 0 if line[0] == "S" else 1 if line[0] == "L" else 2
-
         outdir.mkdir(exist_ok=True, parents=True)
+
         for hmm, group in groupby(sorted(comp_lines.items(), key=get_hmm), key=get_hmm):
             _, lines = zip(*group)
-            with (outdir / f"{hmm}.gfa").open("w") as out_comp:
-                out_comp.write(header)
-                out_comp.write(
-                    "".join(sorted(chain.from_iterable(lines), key=score_line))
-                )
+            subgraph = sorted(chain.from_iterable(lines), key=score_line)
+
+            # Write graphs (.gfa)
+            if write_graphs:
+                with (outdir / f"{hmm}.gfa").open("w") as file:
+                    file.write(header)
+                    file.write("".join(subgraph))
+
+            # Write sequences (.fasta)
+            if write_seqs:
+                file = outdir / f"{hmm}.fasta"
+                SeqIO.write(paths_to_recs(subgraph, suffix_KC=True, K=K), file, "fasta")
 
 
 def main(): ...

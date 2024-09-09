@@ -14,6 +14,7 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 from dataclasses import dataclass, field, fields
+from io import StringIO
 from pathlib import Path
 from typing import Final, Optional, Self, TypedDict, Literal, Any
 import os
@@ -128,7 +129,7 @@ class Cds:
     -global_identity: aa identity from miniprot over all exons (fragments).
     """
 
-    miniprot_output: str = field(repr=False)
+    miniprot_output: StringIO = field(repr=False)
     data: int = field(default_factory=dict, init=False, repr=False)
     fragments: list[Fragment] = field(default_factory=list, init=False, repr=False)
     mRNA_start: int = field(init=False)

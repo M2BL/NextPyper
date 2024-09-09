@@ -1,24 +1,27 @@
-graph_dir = outdir / Path("assembled/prefixed/component_seqs/")
+from vsearch import get_vsearch_kmer_consensus
 
-
-targets.append(expand(outdir / "clustering/clusters/{probes}", probes=probes_list))
+targets.append(
+    expand(outdir / "clustering/consensus/{probes}.fasta", probes=probes_list)
+)
 # ToDo: Test:
 # What happens if not all the probes are present in at least one sample?
 # This would certainly happen in real life cases.
 
 
 def union_probes(wildcards):
-    glob_match = glob_wildcards(graph_dir / f"{{sample}}/{wildcards.probe}.fasta")
+    glob_match = glob_wildcards(
+        outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta"
+    )
 
     return expand(
-        graph_dir / f"{{sample}}/{wildcards.probe}.fasta",
+        outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta",
         sample=glob_match.sample,
     )
 
 
 rule merge_asms:
     input:
-        direc=outdir / "logs/dones/prefixing.done",
+        direc=outdir / "logs/dones/splitting.done",
         probes=union_probes,
     output:
         outfile=outdir / "clustering/sample_merged_input/{probe}.fasta",
@@ -26,36 +29,29 @@ rule merge_asms:
         "cat {input.probes} > {output}"
 
 
-checkpoint clustering:
+rule vsearch_clustering:
     input:
-        probes=outdir / "translated_probes/split_probes/{probe}.fasta",
-        contigs=outdir / "clustering/sample_merged_input/{probe}.fasta",
+        cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
-        directory(outdir / "clustering/clusters/{probe}"),
+        msaout=outdir / "clustering/clusters/{probe}.fasta",
     log:
-        outdir / "logs/clustering/{probe}.log",
-    conda:
-        "../../envs/clustering.yaml"
-    script:
-        "../../../src/contig_cluster.py"
+        outdir / "logs/clustering/vsearch/{probe}.log",
+    params:
+        extra="--id 0.95 --minseqlength 5 --qmask none",
+    threads: 1
+    wrapper:
+        "v4.3.0/bio/vsearch"
 
 
-def get_input_done_clustering(wildcards):
-    aux = checkpoints.clustering.get(wildcards.probe).output[0]
-
-    glob_match = glob_wildcards(
-        Path(checkpoint_output) / f"{wildcards.probe}_{{cluster}}.fasta"
-    )
-
-    return expand(
-        outdir / "clustering/clusters/{probe}/{probe}_{cluster}.hmm",
-        probe=wildcards.probe,
-        cluster=glob_match.cluster,
-    )
-
-
-checkpoint done_clustering:
+rule vsearch_consensus_parsing:
     input:
-        get_input_done_clustering,
+        outdir / "clustering/clusters/{probe}.fasta",
     output:
-        done=touch(outdir / "logs/dones/clustering.done"),
+        outdir / "clustering/consensus/{probe}.fasta",
+    log:
+        outdir / "logs/clustering/consensus/{probe}.log",
+    run:
+        with open(log[0], "w") as outlog:
+            sys.stdout = sys.stderr = outlog
+            recs = get_vsearch_kmer_consensus(Path(input[0]), "SPAdes")
+            SeqIO.write(recs, Path(output[0]), "fasta")

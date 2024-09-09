@@ -19,6 +19,7 @@ from snaketool_utils.cli_utils import (
 
 sys.path.append(str((Path(__file__).parent / "workflow/scripts").resolve()))
 from sample_table import make_table
+from multi_seq_probes import check_probes
 
 
 def snake_base(rel_path):
@@ -150,8 +151,13 @@ Available targets:
 
 # ToDo: Refine this help message
 sample_table_msg = """
-The data directory is expected to have raw paired reads 
-per sample (forward, reverse).
+The data directory is expected to have raw paired reads
+files per each sample (forward, reverse).
+"""
+
+# ToDo: Refine this help message
+validate_probes_msg = """
+
 """
 
 
@@ -176,11 +182,10 @@ per sample (forward, reverse).
     required=True,
 )
 @click.option(
-    "--graph_simplification",
-    "graph_simplification",
-    help="Whether to simplify assembly graph after first assembly",
-    is_flag=True,
-    default=False,
+    "--multi-probes/--single-probes",
+    "multi_probes",
+    help="Whether the probe set has multiple or a single sequence per probe ",
+    default=True,
     show_default=True,
 )
 @click.option(
@@ -248,8 +253,53 @@ def make_sample_table(**kwargs):
     make_table(datadir, outfile)
 
 
+@click.option(
+    "--probes",
+    "probes",
+    help="Path to probes files",
+    type=click.Path(readable=True, exists=True),
+    required=True,
+)
+@click.option(
+    "--pattern",
+    help="Pattern used to group the probes (RegEx)",
+    type=str,
+    default=r"(\d{4})$",
+    # click.Path(writable=True, readable=True),
+    # default="sample.tsv",
+    show_default=True,
+)
+@click.option(
+    "--write_hierarchy",
+    "hierarchy",
+    help="Write grouping hierarchy to this file",
+    type=click.Path(writable=True, readable=True),
+    default="",
+    # show_default=True,
+)
+@click.option(
+    "--write_summary",
+    "output",
+    help="Write summary of grouping to this file",
+    type=click.Path(writable=True, readable=True),
+    default="",
+    # show_default=True,
+)
+@click.command(epilog=validate_probes_msg)
+def validate_probes(**kwargs):
+    """Validate a probes file for running NextPyper"""
+
+    probes_path = Path(kwargs["probes"])
+    pattern = kwargs["pattern"]
+    outsummary = Path(kwargs["output"]) if kwargs["output"] else None
+    outhierarchy = Path(kwargs["hierarchy"]) if kwargs["hierarchy"] else None
+
+    check_probes(probes_path, pattern, outsummary, outhierarchy)
+
+
 cli.add_command(run)
 cli.add_command(make_sample_table)
+cli.add_command(validate_probes)
 cli.add_command(config)
 cli.add_command(citation)
 
