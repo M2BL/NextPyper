@@ -28,19 +28,19 @@ rule split_probes:
 
 if multi_probes:
 
-rule mafft_probes:
-    input:
-        outdir / "translated_probes/split_probes/{probe}.fasta",
-    output:
-        outdir / "translated_probes/aln_probes/{probe}.fasta",
-    params:
-        "--auto ",
-    log:
-        outdir / "logs/translates_probes/aln_probes/{probe}.log",
-    conda:
-        "../../envs/alignment.yaml"
-    shell:
-        "mafft {params} {input} > {output} 2> {log}"
+    rule mafft_probes:
+        input:
+            outdir / "translated_probes/split_probes/{probe}.fasta",
+        output:
+            outdir / "translated_probes/aln_probes/{probe}.fasta",
+        params:
+            "--auto ",
+        log:
+            outdir / "logs/translates_probes/aln_probes/{probe}.log",
+        conda:
+            "../../envs/alignment.yaml"
+        shell:
+            "mafft {params} {input} > {output} 2> {log}"
 
 
 rule build_probe_hmms:
