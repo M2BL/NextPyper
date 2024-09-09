@@ -32,7 +32,6 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 
-from collections import deque
 from dataclasses import dataclass, field
 from importlib import reload
 from io import StringIO
@@ -52,26 +51,18 @@ from typing import Optional, Self, Literal, TypeAlias
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from Bio.Seq import Seq
-import numpy as np
-import numpy.typing as npt
-from sklearn.cluster import HDBSCAN
 
-from alignment import Alignment_fragment
 import gff_parser
 
 gff_parser = reload(gff_parser)
 from gff_parser import Fragment, Cds
 from interval_tree import IntervalST, Interval
-from union_find import UnionFind
+
 
 
 # =======================================================================================
 #               EXCEPTIOMS
 # =======================================================================================
-
-
-class WrongAlphabet(Exception):
-    """Exception raised when no assembled contig overlap with the probe"""
 
 
 # =======================================================================================
@@ -163,27 +154,6 @@ def run_miniprot(
     return StringIO(miniprot.stdout)
 
 
-def validate_sequence(
-    seq: Seq, record_name: str, alphabet: Literal["dna", "protein"] = "dna"
-) -> None:
-    """
-    Validate if a biopython Seq object is a dna or protein sequence
-    :param seq:
-    :param record_name: name of the fasta file
-    :param alphabet:
-    :return: None, raises WrongAlphabet exception if failed
-    """
-    alphabets = {
-        "dna": re.compile("^[acgtn]*$", re.I),
-        "protein": re.compile("^[acdefghiklmnpqrstvwy*]*$", re.I),
-    }
-
-    if alphabets[alphabet].search(str(seq)) is not None:
-        return
-    else:
-        raise WrongAlphabet(f"[error] The sequence {record_name} is not {alphabet}")
-
-
 # =======================================================================================
 #               CLASSES
 # =======================================================================================
@@ -209,13 +179,13 @@ class ProbeCds:
     -cds_dict: dictionary of contig name as key and Cds object as value.
     """
 
-    probes_fasta: str
+    probe_fasta: str
     contigs_fasta: str
     treads: int = field(default=8)
     min_probe_contig_sim: float = field(default=0.85)
     min_fragment_cov: float = field(default=0.05)
     min_contig_length: int = field(default=300)
-    probes_path: Path = field(init=False, repr=False)
+    probe_path: Path = field(init=False, repr=False)
     contigs_path:Path = field(init=False, repr=False)
     probes_dict: dict[str, list[SeqRecord]] = field(
         init=False, repr=False, default_factory=dict)
@@ -224,13 +194,12 @@ class ProbeCds:
     cds_dict: dict[str, Cds] = field(init=False, repr=False, default_factory=dict) # defaultdict(dict)?
 
     def __post_init__(self):
-        self.probes_path = Path(self.probes_fasta)
+        self.probe_path = Path(self.probe_fasta)
         self.contigs_path = Path(self.contigs_fasta)
-        assert self.probes_path.exists(), f"{self.probes_fasta} does not exist"
+        assert self.probe_path.exists(), f"{self.probe_fasta} does not exist"
         assert self.contigs_path.exists(), f"{self.contigs_fasta} does not exist"
         self._parse_fasta()
         print("Running miniprot")
-
         # run miniprot on each scaffold/probe combination
         with tempfile.TemporaryDirectory() as tmpdirname:
             # write all the probe and scaffold sequences
@@ -240,7 +209,7 @@ class ProbeCds:
                 contig_fasta = Path(tmpdirname) / fasta_name
                 SeqIO.write(record, contig_fasta, "fasta")
                 miniprot_out = run_miniprot(
-                    self.probe_fasta,
+                    self.probe_path,
                     contig_fasta,
                     self.treads,
                     self.min_probe_contig_sim,
@@ -255,24 +224,14 @@ class ProbeCds:
         :return:
         """
         try:
-            self.probes_dict = SeqIO.to_dict(SeqIO.parse(self.probes_path, "fasta"))
+            self.probes_dict = SeqIO.to_dict(SeqIO.parse(self.probe_path, "fasta"))
         except Exception as err:
             sys.exit(f"[ERROR] {err}")
-        for record in self.probes_dict.values():
-            # record.description = ""
-            # record.name = ""
-            validate_sequence(record.seq, self.contigs_path.name, "protein")
-            # self.probes_dict[key] = record
         try:
-            contigs_dict = SeqIO.to_dict(SeqIO.parse(self.contigs_fasta, "fasta"))
+            self.contigs_dict = SeqIO.to_dict(SeqIO.parse(self.contigs_path, "fasta"))
         except Exception as err:
             sys.exit(f"[ERROR] {err}")
-        # cleaning the name and descriptions, required for exonerate, still necessary with miniprot?
-        for record in self.probes_dict.values():
-            # record.description = ""
-            # record.name = ""
-            validate_sequence(record.seq, self.contigs_path.name, "dna")
-            # self.contigs_dict[key] = record
+
 
     def _trim_msa(self, cluster_names: list[str]) -> Optional[list[SeqRecord]]:
         """
@@ -425,7 +384,7 @@ class OverlapDetect(ProbeCds):
     def __post_init__(self):
         super().__post_init__()
         self._sorting_overlapping()
-        print(self.non_overlapping)
+        print("non_overlapping", self.non_overlapping)
 
     def _sorting_overlapping(self) -> Self:
         """
@@ -464,5 +423,15 @@ class OverlapDetect(ProbeCds):
                 print(f"saving fasta {name_fasta}")
                 idx += 1
 
-
-
+def main():
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043_contigs.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_105_aa.fasta"
+    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/substample_0_no_gap.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10052_aa.fasta"
+    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/final_alns/probe_10052.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/batarchium/H1_G3/H1_G3_probe_10248.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10248_aa.fasta"
+    OV = OverlapDetect(probe_fasta, contig_fasta)
+if __name__ == "__main__":
+    main()
