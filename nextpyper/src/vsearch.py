@@ -207,6 +207,9 @@ def get_vsearch_kmer_consensus(
     """
     final_consensuses = []
     records = list(SeqIO.parse(vsearch_file, "fasta"))
+    # If input file is empty, return an empty list
+    if not records:
+        return []
     pile = records[1:]
     cluster = [records[0]]
     idx = 0
