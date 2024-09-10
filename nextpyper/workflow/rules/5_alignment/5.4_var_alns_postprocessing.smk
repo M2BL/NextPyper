@@ -1,6 +1,3 @@
-targets.append(outdir / "logs/dones/clean_var_alns.done")
-
-
 use rule taper as taper_vars with:
     input:
         outdir / "var_aligned/var_alns/{probe}.fasta",

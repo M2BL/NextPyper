@@ -11,7 +11,7 @@ include: os.path.join(workflow.basedir, "rules", "preflight.smk")
 
 ## List of outputs
 targets = []
-real_targets = []
+
 
 include: os.path.join(workflow.basedir, "rules", "0_reads_preprocessing", "0.1_trimming.smk")
 # include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.1_mapping_bwa_mem2.smk")
@@ -31,16 +31,18 @@ include: os.path.join(workflow.basedir, "rules", "7_variants_on_graph", "7.1_sau
 # include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.5_sorting_alignments.smk")
 
 
-real_targets.append(
-    expand(outdir / "var_aligned/sorted_alns/{probe}.fasta", probe=probes_list)
+targets.append(
+    expand(outdir / "saute/target_assembly/{sample}/target_vars.fasta", sample=sample_list),
+)
+targets.append(
+    expand(outdir / "translated_probes/probe_consensus/{probe}.fasta", probe=probes_list),
 )
 
 # Target rules
 @targetRule
 rule all:
     input:
-        # targets,
-        real_targets
+        targets,
 
 @targetRule
 rule print_targets:

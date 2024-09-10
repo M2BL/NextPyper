@@ -1,8 +1,3 @@
-targets.append(
-    expand(outdir / "saute/target_assembly/{samples}/graph.gfa", samples=sample_list)
-)
-
-
 rule merge_consensus_probes:
     input:
         expand(outdir / "clustering/consensus/{probes}.fasta", probes=probes_list),

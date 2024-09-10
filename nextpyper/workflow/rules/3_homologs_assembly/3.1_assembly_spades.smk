@@ -1,6 +1,3 @@
-targets.append(outdir / "logs/dones/assembly.done")
-
-
 rule bam2fastq:
     input:
         aux=rules.distribute_reads.output,

@@ -2,10 +2,6 @@ from Bio import AlignIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 
-targets.append(
-    expand(outdir / "var_aligned/sorted_alns/{probe}.fasta", probe=probes_list)
-)
-
 
 def get_cluster(rec: SeqRecord) -> str:
     hit = saute_seq_pattern.match(rec.name)

@@ -1,12 +1,5 @@
 from vsearch import get_vsearch_kmer_consensus
 
-targets.append(
-    expand(outdir / "clustering/consensus/{probes}.fasta", probes=probes_list)
-)
-# ToDo: Test:
-# What happens if not all the probes are present in at least one sample?
-# This would certainly happen in real life cases.
-
 
 def union_probes(wildcards):
     glob_match = glob_wildcards(

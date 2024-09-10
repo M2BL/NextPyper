@@ -2,8 +2,6 @@ from collections import defaultdict
 import re
 from prefix_seqs import pref_rec
 
-targets.append(outdir / "logs/dones/var_alns.done")
-
 
 checkpoint group_variants_by_probe:
     input:

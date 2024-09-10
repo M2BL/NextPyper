@@ -1,8 +1,6 @@
 from prefix_seqs import prefix_fasta, prefix_gfa
 from gfa2fasta import paths2fasta
 
-targets.append(outdir / "logs/dones/prefixing.done")
-
 
 def get_graph_components(wildcards):
     w = wildcards

@@ -1,7 +1,5 @@
 from itertools import chain
 
-targets.append(outdir / "logs/dones/cluster_alns.done")
-
 
 def nrecs(fasta):
     return sum(1 for _ in SeqIO.parse(fasta, "fasta"))

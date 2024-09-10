@@ -1,7 +1,5 @@
 from hmm_build import hmm_build, hmm_consensus
 
-targets.append(outdir / "logs/dones/probe_hmms.done")
-
 
 rule split_probes:
     input:

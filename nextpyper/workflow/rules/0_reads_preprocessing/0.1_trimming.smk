@@ -1,13 +1,3 @@
-targets.append(
-    expand(
-        outdir / "preprocessed/trimmed/{samples}_R{dir}.fastq",
-        samples=sample_list,
-        dir=[1, 2],
-    )
-)
-targets.append(expand(outdir / "log/trimmed/{samples}.json", samples=sample_list))
-
-
 # The input function map the sample at hand to its input files (specified in the samples table):
 def get_raw_input_fastq_r1(wildcards):
     return sample_dict[wildcards.sample]["path_forward"]
