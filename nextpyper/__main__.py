@@ -189,6 +189,14 @@ validate_probes_msg = """
     show_default=True,
 )
 @click.option(
+    "--pattern",
+    "probe_pattern",
+    help="Pattern used to group the probes (RegEx)",
+    type=str,
+    default=r"(\d{4})$",
+    show_default=True,
+)
+@click.option(
     "--taper_parameters",
     "taper_params",
     help="Parameters file to use when running TAPER (-p). See TAPER's docs.",
@@ -254,22 +262,6 @@ def make_sample_table(**kwargs):
 
 
 @click.option(
-    "--probes",
-    "probes",
-    help="Path to probes files",
-    type=click.Path(readable=True, exists=True),
-    required=True,
-)
-@click.option(
-    "--pattern",
-    help="Pattern used to group the probes (RegEx)",
-    type=str,
-    default=r"(\d{4})$",
-    # click.Path(writable=True, readable=True),
-    # default="sample.tsv",
-    show_default=True,
-)
-@click.option(
     "--write_hierarchy",
     "hierarchy",
     help="Write grouping hierarchy to this file",
@@ -284,6 +276,20 @@ def make_sample_table(**kwargs):
     type=click.Path(writable=True, readable=True),
     default="",
     # show_default=True,
+)
+@click.option(
+    "--pattern",
+    help="Pattern used to group the probes (RegEx)",
+    type=str,
+    default=r"(\d{4})$",
+    show_default=True,
+)
+@click.option(
+    "--probes",
+    "probes",
+    help="Path to probes files",
+    type=click.Path(readable=True, exists=True),
+    required=True,
 )
 @click.command(epilog=validate_probes_msg)
 def validate_probes(**kwargs):
