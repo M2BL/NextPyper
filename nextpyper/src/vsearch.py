@@ -254,10 +254,11 @@ if __name__ == "__main__":
     # records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SAUTE")
     # SeqIO.write(records_con, out, "fasta")
     vsearch_result = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/vsearch_6128_aln.fasta"
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_vsearch.fasta"
 
 
     )
-    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/vsearch_6128_aln_con.fasta"
-    records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SPades")
+    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
+
+    records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SAUTE")
     SeqIO.write(records_con, out, "fasta")

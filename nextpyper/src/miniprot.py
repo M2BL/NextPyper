@@ -432,6 +432,10 @@ def main():
     # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/final_alns/probe_10052.fasta"
     contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/batarchium/H1_G3/H1_G3_probe_10248.fasta"
     probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10248_aa.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/probe_consensus/6128.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/probe_consensus/6487.fasta"
     OV = OverlapDetect(probe_fasta, contig_fasta)
 if __name__ == "__main__":
     main()
