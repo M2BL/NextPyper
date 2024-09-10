@@ -26,7 +26,12 @@ rule merge_asms:
     output:
         outfile=outdir / "clustering/sample_merged_input/{probe}.fasta",
     shell:
-        "cat {input.probes} > {output}"
+        """
+        for file in {input.probes}; do 
+            cat $file 
+        done > {output}
+        touch {output}
+        """
 
 
 rule vsearch_clustering:
