@@ -1,6 +1,3 @@
-targets.append(expand(outdir / "mapped/total/{samples}.bam", samples=sample_list))
-
-
 rule probes_symlink:
     input:
         probes.resolve(),  # resolve() makes the path absolute.

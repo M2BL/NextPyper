@@ -31,6 +31,13 @@ include: os.path.join(workflow.basedir, "rules", "7_variants_on_graph", "7.1_sau
 # include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.5_sorting_alignments.smk")
 
 
+targets.append(
+    expand(outdir / "saute/target_assembly/{sample}/target_vars.fasta", sample=sample_list),
+)
+targets.append(
+    expand(outdir / "translated_probes/probe_consensus/{probe}.fasta", probe=probes_list),
+)
+
 # Target rules
 @targetRule
 rule all:

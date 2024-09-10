@@ -2,8 +2,6 @@ from collections import defaultdict
 import re
 from prefix_seqs import pref_rec
 
-targets.append(outdir / "logs/dones/var_alns.done")
-
 
 checkpoint group_variants_by_probe:
     input:
@@ -38,7 +36,7 @@ def get_vars_for_aln(wildcards):
 
 use rule mafft as mafft_vars with:
     input:
-        get_vars_for_aln,
+        alns=get_vars_for_aln,
     output:
         alns=outdir / "var_aligned/var_alns/{probe}.fasta",
     params:

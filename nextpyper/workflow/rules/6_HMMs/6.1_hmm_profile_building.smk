@@ -1,7 +1,5 @@
 from hmm_build import hmm_build, hmm_consensus
 
-targets.append(outdir / "logs/dones/hmms.done")
-
 
 def is_multiseq(wildcards) -> bool:
     return 1 < nrecs(

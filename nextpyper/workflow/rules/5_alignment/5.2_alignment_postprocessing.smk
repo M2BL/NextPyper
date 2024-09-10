@@ -1,6 +1,3 @@
-targets.append(outdir / "logs/dones/clean_alns.done")
-
-
 rule taper:
     input:
         outdir / "aligned/cluster_alns/{probe}/{probe}_{cluster}.fasta",

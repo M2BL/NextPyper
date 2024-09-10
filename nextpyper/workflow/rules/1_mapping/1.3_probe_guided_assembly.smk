@@ -1,9 +1,5 @@
 from gfa_parser import split_into_hmms, filter_components_hmm
 
-targets.append(
-    expand(outdir / "assembled/split_components/{sample}", sample=sample_list)
-)
-
 
 rule spades_assembly:
     input:

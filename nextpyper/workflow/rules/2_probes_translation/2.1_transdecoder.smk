@@ -1,7 +1,5 @@
 from trans_dec_parser import transdecoder_parser
 
-targets.append(outdir / "translated_probes/longest_cds.fasta")
-
 
 rule transdecoder_longorfs:
     input:

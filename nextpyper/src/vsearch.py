@@ -110,8 +110,8 @@ def _generate_kmer_consensus(
         prefix = msa[0].id.rsplit("_", 1)[0].replace("*", "")
     else:
         # To be modified
-        idx = msa.id.find("-")
-        prefix = msa.id[1:idx] + msa.id[idx:].rsplit("_", 3)[0]
+        idx = msa[0].id.find("-")
+        prefix = msa[0].id[1:idx] + msa[0].id[idx:].rsplit("_", 3)[0]
     print(f"{prefix=}")
     #  Case a single sequence with the consensus.
     if len(msa) == 2:
@@ -207,6 +207,9 @@ def get_vsearch_kmer_consensus(
     """
     final_consensuses = []
     records = list(SeqIO.parse(vsearch_file, "fasta"))
+    # If input file is empty, return an empty list
+    if not records:
+        return []
     pile = records[1:]
     cluster = [records[0]]
     idx = 0

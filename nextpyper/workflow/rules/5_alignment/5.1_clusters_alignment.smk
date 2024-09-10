@@ -1,15 +1,23 @@
 from itertools import chain
 
-targets.append(outdir / "logs/dones/cluster_alns.done")
-
 
 def nrecs(fasta):
     return sum(1 for _ in SeqIO.parse(fasta, "fasta"))
 
 
+def get_separate_multiseq_input(wildcards):
+    # checkpoint_output = checkpoints.clustering.get(wildcards.probe).output[0]
+    # return Path(checkpoint_output) / f"{wildcards.probe}_{wildcards.cluster}.fasta"
+    aux = checkpoints.clustering.get(wildcards.probe).output[0]
+    print(aux)
+    return aux
+    # return checkpoints.clustering.get(wildcards.probe).output[0]
+
+
 checkpoint separate_multiseq:
     input:
-        outdir / "clustering/clusters/{probe}",
+        # outdir / "clustering/clusters/{probe}",
+        get_separate_multiseq_input,
     output:
         directory(outdir / "aligned/aln_inputs/{probe}"),
     run:
@@ -27,7 +35,8 @@ def get_aln_input(wildcards):
 
 rule mafft:
     input:
-        get_aln_input,
+        direc=outdir / "logs/dones/clustering.done",
+        alns=get_aln_input,
     output:
         outdir / "aligned/cluster_alns/{probe}/{probe}_{cluster}.fasta",
     params:
@@ -37,7 +46,7 @@ rule mafft:
     conda:
         "../../envs/alignment.yaml"
     shell:
-        "mafft {params} {input} > {output} 2> {log}"
+        "mafft {params} {input.alns} > {output} 2> {log}"
 
 
 def aggregate_alns(wildcards):
