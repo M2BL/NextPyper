@@ -78,7 +78,7 @@ class Fragment:
     strand: Literal[-1, 1]
     frame: Literal[0, 1, 2]
     identity: float
-    correspondence: str = field(default_factory=dict, init=False)
+    correspondence: dict[int,int] = field(default_factory=dict, init=False)
 
     def get_correspondence(self) -> dict[int, int]:
         """
@@ -130,7 +130,7 @@ class Cds:
     """
 
     miniprot_output: StringIO = field(repr=False)
-    data: int = field(default_factory=dict, init=False, repr=False)
+    data: dict[str, list] = field(default_factory=dict, init=False, repr=False)
     fragments: list[Fragment] = field(default_factory=list, init=False, repr=False)
     mRNA_start: int = field(init=False)
     mRNA_end: int = field(init=False)
@@ -155,9 +155,9 @@ class Cds:
         if list(self.data.keys()):
             self._find_correspondences()
             # Ensure that all variables have been set
-            for field in fields(self):
-                if field.name not in vars(self):
-                    raise AttributeError(f"Field {field.name} has no attribute")
+            for elmt in fields(self):
+                if elmt.name not in vars(self):
+                    raise AttributeError(f"Field {elmt.name} has no attribute")
             assert (
                 len(self.target_nucleotides)
                 == len(self.target_AAs)
@@ -252,7 +252,7 @@ class Cds:
                     query_start,
                     # query_end - 1,
                     query_end,
-                    item["score"],
+                    int(item["score"]),
                     item["strand"],
                     item["frame"],
                     float(item["Identity"]),
@@ -309,6 +309,10 @@ class Cds:
 
     def is_empty(self):
         return not bool(self.data)
+
+    def get_global_score(self) -> int:
+        """Compute the alignment score as the sum of the fragment scores."""
+        return sum([fragment.score for fragment in self.fragments])
 
 
 
