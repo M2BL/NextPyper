@@ -33,6 +33,7 @@ __version__ = "0.1"
 # =======================================================================================
 
 from dataclasses import dataclass, field
+from collections import defaultdict
 from importlib import reload
 from io import StringIO
 from itertools import groupby, chain
@@ -166,7 +167,7 @@ class ProbeCds:
     Each fragment is one exon.
     Attributes
     ----------
-    -probe_fasta: path to the amino acid probes fasta file.
+    -probes_fasta: path to the amino acid probes fasta file (multiprobe)
     -contigs_fasta: path to the nucleotide contigs fasta file.
     -treads: for miniprot.
     -min_probe_contig_sim: mapping similarity for miniprot.
@@ -179,44 +180,64 @@ class ProbeCds:
     -cds_dict: dictionary of contig name as key and Cds object as value.
     """
 
-    probe_fasta: str
+    probes_fasta: str
     contigs_fasta: str
     treads: int = field(default=8)
     min_probe_contig_sim: float = field(default=0.85)
     min_fragment_cov: float = field(default=0.05)
     min_contig_length: int = field(default=300)
-    probe_path: Path = field(init=False, repr=False)
+    probes_path: Path = field(init=False, repr=False)
     contigs_path:Path = field(init=False, repr=False)
-    probes_dict: dict[str, list[SeqRecord]] = field(
+    probes_dict: dict[str, SeqRecord] = field(
         init=False, repr=False, default_factory=dict)
-    contigs_dict: dict[str, list[SeqRecord]] = field(
+    contigs_dict: dict[str, SeqRecord] = field(
         init=False, repr=False, default_factory=dict)
-    cds_dict: dict[str, Cds] = field(init=False, repr=False, default_factory=dict) # defaultdict(dict)?
-
+    #cds_dict: dict[str, Cds] = field(init=False, repr=False, default_factory=dict) # defaultdict(dict)?
+    cds_dict: defaultdict[str, list[Cds]] = field(default_factory=lambda: defaultdict(list))  # works!
     def __post_init__(self):
-        self.probe_path = Path(self.probe_fasta)
+        self.probes_path = Path(self.probes_fasta)
         self.contigs_path = Path(self.contigs_fasta)
-        assert self.probe_path.exists(), f"{self.probe_fasta} does not exist"
+        assert self.probes_path.exists(), f"{self.probes_fasta} does not exist"
         assert self.contigs_path.exists(), f"{self.contigs_fasta} does not exist"
         self._parse_fasta()
         print("Running miniprot")
         # run miniprot on each scaffold/probe combination
         with tempfile.TemporaryDirectory() as tmpdirname:
             # write all the probe and scaffold sequences
-
-            for contig, record in self.contigs_dict.items():
+            tmp_probe_paths = {}
+            for contig, record in self.probes_dict.items():
                 fasta_name = f"{contig}.fas"
                 contig_fasta = Path(tmpdirname) / fasta_name
                 SeqIO.write(record, contig_fasta, "fasta")
-                miniprot_out = run_miniprot(
-                    self.probe_path,
-                    contig_fasta,
-                    self.treads,
-                    self.min_probe_contig_sim,
-                    self.min_fragment_cov,
-                )
-                self.cds_dict[contig] = Cds(miniprot_out)
+                tmp_probe_paths[contig] = contig_fasta
+
+            for contig, record in self.contigs_dict.items():
+                print(f"working on contig {contig}")
+                for probe_name, probe_path in tmp_probe_paths.items():
+                    print(f"working on probe {probe_name}")
+                    fasta_name = f"{contig}.fas"
+                    contig_fasta = Path(tmpdirname) / fasta_name
+                    SeqIO.write(record, contig_fasta, "fasta")
+                    miniprot_out = run_miniprot(
+                        probe_path,
+                        contig_fasta,
+                        self.treads,
+                        self.min_probe_contig_sim,
+                        self.min_fragment_cov,
+                    )
+                    self.cds_dict[contig].append((probe_name, Cds(miniprot_out)))
                 print(self.cds_dict[contig])
+                idt = [(x[0],x[1].global_identity) for x in self.cds_dict[contig]]
+                print(sorted(idt, key=lambda x: x[1]))
+                print("scores")
+                self._compute_rank_score(contig)
+                sys.exit()
+
+    def _compute_rank_score(self, contig):
+        scores = []
+        for item in self.cds_dict[contig]:
+            scores.append((item[0], item[1].get_global_score()))
+        print(sorted(scores, key=lambda x: x[1]))
 
     def _parse_fasta(self) -> None:
         """
@@ -224,7 +245,7 @@ class ProbeCds:
         :return:
         """
         try:
-            self.probes_dict = SeqIO.to_dict(SeqIO.parse(self.probe_path, "fasta"))
+            self.probes_dict = SeqIO.to_dict(SeqIO.parse(self.probes_path, "fasta"))
         except Exception as err:
             sys.exit(f"[ERROR] {err}")
         try:
@@ -376,7 +397,7 @@ class OverlapDetect(ProbeCds):
     """
     Use miniprot to sort overlapping sequences
     """
-    probe_fasta: str
+    probes_fasta: str
     contigs_fasta: str
     treads: int = field(default=8)
     non_overlapping: list[OverlappingSeqs] = field(init=False, default_factory=list)
@@ -411,7 +432,7 @@ class OverlapDetect(ProbeCds):
 
         print(f"Saving clusters to fasta folder {fasta_folder}")
         Path(fasta_folder).mkdir(parents=True, exist_ok=True)
-        fasta_prefix = self.probe_fasta.stem
+        fasta_prefix = self.probes_path.stem
         idx = 0
         for merged in self.non_overlapping:
             probe_interval = merged.get_probe_interval()
@@ -435,7 +456,7 @@ def main():
     contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
     probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/probe_consensus/6128.fasta"
     contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con.fasta"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/probe_consensus/6487.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/msa_con/kew_6487_aa_consensus.fasta"
     OV = OverlapDetect(probe_fasta, contig_fasta)
 if __name__ == "__main__":
     main()
