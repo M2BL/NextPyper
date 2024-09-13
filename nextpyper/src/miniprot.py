@@ -158,6 +158,18 @@ def run_miniprot(
 # =======================================================================================
 #               CLASSES
 # =======================================================================================
+@dataclass
+class RankCoverage:
+    rank_score: list[int]= field(default_factory=list)
+    coverage: list[str] = field(default_factory=list)
+    #total_score: int = field(init=False, default=0)
+
+    def append_to(self, item_0, item_1):
+        self.rank_score.append(item_0)
+        self.coverage.append(item_1)
+
+    def get_total_score(self):
+        return sum(self.rank_score)/len(self.coverage)
 
 
 @dataclass
@@ -192,8 +204,9 @@ class ProbeCds:
         init=False, repr=False, default_factory=dict)
     contigs_dict: dict[str, SeqRecord] = field(
         init=False, repr=False, default_factory=dict)
-    #cds_dict: dict[str, Cds] = field(init=False, repr=False, default_factory=dict) # defaultdict(dict)?
-    cds_dict: defaultdict[str, list[Cds]] = field(default_factory=lambda: defaultdict(list))  # works!
+    cds_dict: defaultdict[str, list[Cds]] = field(default_factory=lambda: defaultdict(list))
+    probe_score: defaultdict[str, list] = field(default_factory=lambda: defaultdict(list))
+    filtered_cds_dict: dict[str, Cds]= field(init=False, repr=False, default_factory=dict)  #cds that correspond to the best probe, discarding sequences without matches
     def __post_init__(self):
         self.probes_path = Path(self.probes_fasta)
         self.contigs_path = Path(self.contigs_fasta)
@@ -205,11 +218,11 @@ class ProbeCds:
         with tempfile.TemporaryDirectory() as tmpdirname:
             # write all the probe and scaffold sequences
             tmp_probe_paths = {}
-            for contig, record in self.probes_dict.items():
-                fasta_name = f"{contig}.fas"
+            for probe_name, record in list(self.probes_dict.items())[:]:
+                fasta_name = f"{probe_name}.fas"
                 contig_fasta = Path(tmpdirname) / fasta_name
                 SeqIO.write(record, contig_fasta, "fasta")
-                tmp_probe_paths[contig] = contig_fasta
+                tmp_probe_paths[probe_name] = contig_fasta
 
             for contig, record in self.contigs_dict.items():
                 print(f"working on contig {contig}")
@@ -225,19 +238,31 @@ class ProbeCds:
                         self.min_probe_contig_sim,
                         self.min_fragment_cov,
                     )
-                    self.cds_dict[contig].append((probe_name, Cds(miniprot_out)))
-                print(self.cds_dict[contig])
-                idt = [(x[0],x[1].global_identity) for x in self.cds_dict[contig]]
-                print(sorted(idt, key=lambda x: x[1]))
-                print("scores")
-                self._compute_rank_score(contig)
-                sys.exit()
+                    cds = Cds(miniprot_out)
+                    cds.probe_name = probe_name
+                    if not cds.is_empty():
+                        self.cds_dict[contig].append(cds)
+            self._compute_rank_score()
 
-    def _compute_rank_score(self, contig):
-        scores = []
-        for item in self.cds_dict[contig]:
-            scores.append((item[0], item[1].get_global_score()))
-        print(sorted(scores, key=lambda x: x[1]))
+
+    def _compute_rank_score(self) -> Self:
+        """
+        Find the probe that has the best overall match using the miniprot score.
+        """
+        if not self.cds_dict.values():
+            return self
+        probe_ranks = defaultdict(RankCoverage) # score per contig
+        for contig, list_cds in self.cds_dict.items():
+            probe_scores = sorted([(cds.probe_name, cds.get_global_score()) for cds in list_cds],key=lambda x: x[1], reverse=True)
+            for idx, probe_score in enumerate(probe_scores):
+                probe_name = probe_score[0]
+                probe_ranks[probe_name].append_to(idx, contig)
+
+        best_combination = sorted(probe_ranks.items(), key=lambda x: x[1].get_total_score())[0]
+        best_probe = best_combination[0]
+        for contig in best_combination[1].coverage:
+            self.filtered_cds_dict[contig] = [cds for cds in self.cds_dict[contig] if cds.probe_name == best_probe][0]
+        return self
 
     def _parse_fasta(self) -> None:
         """
@@ -263,7 +288,7 @@ class ProbeCds:
         """
         if len(cluster_names) == 1:
             contig = cluster_names[0]
-            cds = self.cds_dict[contig]
+            cds = self.filtered_cds_dict[contig]
             record = self.contigs_dict[contig]
             if cds.is_empty():
                 return
@@ -297,7 +322,7 @@ class ProbeCds:
         interval_tree = IntervalST()
         #  Find overlapping edges.
         for contig in cluster_names:
-            cds = self.cds_dict[contig]
+            cds = self.filtered_cds_dict[contig]
             if cds.is_empty():
                 continue
             fragments = cds.get_fragments()
@@ -310,7 +335,7 @@ class ProbeCds:
 
         #  Trim the sequences
         for contig in cluster_names:
-            cds = self.cds_dict[contig]
+            cds = self.filtered_cds_dict[contig]
             if cds.is_empty():
                 continue
             record = self.contigs_dict[contig]
@@ -413,7 +438,7 @@ class OverlapDetect(ProbeCds):
         :return:
         """
         intervals = []
-        for contig, cds in self.cds_dict.items():
+        for contig, cds in self.filtered_cds_dict.items():
             if cds.is_empty():
                 continue
             start = cds.probe_start
@@ -421,6 +446,7 @@ class OverlapDetect(ProbeCds):
             intervals.append(OverlappingSeqs(start, end, [contig]))
         self.non_overlapping = merge_intervals(intervals)
         return self
+
 
     def save_clusters(self, fasta_folder: str) -> None:
         """
@@ -455,8 +481,16 @@ def main():
     probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10248_aa.fasta"
     contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
     probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/probe_consensus/6128.fasta"
+    ## test with a single species that contains 61 sequences after vsearch clustering
     contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con.fasta"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/msa_con/kew_6487_aa_consensus.fasta"
+    ## test on a subset of sequences from a single species that have an actual match to at least a single probe
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con_short.fasta"
+    ## test on three species
+    contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/3_species_6487_con_small.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/msa_con/Kew_6487_best.fas"
+    # contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/bug_youngia.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/probe_bug.fas"
     OV = OverlapDetect(probe_fasta, contig_fasta)
+    OV.save_clusters( "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp")
 if __name__ == "__main__":
     main()

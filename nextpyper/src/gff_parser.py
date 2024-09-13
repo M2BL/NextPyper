@@ -281,13 +281,13 @@ class Cds:
                 break
             target_AA = self.target_AAs[idx]
             query_AA = self.query_AAs[idx]
+            if query_AA in AAs:
+                query_AA_idx += 1
             if target_nuc == "-":
                 idx += 1
                 continue
             if target_AA in AAs and query_AA in AAs:
                 probe_nucl_cor[query_AA_idx] = nuc_idx
-            if query_AA in AAs:
-                query_AA_idx += 1
             idx += 1
             nuc_idx += 1 * fragment.strand
             if query_AA_idx > frg_limit:
