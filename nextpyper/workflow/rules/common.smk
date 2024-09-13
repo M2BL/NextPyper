@@ -47,6 +47,9 @@ if not (path_taper_params := config["args"]["taper_params"]):
 # Trimal
 trimal_gt = config["args"]["trimal_gt"]
 
+# MMseqs2
+mmseq2_min_seq_id = config["pipeline"]["multi_probe_clustering"]["mmseq2_min_seq_id"]
+
 # Validate Sample table
 cols = ["sample_name", "path_forward", "path_reverse"]
 SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)
