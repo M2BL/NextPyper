@@ -4,4 +4,4 @@ channels:
     - bioconda
     - defaults
 dependencies:
-    - transdecoder=5.7.0
+    - orfipy=0.0.4

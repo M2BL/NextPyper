@@ -58,7 +58,7 @@ validate(SAMPLE_TABLE, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
 # Validate probes
 probes = list(SeqIO.parse(probes_path, "fasta"))
 probes_size = {probe.id: len(probe) for probe in probes}
-min_probe_size = min(list(probes_size.values())) // 3
+min_probe_size = min(list(probes_size.values()))
 probes_list = list(probes_size.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
 validate(PROBES, schema=(SCHEMES_DIR / "probes.yaml").resolve())
