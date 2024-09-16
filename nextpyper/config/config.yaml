@@ -9,3 +9,6 @@ nextpyper:
         taper_params: 
         trimal_gt:
     # Add customisable config here
+    pipeline:
+        multi_probe_clustering:
+            mmseq2_min_seq_id: 0.8
