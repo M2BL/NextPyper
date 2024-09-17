@@ -77,8 +77,8 @@ if multi_probes:
             get_multi_probe_consensus,
         output:
             outdir / "translated_probes/probe_profiles/{probe}_{cluster}.hmm",
-        log:
-            outdir / "logs/translated_probes/probe_profiles/{probe}_{cluster}.log",
+        # log:
+        #     outdir / "logs/translated_probes/probe_profiles/{probe}_{cluster}.log",
         run:
             hmm_build(Path(input[0]), Path(output[0]), "amino")
 
@@ -88,8 +88,8 @@ if multi_probes:
         output:
             consensus=outdir
             / "translated_probes/probe_consensus/{probe}_{cluster}.fasta",
-        log:
-            outdir / "logs/translated_probes/probe_consensus/{probe}_{cluster}.log",
+        # log:
+        #     outdir / "logs/translated_probes/probe_consensus/{probe}_{cluster}.log",
         run:
             hmm_consensus(Path(input[0]), Path(output[0]))
 
@@ -97,11 +97,11 @@ else:
 
     rule build_probe_hmms_single:
         input:
-            otherwise=outdir / "translated_probes/split_probes/{probe}.fasta",
+            outdir / "translated_probes/split_probes/{probe}.fasta",
         output:
             outdir / "translated_probes/probe_profiles/{probe}.hmm",
-        log:
-            outdir / "logs/translated_probes/probe_profiles/{probe}.log",
+        # log:
+        #     outdir / "logs/translated_probes/probe_profiles/{probe}.log",
         run:
             hmm_build(Path(input[0]), Path(output[0]), "amino")
 
