@@ -2,14 +2,27 @@ from vsearch import get_vsearch_kmer_consensus
 
 
 def union_probes(wildcards):
-    glob_match = glob_wildcards(
-        outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta"
-    )
+    if not multi_probes:
+        glob_match = glob_wildcards(
+            outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta"
+        )
+        return expand(
+            outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta",
+            sample=glob_match.sample,
+        )
+    else:
+        glob_match = glob_wildcards(
+            outdir
+            / f"assembled/split_components/{{sample}}/{wildcards.probe}_{{cluster}}.fasta"
+        )
 
-    return expand(
-        outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta",
-        sample=glob_match.sample,
-    )
+        return expand(
+            outdir
+            / f"assembled/split_components/{{sample}}/{wildcards.probe}_{{cluster}}.fasta",
+            zip,
+            sample=glob_match.sample,
+            cluster=glob_match.cluster,
+        )
 
 
 rule merge_asms:
