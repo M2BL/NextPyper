@@ -10,24 +10,28 @@
 """
 Functions and classes for running miniprot in different steps of the pipeline.
 
-The class ReorientScaffolds is used after the SAUTE assembly to re-orient the scaffolds
-and discard those that do not match the selected probes. At this step, the probe set
-should have been downsized as the complexity of the search is quadratic. Re-oriented probes
-are then used for a vsearch clustering.
+The class ComponentFilter is used after the SAUTE assembly to discard the scaffolds that do not match
+the selected probes. At this step, the probe set should have been downsized as the complexity of the search is
+quadratic. Filtered scaffolds are then used for a vsearch clustering. The scaffolds file can be per sample or per probe
+per sample. Adjust the probe file accordingly.
 #  Usage example:
-    probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
-    contig_fasta = "../test_data/test_clustering/gene_3_all.fasta"
+    probe_fasta = ".../test_data/test_clustering/probes_aa.fasta"
+    scaffolds_fasta = "../test_data/test_clustering/sp_1.fasta
     # load the data, perform the computation:
-    ros = ReorientScaffolds(probe_fasta, contig_fasta)
+    cpf = ComponentFilter(probe_fasta, scaffolds_fasta)
     # save the results in fasta format:
-    ros.save("../test_data/test_clustering/gene_3_reorient.fasta")
+    cpf.save("../test_data/test_clustering/sp_1_filtered.fasta")
 
-The class OverlappingCds is used after the vsearch clustering of SAUTE scaffolds.
+The class OverlappingCds is used after the vsearch clustering of SAUTE scaffolds and consensus estimation.
 It maps all probe versions against the consensus sequences of vsearch clusters. It seeks
 to find the best mapping probe version over all the consensus sequences and use it as
 a common reference in order to determine which sequences are not overlapping.
 Strictly non-overlapping sequences (there are no bridging scaffolds) are saved in separate
 files.
+#  Usage example:
+    probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
+    consensus_contig_fasta = "../test_data/test_clustering/gene_3_consensus.fasta"
+
 
 clustering contigs according to their pairwise similarity.
 We first align the probe's AA sequence on each contig and record the coordinates of
@@ -79,7 +83,7 @@ gff_parser = reload(gff_parser)
 from gff_parser import Fragment, Cds
 from interval_tree import IntervalST, Interval
 
-# Parse the header of SAUTE
+# Parse the header of SAUTE scaffolds
 saute_pattern = re.compile(r"^Contig_(?P<name>.*?):(?P<component>\d+?):[^ ]+$",
     re.VERBOSE,
 )
@@ -140,7 +144,6 @@ def merge_intervals(arr: list['OverlappingSeqs']):
     return [arr[index] for index in range(len(arr)) if index not in index_to_del]
 
 
-
 def run_miniprot(
     probe_path: Path,
     contig_path: Path,
@@ -181,6 +184,7 @@ def run_miniprot(
 # =======================================================================================
 #               CLASSES
 # =======================================================================================
+
 @dataclass
 class RankCoverage:
     """
@@ -319,7 +323,7 @@ class ComponentFilter(MiniprotInit):
         super().__post_init__()
 
         # run miniprot on each scaffold/probe combination.
-        # When a hit is found, populate cds_dict
+        # When a hit is found, add to filtered_scaffolds.
         print("Running miniprot")
         used_probes: list[str] = []
         valid_components:set[str] = set()
@@ -335,7 +339,6 @@ class ComponentFilter(MiniprotInit):
 
             for (contig, record) in length_sorted:
                 print(f"working on contig {contig}")
-                #print(f"probe list {used_probes}")
                 #  Check whether this component has been analyzed previously
                 if (match := saute_pattern.match(contig)) is not None:
                     component =f"{match.group('name')}_{match.group('component')}"
@@ -343,30 +346,24 @@ class ComponentFilter(MiniprotInit):
                     sys.exit(f"[ERROR] {contig} does not match saute  header pattern")
                 if component in valid_components:
                     self.filtered_scaffolds.append(contig)
-                    #print("previously accepted component")
                     continue
                 if component in rejected_components:
-                    #print("previously rejected component")
                     continue
 
                 if used_probes:
                     for probe_name in used_probes:
                         probe_path = tmp_probe_paths[probe_name]
-                        #print(f"working on probe {probe_name}")
                         contig_path = Path(tmpdirname) / f"{contig}.fas"
                         cds = self._run_miniprot(record, probe_path, contig_path)
-                        #print(cds)
                         if not cds.is_empty() and cds.get_global_sim() > self.min_global_sim:
                             self.filtered_scaffolds.append(contig)
                             valid_components.add(component)
                             break
                     else:
                         for probe_name in set(self.probes_dict.keys()) - set(used_probes):
-                            #print(f"working on extra probe {probe_name}")
                             probe_path = tmp_probe_paths[probe_name]
                             contig_path = Path(tmpdirname) / f"{contig}.fas"
                             cds = self._run_miniprot(record, probe_path, contig_path)
-                            #print(cds)
                             if not cds.is_empty() and cds.get_global_sim() > self.min_global_sim:
                                 self.filtered_scaffolds.append(contig)
                                 valid_components.add(component)
@@ -376,7 +373,6 @@ class ComponentFilter(MiniprotInit):
                             rejected_components.add(component)
                 else:
                     for probe_name in self.probes_dict.keys():
-                        #print(f"working on extra probe {probe_name}")
                         probe_path = tmp_probe_paths[probe_name]
                         contig_path = Path(tmpdirname) / f"{contig}.fas"
                         cds = self._run_miniprot(record, probe_path, contig_path)
@@ -389,6 +385,7 @@ class ComponentFilter(MiniprotInit):
                         rejected_components.add(component)
 
     def save(self, fasta_file:str) -> None:
+        """Save the trimmed sequences in a fasta file"""
         print(f"Saving filtered scaffolds into {fasta_file}")
         records = [self.contigs_dict[rec] for rec in self.filtered_scaffolds]
         SeqIO.write(records, fasta_file, "fasta")
@@ -405,6 +402,7 @@ class OverlappingCds(MiniprotInit):
     -cds_dict: dict of contig name as key and list of Cds object as value.
     -filtered_cds_dict: dict of contig name as key and the Cds that corresponds to the best overall probe,
         discarding sequences without matches
+    -non_overlapping: list of OverlappingSeqs objects that keep track of overlapping sequences and position on probe.
     """
     cds_dict: defaultdict[str, list[Cds]] = field(init=False,repr=False, default_factory=lambda: defaultdict(list))
     filtered_cds_dict: dict[str, Cds]= field(init=False, repr=False, default_factory=dict)
@@ -430,6 +428,7 @@ class OverlappingCds(MiniprotInit):
                     cds.probe_name = probe_name
                     if not cds.is_empty():
                         self.cds_dict[contig].append(cds)
+                print("cds",self.cds_dict.get(contig))
             self._compute_rank_score()
             self._sorting_overlapping()
             print("non_overlapping", self.non_overlapping)
@@ -474,7 +473,9 @@ class OverlappingCds(MiniprotInit):
 
     def save(self, fasta_folder: str) -> None:
         """
-        Given a list of labels generated by HDBSCAN, save the clusters to a fasta file in the specified folder.
+        Save the scaffolds from each OverlappingSeqs object into a separate fasta file.
+        Scaffolds are trimmed in order to fit the regions covered by the probe.
+        Files are labelled by the aa coordinates covered on the probe
         :param fasta_folder: folder where the fasta files are saved.
         :return:
         """
@@ -602,33 +603,7 @@ class OverlappingCds(MiniprotInit):
 
 
 def main():
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043.fasta"
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043_contigs.fasta"
-    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_105_aa.fasta"
-    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/substample_0_no_gap.fasta"
-    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10052_aa.fasta"
-    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/final_alns/probe_10052.fasta"
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/batarchium/H1_G3/H1_G3_probe_10248.fasta"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10248_aa.fasta"
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/probe_consensus/6128.fasta"
-    ## test with a single species that contains 61 sequences after vsearch clustering
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con.fasta"
-    ## test on a subset of sequences from a single species that have an actual match to at least a single probe
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con_short.fasta"
-    ## test on three species
-    contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/3_species_6487_con_small.fasta"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/msa_con/Kew_6487_best.fas"
-    contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Andryola_saute.fasta"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/msa_con/kew_6487_aa_consensus.fasta"
-    # contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/bug_youngia.fasta"
-    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/probe_bug.fas"
-    #OV = OverlappingCds(probe_fasta, contig_fasta)
-    #OV.save_clusters( "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp")
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Andryola_saute_6488.fasta"
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/kew_probes_6488/kew_probes_6488_aa.fasta"
-    RS = ComponentFilter(probe_fasta, contig_fasta)
+   ...
 
-    RS.save("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/filtered.fasta")
 if __name__ == "__main__":
     main()
