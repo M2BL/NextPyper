@@ -261,5 +261,12 @@ if __name__ == "__main__":
     )
     out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
 
+    vsearch_result = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Youngia_japonica_6487_vsearch_corrected.fasta"
+
+
+    )
+    out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Youngia_japonica_6487_con.fasta"
+
     records_con = get_vsearch_kmer_consensus(Path(vsearch_result), "SAUTE")
     SeqIO.write(records_con, out, "fasta")

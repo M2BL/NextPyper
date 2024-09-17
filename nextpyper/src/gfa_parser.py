@@ -161,12 +161,11 @@ def components_from_gfa(gfa_file: str) -> list[set[str]]:
     return components
 
 
-def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, str]:
+def matched_edges_from_hmm(hmm_stat_file: str) -> dict[str, str]:
     """
     From a 'hmm_statistics.txt' file generated from spades with the --custom-hmms flag, retrieve the edges that
     have matched a hmm profile.
     :param hmm_stat_file:
-    :param min_domain_len: minimum number of matched aa by the hmm profile over the whole length of a contig.
     :return: a dict with edge id as key and hmm id as value.
     """
     with Path(hmm_stat_file).open() as file:
