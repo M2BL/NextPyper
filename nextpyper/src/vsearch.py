@@ -134,7 +134,7 @@ def _generate_kmer_consensus(
         # Extract for each sequence the k-mer count, do not normalize by length as for SPAdes the
         # normalization has been done during the scaffold creation from the contigs.
         kmers = [
-            int(record.id.split("_")[-1].removeprefix("DP")) for record in msa[:-1]
+            float(record.id.split("_")[-1].removeprefix("DP")) for record in msa[:-1]
         ]
 
     SequenceBoundaries = namedtuple("SequenceBoundaries", ["start", "end"])
@@ -258,8 +258,6 @@ if __name__ == "__main__":
     # SeqIO.write(records_con, out, "fasta")
     vsearch_result = Path(
         "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_vsearch.fasta"
-
-
     )
     out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
 

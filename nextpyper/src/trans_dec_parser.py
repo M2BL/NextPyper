@@ -296,7 +296,7 @@ def td_parser(pep_path: Path) -> list[SeqRecord]:
     records = SeqIO.parse(pep_path, "fasta")
     cds_dict = defaultdict(list)
     for rec in records:
-        cds_name_splt = rec.id.rsplit(".p", 1)
+        cds_name_splt = rec.id.rsplit(".", 1)
         cds_prefix = cds_name_splt[0]
         cds_suffix = cds_name_splt[1]
         if (match := pattern.match(rec.description)) is None:

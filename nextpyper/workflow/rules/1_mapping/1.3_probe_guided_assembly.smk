@@ -1,11 +1,37 @@
 from gfa_parser import split_into_hmms, filter_components_hmm
+from itertools import chain
+
+
+def aggregate_hmms_spades(wildcards):
+    if multi_probes:
+        matches = {
+            p: glob_wildcards(
+                Path(checkpoints.make_probe_consensus.get(probe=p).output[0])
+                / f"{p}_{{cluster}}.fasta"
+            )
+            for p in probes_list
+        }
+
+        return list(
+            chain.from_iterable(
+                expand(
+                    outdir / f"translated_probes/probe_profiles/{p}_{{cluster}}.hmm",
+                    cluster=matches[p].cluster,
+                )
+                for p in probes_list
+            )
+        )
+    else:
+        return expand(
+            outdir / "translated_probes/probe_profiles/{probe}.hmm", probe=probes_list
+        )
 
 
 rule spades_assembly:
     input:
         in1=outdir / "preprocessed/filtered/{sample}_R1.fastq",
         in2=outdir / "preprocessed/filtered/{sample}_R2.fastq",
-        approv=outdir / "logs/dones/probe_hmms.done",
+        hmms=aggregate_hmms_spades,
     output:
         out_dir=directory(outdir / "assembled/spades/{sample}"),
         contigs=outdir / "assembled/spades/{sample}/scaffolds.fasta",
