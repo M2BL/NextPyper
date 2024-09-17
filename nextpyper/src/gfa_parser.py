@@ -257,7 +257,7 @@ def filter_components_hmm(
     """
     all_components = []
     components = components_from_gfa(gfa_file)
-    matched_edges = matched_edges_from_hmm(hmm_stat_file, min_domain_len)
+    matched_edges = matched_edges_from_hmm(hmm_stat_file)
 
     for component in components:
         bgc_matches = []
