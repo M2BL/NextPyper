@@ -38,8 +38,7 @@ rule spades_assembly:
         gfa=outdir / "assembled/spades/{sample}/assembly_graph_after_simplification.gfa",
         stats=outdir / "assembled/spades/{sample}/hmm_statistics.txt",
     params:
-        params="--only-assembler --cov-cutoff auto",
-        # params="--only-assembler --cov-cutoff auto -k 55,77", #ToDo: Consider for Speed-up
+        params=f"--only-assembler --cov-cutoff auto {spades_k}",
         hmms=outdir / "translated_probes/probe_profiles",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
@@ -54,10 +53,20 @@ checkpoint split_graph_into_hmms:
     input:
         gfa=outdir / "assembled/spades/{sample}/assembly_graph_after_simplification.gfa",
         hmm=outdir / "assembled/spades/{sample}/hmm_statistics.txt",
+    params:
+        probes_dir=outdir / "translated_probes/multi_probe_consensus",
+        min_probe_cov=0.1,
     output:
         directory(outdir / "assembled/split_components/{sample}"),
     run:
-        components = filter_components_hmm(Path(input.gfa), Path(input.hmm))
+        probe_lens = {
+            file.stem: len(SeqIO.read(file, "fasta")) * 3
+            for file in Path(params.probes_dir).glob("*/*.fasta")
+        }
+
+        components = filter_components_hmm(
+            Path(input.gfa), Path(input.hmm), probe_lens, params.min_probe_cov
+        )
         split_into_hmms(
             gfa_path=Path(input.gfa),
             components=components,

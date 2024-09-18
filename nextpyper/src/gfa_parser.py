@@ -83,6 +83,13 @@ class BGC_candidate:
         self.dominant_hmm = dominant_hmm[0]
         return self
 
+    def get_dominant_hmm_length(self) -> int:
+        return sum(
+            length
+            for length, hmm in zip(self.lengths, self.hmms)
+            if hmm == self.dominant_hmm
+        )
+
     def get_max_length(self) -> int:
         return self.max_domain_length
 
@@ -246,13 +253,17 @@ def matched_edges_from_hmm(hmm_stat_file: str) -> dict[str, str]:
 
 
 def filter_components_hmm(
-    gfa_file, hmm_stat_file, min_domain_len=20
+    gfa_file: Path,
+    hmm_stat_file: Path,
+    probe_lens: dict[str, int],
+    min_domain_cov: float = 0.2,
 ) -> list[Component]:
     """
     Filter components from a gfa file based on a hmm profile file.
     :param gfa_file:
     :param hmm_stat_file:
-    :param min_domain_len: minimum matching length of the HMM profile on the scaffold in aa.
+    :param probe_lens: dictionary with the length, in nucleotides, of each probe for coverage computation.
+    :param min_domain_cov: minimum matching coverage of the scaffold in the HMM profile as a proportion [0-1].
     :return: a list of components with path that match at least one probe over 'min_domain_len- amino acids.
     """
     all_components = []
@@ -265,7 +276,12 @@ def filter_components_hmm(
             if (bgc_list := matched_edges.get(edge)) is not None:
                 #  filter by probe matching length
                 bgc_matches.extend(
-                    [bgc for bgc in bgc_list if bgc.get_max_length() > min_domain_len]
+                    [
+                        bgc
+                        for bgc in bgc_list
+                        if bgc.get_dominant_hmm_length() / probe_lens[bgc.dominant_hmm]
+                        >= min_domain_cov
+                    ]
                 )
 
         if bgc_matches:
