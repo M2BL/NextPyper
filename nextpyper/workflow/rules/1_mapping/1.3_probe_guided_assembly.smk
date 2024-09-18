@@ -55,7 +55,7 @@ checkpoint split_graph_into_hmms:
         hmm=outdir / "assembled/spades/{sample}/hmm_statistics.txt",
     params:
         probes_dir=outdir / "translated_probes/multi_probe_consensus",
-        min_probe_cov=0.1,
+        min_probe_cov=min_probe_cov,
     output:
         directory(outdir / "assembled/split_components/{sample}"),
     run:
