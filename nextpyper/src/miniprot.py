@@ -49,25 +49,20 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 from importlib import reload
 from io import StringIO
-from itertools import groupby, chain
 from operator import attrgetter
-import os
 from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
 import textwrap
-import time
-from typing import Optional, Self, Literal, TypeAlias
+from typing import Optional, Self
 
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
-from Bio.Seq import Seq
 
-import gff_parser
-
-gff_parser = reload(gff_parser)
+# import gff_parser
+# gff_parser = reload(gff_parser)
 from gff_parser import Fragment, Cds
 from interval_tree import IntervalST, Interval
 
@@ -599,13 +594,7 @@ class OverlappingCds(MiniprotInit):
         return trimmed_records
 
 def main():
-    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/kew_probes_6488/kew_probes_6488_aa.fasta"
-    # RS = ComponentFilter(probe_fasta, contig_fasta)
-    # RS.save("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/filtered.fasta")
-    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/filtered.fasta"
-    OV = OverlappingCds(probe_fasta, contig_fasta)
-    OV.save_scaffolds("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp")
-    OV.save_best_probe("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/best_probe_6488.fasta")
+    ...
 
 if __name__ == "__main__":
     main()
