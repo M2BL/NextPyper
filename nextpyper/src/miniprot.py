@@ -31,24 +31,12 @@ files.
 #  Usage example:
     probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
     consensus_contig_fasta = "../test_data/test_clustering/gene_3_consensus.fasta"
-
-
-clustering contigs according to their pairwise similarity.
-We first align the probe's AA sequence on each contig and record the coordinates of
-the alignments. Contigs are then aligned pairwise along their overlapping probe regions.
-Pairwise distances are used to cluster the contigs using HDBscan (or union-find for small samples).
-Individual clusters can be saved in fasta format.
-#  Usage example:
-    probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
-    contig_fasta = "../test_data/test_clustering/gene_3_all.fasta"
     # load the data, perform the computation:
-    hdb = HDBcluster(probe_fasta, contig_fasta)
-    # save the results:
-    hdb.save_clusters("../test_data/test_clustering/clusters")
-    The resulting fasta files are named using the suffix of the probe file name
-    and the index of the cluster as suffix, e.g. probe_3_aa_45.fasta.
-
-
+    olc = OverlappingCds(probe_fasta, consensus_contig_fasta)
+    # specify a folder where each non-overlapping group of sequences is saved in fasta format.
+    olc.save_scaffolds("../test_data/test_clustering/non_overlapping/)
+    # save the sequence of the best overall mapping probe.
+    olc.save_best_probe("../test_data/test_clustering/gene_3_best_probe.fasta")
 """
 
 __version__ = "0.1"
@@ -403,10 +391,12 @@ class OverlappingCds(MiniprotInit):
     -filtered_cds_dict: dict of contig name as key and the Cds that corresponds to the best overall probe,
         discarding sequences without matches
     -non_overlapping: list of OverlappingSeqs objects that keep track of overlapping sequences and position on probe.
+    -best_probe: name of the probe version that has the overall best mapping score.
     """
     cds_dict: defaultdict[str, list[Cds]] = field(init=False,repr=False, default_factory=lambda: defaultdict(list))
     filtered_cds_dict: dict[str, Cds]= field(init=False, repr=False, default_factory=dict)
     non_overlapping: list[OverlappingSeqs] = field(init=False, default_factory=list)
+    best_probe: str = field(init=False, default=None)
     def __post_init__(self):
         super().__post_init__()
         # run miniprot on each scaffold/probe combination
@@ -428,7 +418,7 @@ class OverlappingCds(MiniprotInit):
                     cds.probe_name = probe_name
                     if not cds.is_empty():
                         self.cds_dict[contig].append(cds)
-                print("cds",self.cds_dict.get(contig))
+                #print("cds",self.cds_dict.get(contig))
             self._compute_rank_score()
             self._sorting_overlapping()
             print("non_overlapping", self.non_overlapping)
@@ -437,6 +427,7 @@ class OverlappingCds(MiniprotInit):
     def _compute_rank_score(self) -> Self:
         """
         Find the probe that has the best overall match using the miniprot score.
+        Populate the 'best_probe' attribute.
         """
         if not self.cds_dict.values():
             return self
@@ -448,10 +439,10 @@ class OverlappingCds(MiniprotInit):
                 probe_ranks[probe_name].append_to(idx, contig)
 
         best_combination = sorted(probe_ranks.items(), key=lambda x: x[1].get_total_score())[0]
-        best_probe = best_combination[0]
-        print(f"Best overall probe: {best_probe}")
+        self.best_probe = best_combination[0]
+        print(f"Best overall probe: {self.best_probe}")
         for contig in best_combination[1].coverage:
-            self.filtered_cds_dict[contig] = [cds for cds in self.cds_dict[contig] if cds.probe_name == best_probe][0]
+            self.filtered_cds_dict[contig] = [cds for cds in self.cds_dict[contig] if cds.probe_name == self.best_probe][0]
         return self
 
     def _sorting_overlapping(self) -> Self:
@@ -471,7 +462,7 @@ class OverlappingCds(MiniprotInit):
         return self
 
 
-    def save(self, fasta_folder: str) -> None:
+    def save_scaffolds(self, fasta_folder: str) -> None:
         """
         Save the scaffolds from each OverlappingSeqs object into a separate fasta file.
         Scaffolds are trimmed in order to fit the regions covered by the probe.
@@ -494,6 +485,12 @@ class OverlappingCds(MiniprotInit):
                 SeqIO.write(trimmed_records, name_fasta, "fasta")
                 print(f"saving fasta {name_fasta}")
                 idx += 1
+
+    def save_best_probe(self, fasta_file: str)-> None:
+        fasta_path = Path(fasta_file)
+        fasta_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"Saving best probe to fasta file {fasta_file}")
+        SeqIO.write([self.probes_dict[self.best_probe]], fasta_path, "fasta")
 
 
     def _trim_msa(self, cluster_names: list[str]) -> Optional[list[SeqRecord]]:
@@ -601,9 +598,14 @@ class OverlappingCds(MiniprotInit):
             trimmed_records.append(new_record)
         return trimmed_records
 
-
 def main():
-   ...
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/kew_probes_6488/kew_probes_6488_aa.fasta"
+    # RS = ComponentFilter(probe_fasta, contig_fasta)
+    # RS.save("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/filtered.fasta")
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/filtered.fasta"
+    OV = OverlappingCds(probe_fasta, contig_fasta)
+    OV.save_scaffolds("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp")
+    OV.save_best_probe("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/best_probe_6488.fasta")
 
 if __name__ == "__main__":
     main()
