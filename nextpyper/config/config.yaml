@@ -12,3 +12,7 @@ nextpyper:
     pipeline:
         multi_probe_clustering:
             mmseq2_min_seq_id: 0.8
+        spades:
+            k: ""
+        split_graph_by_matching_probe:
+            min_probe_coverage: 0.1

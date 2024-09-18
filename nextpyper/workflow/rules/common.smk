@@ -47,8 +47,18 @@ if not (path_taper_params := config["args"]["taper_params"]):
 # Trimal
 trimal_gt = config["args"]["trimal_gt"]
 
+## Read Workflow parameters:
+pipeline = config["pipeline"]
+
 # MMseqs2
-mmseq2_min_seq_id = config["pipeline"]["multi_probe_clustering"]["mmseq2_min_seq_id"]
+mmseq2_min_seq_id = pipeline["multi_probe_clustering"]["mmseq2_min_seq_id"]
+
+# Spades
+spades_k = pipeline["spades"]["k"]
+
+# Split graph into probes
+min_probe_cov = pipeline["split_graph_by_matching_probe"]["min_probe_coverage"]
+
 
 # Validate Sample table
 cols = ["sample_name", "path_forward", "path_reverse"]
@@ -58,7 +68,7 @@ validate(SAMPLE_TABLE, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
 # Validate probes
 probes = list(SeqIO.parse(probes_path, "fasta"))
 probes_size = {probe.id: len(probe) for probe in probes}
-min_probe_size = min(list(probes_size.values()))  # // 3
+min_probe_size = min(list(probes_size.values()))
 probes_list = list(probes_size.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
 validate(PROBES, schema=(SCHEMES_DIR / "probes.yaml").resolve())
