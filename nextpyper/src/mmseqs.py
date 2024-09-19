@@ -33,7 +33,6 @@ from Bio.Seq import Seq
 import pyabpoa as pa
 
 
-
 # =======================================================================================
 #               EXCEPTIOMS
 # =======================================================================================
@@ -42,7 +41,7 @@ import pyabpoa as pa
 # =======================================================================================
 #               FUNCTIONS
 # =======================================================================================
-def _parse_all_seqs(fasta:str)->list[list[SeqRecord]]:
+def _parse_all_seqs(fasta: str) -> list[list[SeqRecord]]:
     clusters = []
     records = list(SeqIO.parse(Path(fasta), "fasta"))
     cluster = [records[1]]
@@ -61,23 +60,21 @@ def _parse_all_seqs(fasta:str)->list[list[SeqRecord]]:
     return clusters
 
 
-def _align_abpoa(cluster:list[SeqRecord], rec_id:str)->SeqRecord:
+def _align_abpoa(cluster: list[SeqRecord], rec_id: str) -> SeqRecord:
     a = pa.msa_aligner(is_aa=True)
     seqs = [str(rec.seq) for rec in cluster]
     res = a.msa(seqs, out_cons=True, out_msa=False)
     if (sequence := res.cons_seq[0]) != "":
         return SeqRecord(Seq(sequence), id=rec_id, name="", description="")
 
+
 def generate_consensuses(fasta: str) -> Optional[list[SeqRecord]]:
     mmseqs_clusters = _parse_all_seqs(fasta)
     consensuses = []
     if not mmseqs_clusters:
         return
-    probe = mmseqs_clusters[0][0].id.rsplit('-')[-1]
-
     for idx, cluster in enumerate(mmseqs_clusters):
-        # adjust if necessary
-        rec_id = f"{probe}_{idx}"
+        rec_id = f"{cluster[0].id}_{idx}"
         if len(cluster) == 1:
             new_rec = cluster[0]
             new_rec.id = rec_id
@@ -89,11 +86,8 @@ def generate_consensuses(fasta: str) -> Optional[list[SeqRecord]]:
     return consensuses
 
 
-
-
 if __name__ == "__main__":
     mmseqs_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/all_proteins_cluster_all_seqs.fasta"
-    #print(_parse_all_seqs(mmseqs_fasta))
     consensuses = generate_consensuses(mmseqs_fasta)
     out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/consensuses.fasta"
     SeqIO.write(consensuses, out, "fasta")
