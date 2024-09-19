@@ -59,7 +59,7 @@ setup(
         "numpy>=1.26",
         "scikit-learn>=1.5",
         "pyhmmer>=0.10",
-        "pyabpoa>=1.5.2",
+        "pyabpoa>=1.5.3",
     ],
     entry_points={"console_scripts": ["nextpyper=nextpyper.__main__:main"]},
     include_package_data=True,
