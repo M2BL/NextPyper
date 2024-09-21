@@ -1,0 +1,140 @@
+SAUTE_PATTERN = re.compile(
+    r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?):(?P<component>\d+?):[^ ]+$",
+    re.VERBOSE,
+)
+
+blast_cols = (
+    "query",
+    "subject",
+    "idt",
+    "aln_len",
+    "mismatches",
+    "gap_opens",
+    "qstart",
+    "qend",
+    "sstart",
+    "send",
+    "evalue",
+    "score",
+    "query_len",
+    "matches",
+)
+blast_usecols = ("query", "subject", "mismatches", "gap_opens", "query_len", "matches")
+
+
+rule gather_matching_probes:
+    input:
+        direc=outdir / "logs/dones/splitting.done",
+        probes=outdir / "translated_probes/longest_cds.fasta",
+    output:
+        outdir / "homolog_prospection/matching_probes.fasta",
+    params:
+        split_dir=outdir / "assembled/split_components",
+        probe_clusters_dir=outdir / "translated_probes/grouped_probes",
+    run:
+        subset_probes = set()
+        cols = ["cluster", "probe"]
+
+        probe_clusters = {
+            file.stem for file in Path(params.split_dir).glob("*/*.fasta")
+        }
+        for probe_cluster in probe_clusters:
+            probe, cluster = probe_cluster.rsplit("_", 1)
+            clusters_path = f"{params.probe_clusters_dir}/{probe}_cluster.tsv"
+            df = pd.read_csv(clusters_path, sep="\t", names=cols)
+            probe_cluster = df.cluster.unique()[int(cluster)]
+            subset_probes.update(set(df.query("cluster == @probe_cluster")["probe"]))
+
+        probes_gen = (
+            rec for rec in SeqIO.parse(input.probes, "fasta") if rec.id in subset_probes
+        )
+        SeqIO.write(probes_gen, Path(output[0]), "fasta")
+
+
+rule make_blast_probe_db:
+    input:
+        outdir / "homolog_prospection/matching_probes.fasta",
+    output:
+        multiext(
+            str(
+                outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta"
+            ),
+            ".pdb",
+            ".phr",
+            ".pin",
+            ".pot",
+            ".psq",
+            ".ptf",
+            ".pto",
+        ),
+    params:
+        outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta",
+    log:
+        outdir / "log/homolog_prospection/blast_filtering/makedb.log",
+    conda:
+        "../../envs/blast.yaml"
+    shell:
+        "makeblastdb -dbtype prot -in {input} -out {params} 2> {log}"
+
+
+rule scfs_blast_filtering:
+    input:
+        query=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
+        db=rules.make_blast_probe_db.output,
+    output:
+        outdir / "homolog_prospection/blast_filtering/blastx/{sample}.blast.tsv",
+    params:
+        db=outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta",
+        others="-outfmt '6 std qlen nident'",
+    log:
+        outdir / "log/homolog_prospection/blast_filtering/blastx/{sample}.log",
+    threads: 4
+    conda:
+        "../../envs/blast.yaml"
+    shell:
+        "blastx -num_threads {threads} -query {input.query} -db {params.db} -out {output} {params.others} 2> {log}"
+
+
+rule parse_blast_filtering:
+    input:
+        scfs=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
+        blast=outdir / "homolog_prospection/blast_filtering/blastx/{sample}.blast.tsv",
+    output:
+        outdir / "homolog_prospection/blast_filtering/filtered_scfs/{sample}.fasta",
+    params:
+        min_cov=homolog_scf_min_cov,
+        min_idt=homolog_scf_min_idt,
+    run:
+        min_idt = params.min_idt
+        min_cov = params.min_cov
+        filt_ids = []
+
+        df = pd.read_csv(input.blast, sep="\t", names=blast_cols, usecols=blast_usecols)
+        for query in df["query"].unique():
+            probe = re.search(SAUTE_PATTERN, query)["probe"]
+            df_matches = df.query("query == @query")
+            df_matches = df_matches[df_matches.subject.str.contains(probe, regex=True)]
+
+            if len(df_matches) == 0:
+                continue
+
+            query_len = df_matches["query_len"].to_list()[0]
+            agg = (
+                df_matches.loc[:, ["subject", "matches", "mismatches", "gap_opens"]]
+                .groupby(by="subject")
+                .sum()
+            )
+            metrics = pd.DataFrame(
+                {
+                    "cov": agg.eval("matches + mismatches") * 3 / query_len,
+                    "idt": agg.eval("matches / (matches + mismatches + gap_opens)"),
+                }
+            )
+
+            if len(metrics.query("idt >= @min_idt and cov >= @min_cov")) > 0:
+                filt_ids.append(query)
+
+        filt_scfs = (
+            rec for rec in SeqIO.parse(input.scfs, "fasta") if rec.id in filt_ids
+        )
+        SeqIO.write(filt_scfs, output[0], "fasta")
