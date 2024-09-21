@@ -16,3 +16,6 @@ nextpyper:
             k: ""
         split_graph_by_matching_probe:
             min_probe_coverage: 0.1
+        blast_homolog_filtering:
+            homolog_scf_min_cov: 0.05
+            homolog_scf_min_idt: 0.8

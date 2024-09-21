@@ -59,6 +59,9 @@ spades_k = pipeline["spades"]["k"]
 # Split graph into probes
 min_probe_cov = pipeline["split_graph_by_matching_probe"]["min_probe_coverage"]
 
+# Blastx filtering
+homolog_scf_min_cov = pipeline["blast_homolog_filtering"]["homolog_scf_min_cov"]
+homolog_scf_min_idt = pipeline["blast_homolog_filtering"]["homolog_scf_min_idt"]
 
 # Validate Sample table
 cols = ["sample_name", "path_forward", "path_reverse"]
