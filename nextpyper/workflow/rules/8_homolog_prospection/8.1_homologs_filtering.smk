@@ -3,7 +3,7 @@ SAUTE_PATTERN = re.compile(
     re.VERBOSE,
 )
 
-blast_cols = (
+BLAST_COLS = (
     "query",
     "subject",
     "idt",
@@ -19,7 +19,7 @@ blast_cols = (
     "query_len",
     "matches",
 )
-blast_usecols = ("query", "subject", "mismatches", "gap_opens", "query_len", "matches")
+BLAST_USECOLS = ("query", "subject", "mismatches", "gap_opens", "query_len", "matches")
 
 
 rule gather_matching_probes:
@@ -107,21 +107,22 @@ rule parse_blast_filtering:
     run:
         min_idt = params.min_idt
         min_cov = params.min_cov
-        filt_ids = []
+        filt_ids = {}
 
-        df = pd.read_csv(input.blast, sep="\t", names=blast_cols, usecols=blast_usecols)
+        df = pd.read_csv(input.blast, sep="\t", names=BLAST_COLS, usecols=BLAST_USECOLS)
         for query in df["query"].unique():
             probe = re.search(SAUTE_PATTERN, query)["probe"]
-            df_matches = df.query("query == @query")
-            df_matches = df_matches[df_matches.subject.str.contains(probe, regex=True)]
+            dfq = df.query("query == @query")
+            dfq = dfq[dfq.subject.str.contains(probe, regex=True)]
 
-            if len(df_matches) == 0:
+            if len(dfq) == 0:
                 continue
 
-            query_len = df_matches["query_len"].to_list()[0]
+            query_len = dfq["query_len"].to_list()[0]
+            dfq["cis"] = dfq.eval("qend > qstart")
             agg = (
-                df_matches.loc[:, ["subject", "matches", "mismatches", "gap_opens"]]
-                .groupby(by="subject")
+                dfq.loc[:, ["subject", "cis", "matches", "mismatches", "gap_opens"]]
+                .groupby(by=["subject", "cis"])
                 .sum()
             )
             metrics = pd.DataFrame(
@@ -132,9 +133,11 @@ rule parse_blast_filtering:
             )
 
             if len(metrics.query("idt >= @min_idt and cov >= @min_cov")) > 0:
-                filt_ids.append(query)
+                filt_ids[query] = not res.reset_index()["cis"][0]
 
         filt_scfs = (
-            rec for rec in SeqIO.parse(input.scfs, "fasta") if rec.id in filt_ids
+            rec.reverse_complement() if filt_ids[rec.id] else rec
+            for rec in SeqIO.parse(input.scfs, "fasta")
+            if rec.id in filt_ids
         )
         SeqIO.write(filt_scfs, output[0], "fasta")
