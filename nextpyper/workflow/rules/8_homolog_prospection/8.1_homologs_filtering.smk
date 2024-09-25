@@ -1,5 +1,5 @@
 SAUTE_PATTERN = re.compile(
-    r"^Contig_.*?-(?P<probe>.*?)_(?P<cluster>\d+?)_\d+?:\d+:[^ ]+$",
+    r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?):(?P<component>\d+?):[^ ]+$",
     re.VERBOSE,
 )
 
