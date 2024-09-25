@@ -40,26 +40,36 @@ class NoMatch(Exception):
     "Exception raised when a pattern (RegEx) does not match a probre name"
 
 
-def group_probes(recs: list[SeqRecord], pattern: str) -> dict[str, list[SeqRecord]]:
+def group_probes(
+    recs: list[SeqRecord], pattern: str, match_group: int | str = 1
+) -> dict[str, list[SeqRecord]]:
     """Given a list of records with multiple sequences per probe, use the given
     pattern (a RegEx) to group the sequences using their ID. The pattern must
     have at least one capture group. The first capture group will be used
     to group the probes
     """
 
-    def get_probe_generic(rec: SeqRecord, pattern):
+    def get_probe_generic(rec: SeqRecord, pattern: re.Pattern, match_group: int | str):
         if (match := pattern.search(rec.id)) is None:
             raise NoMatch(f"Probe {rec.id} does not match pattern {pattern.pattern}")
         else:
-            return match[1]
+            return match[match_group]
 
     pat = re.compile(pattern)
     if pat.groups == 0:
         raise ValueError(
             "RegEx must have at least one capture group that groups the sequences."
         )
+    elif isinstance(match_group, int):
+        if match_group > pat.groups:
+            raise IndexError(
+                f"{match_group=} bigger than the number of capture groups ({pat.groups}) in RegEx."
+            )
+    elif isinstance(match_group, str):
+        if match_group not in pat.groupindex:
+            raise ValueError(f"{match_group=} not defined in RegEx {pattern}.")
 
-    get_probe = partial(get_probe_generic, pattern=pat)
+    get_probe = partial(get_probe_generic, pattern=pat, match_group=match_group)
     probe_recs = {
         probe: list(recs)
         for probe, recs in groupby(sorted(recs, key=get_probe), key=get_probe)
