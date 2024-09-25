@@ -107,7 +107,8 @@ def _generate_kmer_consensus(
     :return: None if there is a majority of gaps at all positions, raise EmptyConsensus exception.
     """
     if assembly_method == "SAUTE":
-        prefix = msa[0].id.rsplit("_", 1)[0].replace("*", "")
+        ## ToDo: Consider renaming the sequences, since at this point sample name is misleading.
+        prefix = msa[0].id.rsplit("_", 1)[0].replace("*", "").removeprefix("Contig_")
     else:
         # To be modified
         idx = msa[0].id.find("-")
@@ -263,8 +264,6 @@ if __name__ == "__main__":
 
     vsearch_result = Path(
         "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Youngia_japonica_6487_vsearch_corrected.fasta"
-
-
     )
     out = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Youngia_japonica_6487_con.fasta"
 
