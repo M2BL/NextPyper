@@ -1,5 +1,5 @@
 SAUTE_PATTERN = re.compile(
-    r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?):(?P<component>\d+?):[^ ]+$",
+    r"^Contig_.*?-(?P<probe>.*?)_(?P<cluster>\d+?)_\d+?:\d+:[^ ]+$",
     re.VERBOSE,
 )
 
@@ -19,7 +19,22 @@ BLAST_COLS = (
     "query_len",
     "matches",
 )
-BLAST_USECOLS = ("query", "subject", "mismatches", "gap_opens", "query_len", "matches")
+BLAST_USECOLS = (
+    "query",
+    "subject",
+    "mismatches",
+    "gap_opens",
+    "qstart",
+    "qend",
+    "query_len",
+    "matches",
+)
+
+
+def orient_scf(rec: SeqRecord, trans: bool) -> SeqRecord:
+    if trans:
+        rec.seq = rec.seq.reverse_complement()
+    return rec
 
 
 rule gather_matching_probes:
@@ -132,12 +147,12 @@ rule parse_blast_filtering:
                 }
             )
 
-            if len(metrics.query("idt >= @min_idt and cov >= @min_cov")) > 0:
-                filt_ids[query] = not res.reset_index()["cis"][0]
+            if len(result := metrics.query("idt >= @min_idt and cov >= @min_cov")) > 0:
+                filt_ids[query] = not result.reset_index()["cis"][0]
 
         filt_scfs = (
-            rec.reverse_complement() if filt_ids[rec.id] else rec
+            orient_scf(rec, trans)
             for rec in SeqIO.parse(input.scfs, "fasta")
-            if rec.id in filt_ids
+            if (trans := filt_ids.get(rec.id)) is not None
         )
         SeqIO.write(filt_scfs, output[0], "fasta")

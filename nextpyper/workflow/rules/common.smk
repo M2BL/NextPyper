@@ -11,6 +11,7 @@ import os
 import re
 import pandas as pd
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 
 sys.path.append((Path(workflow.basedir) / "../src/").as_posix())
 sys.path.append((Path(workflow.basedir) / "scripts").as_posix())
