@@ -31,11 +31,10 @@ include: os.path.join(workflow.basedir, "rules", "7_variants_on_graph", "7.1_sau
 # include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.5_sorting_alignments.smk")
 include: os.path.join(workflow.basedir, "rules", "8_homolog_prospection", "8.1_homologs_filtering.smk")
 include: os.path.join(workflow.basedir, "rules", "8_homolog_prospection", "8.2_allele_collapsing.smk")
+include: os.path.join(workflow.basedir, "rules", "8_homolog_prospection", "8.3_region_separation.smk")
 
 
-targets.append(
-    expand(outdir / "homolog_prospection/allele_collapsing/consensus/{sample}.fasta", sample=sample_list),
-)
+targets.append(outdir / "homolog_prospection/region_separation/separation_output")
 
 # Target rules
 @targetRule

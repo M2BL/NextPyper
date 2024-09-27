@@ -64,6 +64,11 @@ min_probe_cov = pipeline["split_graph_by_matching_probe"]["min_probe_coverage"]
 homolog_scf_min_cov = pipeline["blast_homolog_filtering"]["homolog_scf_min_cov"]
 homolog_scf_min_idt = pipeline["blast_homolog_filtering"]["homolog_scf_min_idt"]
 
+# Region separation
+min_probe_contig_sim = pipeline["region_separation"]["min_probe_contig_sim"]
+min_fragment_cov = pipeline["region_separation"]["min_fragment_cov"]
+min_contig_length = pipeline["region_separation"]["min_contig_length"]
+
 # Validate Sample table
 cols = ["sample_name", "path_forward", "path_reverse"]
 SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)

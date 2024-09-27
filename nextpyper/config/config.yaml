@@ -19,3 +19,7 @@ nextpyper:
         blast_homolog_filtering:
             homolog_scf_min_cov: 0.05
             homolog_scf_min_idt: 0.8
+        region_separation:
+            min_probe_contig_sim: 0.85
+            min_fragment_cov: 0.1
+            min_contig_length: 10
