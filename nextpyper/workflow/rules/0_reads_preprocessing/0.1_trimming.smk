@@ -50,15 +50,14 @@ rule matching_probes:
     conda:
         "../../envs/preprocessing.yaml"
     shell:
-        "(bbduk.sh "
-        "{params.others} "
+        "(bbduk.sh {params.others} "
         "in1={input.in1} "
         "in2={input.in2} "
         "ref={input.ref} "
         "outm1={output.outm1} "
-        "outm2={output.outm1} "
+        "outm2={output.outm2} "
         "k={params.k} "
-        "threads={threads} ) >> {log} 2>&"
+        "threads={threads} ) 2> {log} "
 
 
 # rule matching_probes:
