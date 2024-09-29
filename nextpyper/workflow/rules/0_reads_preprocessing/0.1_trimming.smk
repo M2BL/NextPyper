@@ -49,6 +49,7 @@ rule matching_probes:
     params:
         command="bbduk.sh",
         k=19,
+        Xmx="4g",
     threads: 4
     wrapper:
         "v4.3.0/bio/bbtools"
