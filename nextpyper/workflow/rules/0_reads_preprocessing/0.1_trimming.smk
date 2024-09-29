@@ -34,22 +34,51 @@ rule fastp_pe:
 
 rule matching_probes:
     input:
-        input=[
-            outdir / "preprocessed/trimmed/{sample}_R1.fastq",
-            outdir / "preprocessed/trimmed/{sample}_R2.fastq",
-        ],
+        in1=outdir / "preprocessed/trimmed/{sample}_R1.fastq",
+        in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq",
         ref=probes_path.resolve(),
     output:
-        outm=[
-            outdir / "preprocessed/filtered/{sample}_R1.fastq",
-            outdir / "preprocessed/filtered/{sample}_R2.fastq",
-        ],
+        outm1=outdir / "preprocessed/filtered/{sample}_R1.fastq",
+        outm2=outdir / "preprocessed/filtered/{sample}_R2.fastq",
     log:
         outdir / "logs/preprocessing/bbduk/{sample}.log",
     params:
+        others="-Xmx4g",
         command="bbduk.sh",
         k=19,
-        Xmx="4g",
     threads: 4
-    wrapper:
-        "v4.3.0/bio/bbtools"
+    conda:
+        "../../envs/preprocessing.yaml"
+    shell:
+        "(bbduk.sh "
+        "{params.others} "
+        "in1={input.in1} "
+        "in2={input.in2} "
+        "ref={input.ref} "
+        "outm1={output.outm1} "
+        "outm2={output.outm1} "
+        "k={params.k} "
+        "threads={threads} ) >> {log} 2>&"
+
+
+# rule matching_probes:
+#     input:
+#         input=[
+#             outdir / "preprocessed/trimmed/{sample}_R1.fastq",
+#             outdir / "preprocessed/trimmed/{sample}_R2.fastq",
+#         ],
+#         ref=probes_path.resolve(),
+#     output:
+#         outm=[
+#             outdir / "preprocessed/filtered/{sample}_R1.fastq",
+#             outdir / "preprocessed/filtered/{sample}_R2.fastq",
+#         ],
+#     log:
+#         outdir / "logs/preprocessing/bbduk/{sample}.log",
+#     params:
+#         Xmx4g,
+#         command="bbduk.sh",
+#         k=19,
+#     threads: 4
+#     wrapper:
+#         "v4.3.0/bio/bbtools"
