@@ -85,7 +85,7 @@ rule make_blast_probe_db:
     params:
         outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta",
     log:
-        outdir / "log/homolog_prospection/blast_filtering/makedb.log",
+        outdir / "logs/homolog_prospection/blast_filtering/makedb.log",
     conda:
         "../../envs/blast.yaml"
     shell:
