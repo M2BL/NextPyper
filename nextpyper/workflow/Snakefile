@@ -34,6 +34,7 @@ include: os.path.join(workflow.basedir, "rules", "8_homolog_prospection", "8.2_a
 include: os.path.join(workflow.basedir, "rules", "8_homolog_prospection", "8.3_region_separation.smk")
 
 
+targets.append(outdir / "logs/dones/probe_hmms.done")
 targets.append(outdir / "homolog_prospection/region_separation/separation_output")
 
 # Target rules
