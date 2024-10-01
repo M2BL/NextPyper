@@ -14,10 +14,10 @@ rule fastp_pe:
     output:
         trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq",
         trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq",
-        html=outdir / "logs/trimmed/{sample}.html",
-        json=outdir / "logs/trimmed/{sample}.json",
+        html=outdir / "logs/preprocessing/fastp/{sample}.html",
+        json=outdir / "logs/preprocessing/fastp/{sample}.json",
     log:
-        outdir / "logs/fastp/{sample}.log",
+        outdir / "logs/preprocessing/fastp/{sample}.log",
     params:
         extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_right",
     threads: 4
