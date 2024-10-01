@@ -38,6 +38,9 @@ rule spades_assembly:
         gfa=outdir / "assembled/spades/{sample}/assembly_graph_after_simplification.gfa",
         stats=outdir / "assembled/spades/{sample}/hmm_statistics.txt",
     params:
+        mode=lambda wildcards: (
+            "--rna" if sample_dict[wildcards.sample]["type"] == "rna" else ""
+        ),
         params=f"--only-assembler --cov-cutoff auto {spades_k}",
         hmms=outdir / "translated_probes/probe_profiles",
     log:
@@ -46,7 +49,7 @@ rule spades_assembly:
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
-        "spades.py -t {threads} {params.params} -1 {input.in1} -2 {input.in2} --custom-hmms {params.hmms} -o {output.out_dir} > {log} 2>&1"
+        "spades.py -t {threads} {params.mode} {params.params} -1 {input.in1} -2 {input.in2} --custom-hmms {params.hmms} -o {output.out_dir} > {log} 2>&1"
 
 
 checkpoint split_graph_into_hmms:

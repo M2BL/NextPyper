@@ -60,7 +60,7 @@ min_fragment_cov = pipeline["region_separation"]["min_fragment_cov"]
 min_contig_length = pipeline["region_separation"]["min_contig_length"]
 
 # Validate Sample table
-cols = ["sample_name", "path_forward", "path_reverse"]
+cols = ["sample", "path_forward", "path_reverse", "type"]
 SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)
 validate(SAMPLE_TABLE, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
 
@@ -87,7 +87,7 @@ if multi_probes:
 
 
 # Make useful structures for the inputs
-sample_dict = SAMPLE_TABLE.set_index("sample_name").T.to_dict()
+sample_dict = SAMPLE_TABLE.set_index("sample").T.to_dict()
 sample_list = list(sample_dict)
 
 # Define pattern for matching final sequences

@@ -225,11 +225,11 @@ def citation(**kwargs):
 
 
 @click.option(
-    "--input",
-    "input",
-    help="Path to data directory",
-    type=click.Path(readable=True, exists=True),
-    required=True,
+    "--extra",
+    help="extra info to add to all samples",
+    type=str,
+    default=None,
+    show_default=True,
 )
 @click.option(
     "--output",
@@ -238,14 +238,22 @@ def citation(**kwargs):
     default="sample.tsv",
     show_default=True,
 )
+@click.option(
+    "--input",
+    "input",
+    help="Path to data directory",
+    type=click.Path(readable=True, exists=True),
+    required=True,
+)
 @click.command(epilog=sample_table_msg)
 def make_sample_table(**kwargs):
     """Generate a sample table given a data directory"""
 
     datadir = Path(kwargs["input"])
     outfile = Path(kwargs["output"])
+    extra = kwargs["extra"]
 
-    make_table(datadir, outfile)
+    make_table(datadir, outfile, extra=extra)
 
 
 @click.option(
