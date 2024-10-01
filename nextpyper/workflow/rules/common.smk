@@ -26,36 +26,26 @@ report: "../report/workflow.rst"
 
 SCHEMES_DIR = Path(workflow.basedir) / "schemes"
 
-# Parameters of the run
-graph_simplification = config["args"]["graph_simplification"]
-
 # Read inputs
 probes_path = Path(config["args"]["probes"])
 outdir = Path(config["args"]["output"])
-path_samples = config["args"]["input"]
+path_samples = Path(config["args"]["input"])
 pattern = config["args"]["probe_pattern"]
 multi_probes = config["args"]["multi_probes"]
 max_threads = config["args"]["threads"]
 
-# Program configurations/parameters
-# TAPER
-taper_exec = Path(workflow.basedir) / config["taper_path"]
-default_taper_params = config["taper_params_path"]
-
-if not (path_taper_params := config["args"]["taper_params"]):
-    path_taper_params = Path(workflow.basedir) / default_taper_params
-
-# Trimal
-trimal_gt = config["args"]["trimal_gt"]
-
 ## Read Workflow parameters:
 pipeline = config["pipeline"]
+
+# BBduk
+bbduk_k = pipeline["matching_probes"]["bbduk_k"]
+other_bbduk = pipeline["matching_probes"]["others"]
 
 # MMseqs2
 mmseq2_min_seq_id = pipeline["multi_probe_clustering"]["mmseq2_min_seq_id"]
 
 # Spades
-spades_k = pipeline["spades"]["k"]
+spades_k = "" if (argk := pipeline["spades"]["k"]) == "auto" else argk
 
 # Split graph into probes
 min_probe_cov = pipeline["split_graph_by_matching_probe"]["min_probe_coverage"]

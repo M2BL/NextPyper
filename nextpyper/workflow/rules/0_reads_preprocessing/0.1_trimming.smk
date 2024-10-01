@@ -43,9 +43,8 @@ rule matching_probes:
     log:
         outdir / "logs/preprocessing/bbduk/{sample}.log",
     params:
-        others="-Xmx4g",
-        command="bbduk.sh",
-        k=19,
+        others=other_bbduk,
+        k=bbduk_k,
     threads: 4
     conda:
         "../../envs/preprocessing.yaml"
@@ -58,26 +57,3 @@ rule matching_probes:
         "outm2={output.outm2} "
         "k={params.k} "
         "threads={threads} ) 2> {log} "
-
-
-# rule matching_probes:
-#     input:
-#         input=[
-#             outdir / "preprocessed/trimmed/{sample}_R1.fastq",
-#             outdir / "preprocessed/trimmed/{sample}_R2.fastq",
-#         ],
-#         ref=probes_path.resolve(),
-#     output:
-#         outm=[
-#             outdir / "preprocessed/filtered/{sample}_R1.fastq",
-#             outdir / "preprocessed/filtered/{sample}_R2.fastq",
-#         ],
-#     log:
-#         outdir / "logs/preprocessing/bbduk/{sample}.log",
-#     params:
-#         Xmx4g,
-#         command="bbduk.sh",
-#         k=19,
-#     threads: 4
-#     wrapper:
-#         "v4.3.0/bio/bbtools"

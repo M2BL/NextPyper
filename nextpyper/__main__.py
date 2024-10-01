@@ -196,19 +196,6 @@ validate_probes_msg = """
     default=r"(\d{4})$",
     show_default=True,
 )
-@click.option(
-    "--taper_parameters",
-    "taper_params",
-    help="Parameters file to use when running TAPER (-p). See TAPER's docs.",
-    type=click.Path(readable=True, exists=True),
-)
-@click.option(
-    "--trimal_gt",
-    "trimal_gt",
-    help="1 - (fraction of sequences with a gap allowed)in Trimal.",
-    type=float,
-    default=0.2,
-)
 @common_options
 def run(**kwargs):
     """Run NextPyper"""

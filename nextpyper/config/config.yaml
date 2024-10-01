@@ -5,15 +5,15 @@ nextpyper:
         output:
         probe_pattern: (\d{4})$
         multi_probes:
-        graph_simplification: false
-        taper_params: 
-        trimal_gt:
     # Add customisable config here
     pipeline:
+        matching_probes: 
+            bbduk_k: 19
+            others: -Xmx4g
         multi_probe_clustering:
             mmseq2_min_seq_id: 0.8
         spades:
-            k: ""
+            k: auto
         split_graph_by_matching_probe:
             min_probe_coverage: 0.1
         blast_homolog_filtering:
