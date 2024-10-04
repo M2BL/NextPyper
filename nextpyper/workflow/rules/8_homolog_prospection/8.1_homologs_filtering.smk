@@ -102,7 +102,7 @@ rule scfs_blast_filtering:
         db=outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta",
         others="-outfmt '6 std qlen nident'",
     log:
-        outdir / "log/homolog_prospection/blast_filtering/blastx/{sample}.log",
+        outdir / "logs/homolog_prospection/blast_filtering/blastx/{sample}.log",
     threads: 4
     conda:
         "../../envs/blast.yaml"
