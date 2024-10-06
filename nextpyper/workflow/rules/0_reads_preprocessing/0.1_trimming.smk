@@ -12,8 +12,8 @@ rule fastp_pe:
         in1=get_raw_input_fastq_r1,
         in2=get_raw_input_fastq_r2,
     output:
-        trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq",
-        trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq",
+        trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
+        trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
         html=outdir / "logs/preprocessing/fastp/{sample}.html",
         json=outdir / "logs/preprocessing/fastp/{sample}.json",
     log:
@@ -34,8 +34,8 @@ rule fastp_pe:
 
 rule matching_probes:
     input:
-        in1=outdir / "preprocessed/trimmed/{sample}_R1.fastq",
-        in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq",
+        in1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
+        in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
         ref=probes_path.resolve(),
     output:
         outm1=outdir / "preprocessed/filtered/{sample}_R1.fastq",
