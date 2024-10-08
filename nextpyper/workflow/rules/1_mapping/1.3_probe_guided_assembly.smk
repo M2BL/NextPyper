@@ -39,9 +39,9 @@ rule spades_assembly:
         stats=outdir / "assembled/spades/{sample}/hmm_statistics.txt",
     params:
         mode=lambda wildcards: (
-            "--rna" if sample_dict[wildcards.sample]["type"] == "rna" else ""
+            "--rna" if sample_dict[wildcards.sample]["type"] == "rna" else "--meta"
         ),
-        params=f"--only-assembler --cov-cutoff auto {spades_k}",
+        params=f"--only-assembler -k {spades_k}",
         hmms=outdir / "translated_probes/probe_profiles",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
