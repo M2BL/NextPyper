@@ -1,7 +1,4 @@
-SAUTE_PATTERN = re.compile(
-    r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?):(?P<component>\d+?):[^ ]+$",
-    re.VERBOSE,
-)
+SAUTE_PATTERN = r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?):(?P<component>\d+?):[^ ]+$"
 
 BLAST_COLS = (
     "query",
@@ -122,33 +119,54 @@ rule parse_blast_filtering:
     run:
         min_idt = params.min_idt
         min_cov = params.min_cov
-        filt_ids = {}
 
-        df = pd.read_csv(input.blast, sep="\t", names=BLAST_COLS, usecols=BLAST_USECOLS)
-        for query in df["query"].unique():
-            probe = re.search(SAUTE_PATTERN, query)["probe"]
-            dfq = df.query("query == @query")
-            dfq = dfq[dfq.subject.str.contains(probe, regex=True)]
+        sel_cols = [
+            "query",
+            "subject",
+            "cis",
+            "matches",
+            "mismatches",
+            "gap_opens",
+            "query_len",
+        ]
+        group_cols = ["query", "subject", "cis"]
 
-            if len(dfq) == 0:
-                continue
 
-            query_len = dfq["query_len"].to_list()[0]
-            dfq["cis"] = dfq.eval("qend > qstart")
-            agg = (
-                dfq.loc[:, ["subject", "cis", "matches", "mismatches", "gap_opens"]]
-                .groupby(by=["subject", "cis"])
-                .sum()
+        df = pl.read_csv(
+            input.blast, separator="\t", has_header=False, new_columns=BLAST_COLS
+        ).select(BLAST_USECOLS)
+
+        final_scfs = (
+            df.with_columns(
+                qprobe=pl.col("query").str.extract(SAUTE_PATTERN, 2),
+                cis=pl.col("qend") > pl.col("qstart"),
             )
-            metrics = pd.DataFrame(
-                {
-                    "cov": agg.eval("matches + mismatches") * 3 / query_len,
-                    "idt": agg.eval("matches / (matches + mismatches + gap_opens)"),
-                }
+            .filter(pl.col("subject").str.contains(pl.col("qprobe"), literal=True))
+            .select(sel_cols)
+            .group_by(group_cols)
+            .agg(
+                pl.sum("matches"),
+                pl.sum("mismatches"),
+                pl.sum("gap_opens"),
+                pl.first("query_len"),
             )
+            .with_columns(
+                cov=(
+                    (pl.col("matches") + pl.col("mismatches")) * 3 / pl.col("query_len")
+                ),
+                idt=(
+                    pl.col("matches")
+                    / (pl.col("matches") + pl.col("mismatches") + pl.col("gap_opens"))
+                ),
+            )
+            .filter((pl.col("cov") > min_cov) & (pl.col("idt") > min_idt))
+            .group_by("query")
+            .agg(pl.all().sort_by("idt").last())
+            .select(["query", "cis"])
+            .with_columns(~pl.col("cis"))
+        )
 
-            if len(result := metrics.query("idt >= @min_idt and cov >= @min_cov")) > 0:
-                filt_ids[query] = not result.reset_index()["cis"][0]
+        filt_ids = dict(final_scfs.iter_rows())
 
         filt_scfs = (
             orient_scf(rec, trans)

@@ -10,6 +10,7 @@ import sys
 import os
 import re
 import pandas as pd
+import polars as pl
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
