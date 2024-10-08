@@ -2,3 +2,4 @@ nextpyper:
     # Config you don't want users to change
     taper_path: "../deps/TAPER/correction_multi.jl"
     taper_params_path: "../config/taper_parameters.txt"
+    silva_db: "../data/silva_ref_NR_138.2_embryphyota_4501.fasta.gz"

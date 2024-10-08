@@ -36,6 +36,33 @@ rule matching_probes:
     input:
         in1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
         in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
+        ref=silva_db,
+    output:
+        out1=outdir / "preprocessed/cleaned/{sample}_R1.fastq",
+        out2=outdir / "preprocessed/cleaned/{sample}_R2.fastq",
+    log:
+        outdir / "logs/preprocessing/bbduk_cleaning/{sample}.log",
+    params:
+        others=other_bbduk,
+        k=19,
+    threads: 4
+    conda:
+        "../../envs/preprocessing.yaml"
+    shell:
+        "(bbduk.sh {params.others} "
+        "in1={input.in1} "
+        "in2={input.in2} "
+        "ref={input.ref} "
+        "out1={output.out1} "
+        "out2={output.out2} "
+        "k={params.k} "
+        "threads={threads} ) 2> {log} "
+
+
+rule matching_probes:
+    input:
+        in1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        in2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
         ref=probes_path.resolve(),
     output:
         outm1=outdir / "preprocessed/filtered/{sample}_R1.fastq",

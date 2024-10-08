@@ -35,6 +35,8 @@ pattern = config["args"]["probe_pattern"]
 multi_probes = config["args"]["multi_probes"]
 max_threads = config["args"]["threads"]
 
+silva_db = Path(config["args"]["silva_db"])
+
 ## Read Workflow parameters:
 pipeline = config["pipeline"]
 
