@@ -38,8 +38,8 @@ rule cleaning_data:
         in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
         ref=silva_db,
     output:
-        out1=outdir / "preprocessed/cleaned/{sample}_R1.fastq",
-        out2=outdir / "preprocessed/cleaned/{sample}_R2.fastq",
+        out1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        out2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
     log:
         outdir / "logs/preprocessing/bbduk_cleaning/{sample}.log",
     params:
