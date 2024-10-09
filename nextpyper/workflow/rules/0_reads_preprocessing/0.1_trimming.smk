@@ -32,7 +32,7 @@ rule fastp_pe:
         "--json {output.json} ) 2> {log} "
 
 
-rule matching_probes:
+rule cleaning_data:
     input:
         in1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
         in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
