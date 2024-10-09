@@ -119,7 +119,7 @@ def merge_intervals(arr: list["OverlappingSeqs"]):
     index = 0
     index_to_del = []
     for i in range(1, len(arr)):
-        if arr[index].probe_end >= arr[i].probe_start:
+        if arr[index].probe_end > arr[i].probe_start:
             arr[index].probe_end = max(arr[index].probe_end, arr[i].probe_end)
             arr[index].combine(arr[i].seq_names)
             index_to_del.append(i)
