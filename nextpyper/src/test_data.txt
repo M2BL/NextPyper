@@ -1,0 +1,31 @@
+miniprot.py
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/probe_1043_contigs.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_105_aa.fasta"
+    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/substample_0_no_gap.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10052_aa.fasta"
+    # contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/final_alns/probe_10052.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/batarchium/H1_G3/H1_G3_probe_10248.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy/probe_10248_aa.fasta"
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Microseris_lindleyi_6128_con.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/probe_consensus/6128.fasta"
+    ## test with a single species that contains 61 sequences after vsearch clustering
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con.fasta"
+    ## test on a subset of sequences from a single species that have an actual match to at least a single probe
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Hedypnois_rhagadioloides_6487_con_short.fasta"
+    ## test on three species
+    contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/3_species_6487_con_small.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/msa_con/Kew_6487_best.fas"
+    contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Andryola_saute.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/msa_con/kew_6487_aa_consensus.fasta"
+    # contig_fasta =  "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/bug_youngia.fasta"
+    # probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/probe_bug.fas"
+    #OV = OverlappingCds(probe_fasta, contig_fasta)
+    #OV.save_clusters( "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp")
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/Andryola_saute_6488.fasta"
+    probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/saute_out/kew_probes_6488/kew_probes_6488_aa.fasta"
+    #RS = ComponentFilter(probe_fasta, contig_fasta)
+    #RS.save("/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/filtered.fasta")
+    contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp/filtered.fasta"
+    OV = OverlappingCds(probe_fasta, contig_fasta)
+    OV.save( "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_clustering_final/tmp")
