@@ -5,3 +5,4 @@ channels:
     - defaults
 dependencies:
     - orfipy=0.0.4
+    - biopython=>1.83

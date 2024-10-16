@@ -25,6 +25,7 @@ __version__ = "0.1"
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field, fields
 import re
+import sys
 from typing import Final, Optional, Self, TypedDict, Literal, Any
 from pathlib import Path
 
@@ -36,7 +37,6 @@ import orfipy_core
 
 pattern = re.compile(
     r"""^ID=Seq_ORF\.(?P<name>\d+?);ORF_type=(?P<type>.*?);ORF_len=(?P<length>\d+?);ORF_frame=(?P<frame>.*?);Start.*$""",
-
     re.VERBOSE,
 )
 
@@ -51,7 +51,10 @@ GraphPath = namedtuple("GraphPath", ["path", "length"])
 #               FUNCTIONS
 # =======================================================================================
 
-def select_best_cds(orf_list: list['Orf'], seq_length: int, max_stops: int, sensitivity: float) -> GraphPath:
+
+def select_best_cds(
+    orf_list: list["Orf"], seq_length: int, max_stops: int, sensitivity: float
+) -> GraphPath:
     """
     Create an interval graph for '+' and '-' list of orf. Explore all possible paths and determine the best path.
     Return the longest path that can be translated.
@@ -74,20 +77,30 @@ def select_best_cds(orf_list: list['Orf'], seq_length: int, max_stops: int, sens
     # perform the path search on each strand separately
     if partial_plus:
         sorted_partial_plus = sorted(partial_plus, key=lambda o: o.start)
-        iter_graph_plus = ItervalGraph(sorted_partial_plus, seq_length, max_stops, sensitivity)
+        iter_graph_plus = ItervalGraph(
+            sorted_partial_plus, seq_length, max_stops, sensitivity
+        )
         optima = iter_graph_plus.get_best_path()
     if optima:
         best_length = optima.length
     if partial_minus:
         sorted_partial_minus = sorted(partial_minus, key=lambda o: o.start)
         # use the best length from the '+' strand
-        iter_graph_minus = ItervalGraph(sorted_partial_minus, seq_length, max_stops, sensitivity, best_length)
+        iter_graph_minus = ItervalGraph(
+            sorted_partial_minus, seq_length, max_stops, sensitivity, best_length
+        )
         if (optimum := iter_graph_minus.get_best_path()) is not None:
             optima = optimum
     return optima
 
 
-def find_cds(input_fasta: Path, output_fasta: Path, sensitivity: float=0.95, stop_per_1Kbp: float = 2.0, min_exon_length: int = 20 ) -> None:
+def find_cds(
+    input_fasta: Path,
+    output_fasta: Path,
+    sensitivity: float = 0.95,
+    stop_per_1Kbp: float = 2.0,
+    min_exon_length: int = 20,
+) -> None:
     """
     Controle function to run orfipan and use the identified orf to find the longest translated region.
     Parameters
@@ -105,13 +118,19 @@ def find_cds(input_fasta: Path, output_fasta: Path, sensitivity: float=0.95, sto
     records = SeqIO.parse(input_fasta, "fasta")
     for record in records:
         print(f"working on record {record.id}")
-        if (translated_record := AllOrfs(record, sensitivity, stop_per_1Kbp, min_exon_length).get_best_pep()) is not None:
+        if (
+            translated_record := AllOrfs(
+                record, sensitivity, stop_per_1Kbp, min_exon_length
+            ).get_best_pep()
+        ) is not None:
             new_records.append(translated_record)
-            trans_fraction = 100*(len(translated_record.seq)*3)/len(record.seq)
-            print(f"orfipy translated {int(trans_fraction)} percent of the original sequence")
+            trans_fraction = 100 * (len(translated_record.seq) * 3) / len(record.seq)
+            print(
+                f"orfipy translated {int(trans_fraction)} percent of the original sequence"
+            )
         else:
             print("no translation occurred.")
-        #break
+        # break
     if new_records:
         SeqIO.write(new_records, output_fasta, "fasta")
 
@@ -251,7 +270,7 @@ class ItervalGraph:
         do not overlap"""
         self.node_dict = {node.name: node for node in self.nodes}
         for idx, node in enumerate(self.nodes):
-            for other_node in self.nodes[idx + 1:]:
+            for other_node in self.nodes[idx + 1 :]:
                 if node.overlap(other_node):
                     continue
                 node.add_child(other_node.name)
@@ -264,7 +283,10 @@ class ItervalGraph:
         """
 
         def dfs_util(
-                current_name: str, current_path=None, current_length: int = 0, number_stops=0
+            current_name: str,
+            current_path=None,
+            current_length: int = 0,
+            number_stops=0,
         ) -> GraphPath:
             if current_path is None:
                 current_path = []
@@ -284,9 +306,10 @@ class ItervalGraph:
             if not current_node.has_children():
                 if current_length > self.best_path_length:
                     self.best_path_length = current_length
-                    self.best_graph_path = GraphPath(current_path_copy,
-                                                     current_length,
-                                                     )
+                    self.best_graph_path = GraphPath(
+                        current_path_copy,
+                        current_length,
+                    )
                 return
             else:
                 for child in current_node.get_children():
@@ -299,11 +322,14 @@ class ItervalGraph:
                     if current_number_stop == self.max_stops:
                         if current_length > self.best_path_length:
                             self.best_path_length = current_length
-                            self.best_graph_path = GraphPath(current_path_copy,
-                                                             current_length,
-                                                             )
+                            self.best_graph_path = GraphPath(
+                                current_path_copy,
+                                current_length,
+                            )
                         return
-                    dfs_util(child, current_path_copy, current_length, current_number_stop)
+                    dfs_util(
+                        child, current_path_copy, current_length, current_number_stop
+                    )
 
         # check all nodes in the list, starting from 5' end
         for root_name in (x.name for x in self.nodes):
@@ -340,11 +366,15 @@ class AllOrfs:
     -candidates: keys are Orf numbers, value are Orf recovered with orfipy
     -best_path: best path found overall.
     """
+
     record: SeqRecord
     sensitivity: float = 0.99
     stop_per_1Kbp: float = 2.0
     min_exon_length: int = 20  # number of amino acids
-    candidates: dict[str, Orf] = field(init=False, default_factory=dict, )
+    candidates: dict[str, Orf] = field(
+        init=False,
+        default_factory=dict,
+    )
     best_path: GraphPath = field(init=False, default=None)  # name of orf(s)
 
     def __post_init__(self):
@@ -354,33 +384,51 @@ class AllOrfs:
         self._select_best()
 
     def _find_orfs(self):
-        for start, stop, strand, description in orfipy_core.orfs(str(self.record.seq).upper(), strand='b', minlen=3, maxlen=20000,
-                                                                 include_stop=False, partial3=True, partial5=True,
-                                                                 between_stops=True,
-                                                                 starts=['ATG']):
+        for start, stop, strand, description in orfipy_core.orfs(
+            str(self.record.seq).upper(),
+            strand="b",
+            minlen=3,
+            maxlen=20000,
+            include_stop=False,
+            partial3=True,
+            partial5=True,
+            between_stops=True,
+            starts=["ATG"],
+        ):
             match = pattern.match(description)
             name = match.group("name")
-            length = int(match.group('length'))
+            length = int(match.group("length"))
             if length < self.min_exon_length * 3:
                 continue
-            frame_match = match.group('frame')
-            frame = int(frame_match) if strand == '+' else - int(frame_match[1:])
-            type_match = match.group('type')
-            self.candidates[name] = Orf(name=name, strand=strand, type=type_match, start=start, end=stop, length=length,
-                                        frame=frame)
+            frame_match = match.group("frame")
+            frame = int(frame_match) if strand == "+" else -int(frame_match[1:])
+            type_match = match.group("type")
+            self.candidates[name] = Orf(
+                name=name,
+                strand=strand,
+                type=type_match,
+                start=start,
+                end=stop,
+                length=length,
+                frame=frame,
+            )
 
     def _select_best(self):
         length = len(self.record.seq)
         if not self.candidates:
             return
-        sorted_orfs = sorted(self.candidates.values(), key=lambda o: o.length, reverse=True)
+        sorted_orfs = sorted(
+            self.candidates.values(), key=lambda o: o.length, reverse=True
+        )
         if sorted_orfs[0].length >= length * self.sensitivity:
             best_orf_name = sorted_orfs[0].name
             best_orf_length = sorted_orfs[0].length
             self.best_path = GraphPath([best_orf_name], best_orf_length)
             return
         max_stop = int((length / 1000) * self.stop_per_1Kbp)
-        self.best_path = select_best_cds(list(self.candidates.values()), length, max_stop, self.sensitivity)
+        self.best_path = select_best_cds(
+            list(self.candidates.values()), length, max_stop, self.sensitivity
+        )
 
     def get_best_pep(self) -> Optional[SeqRecord]:
         if not self.best_path:
@@ -388,27 +436,58 @@ class AllOrfs:
         new_sequence = []
         best_path = self.best_path.path
         strand = self.candidates[best_path[0]].strand
-        if strand == '+':
+        if strand == "+":
             for orf_name in best_path:
                 orf = self.candidates[orf_name]
-                new_sequence.append(str(self.record.seq[orf.start:orf.end].translate()))
+                new_sequence.append(
+                    str(self.record.seq[orf.start : orf.end].translate())
+                )
         else:
             best_path.reverse()
             for orf_name in best_path:
                 orf = self.candidates[orf_name]
-                new_sequence.append(str(self.record.seq[orf.start:orf.end].reverse_complement().translate()))
-        pep_seq = ''.join(new_sequence).replace('X', '')
-        return SeqRecord(Seq(pep_seq), id=self.record.id, description=self.record.description, name=self.record.name)
+                new_sequence.append(
+                    str(
+                        self.record.seq[orf.start : orf.end]
+                        .reverse_complement()
+                        .translate()
+                    )
+                )
+        pep_seq = "".join(new_sequence).replace("X", "")
+        return SeqRecord(
+            Seq(pep_seq),
+            id=self.record.id,
+            description=self.record.description,
+            name=self.record.name,
+        )
 
+
+def snakemake_call(snakemake) -> None:
+    with open(snakemake.log[0], "w") as outlog:
+        sys.stdout = sys.stderr = outlog
+
+        probes = Path(snakemake.input[0])
+        translated_probes = Path(snakemake.output[0])
+
+        translated_prop = snakemake.params.translated_prop
+        stop_per_1Kbp = snakemake.params.stop_per_1Kbp
+        min_exon_length = snakemake.params.min_exon_length
+
+        find_cds(
+            probes, translated_probes, translated_prop, stop_per_1Kbp, min_exon_length
+        )
 
 
 if __name__ == "__main__":
     if "snakemake" in globals():
         snakemake_call(snakemake)
     else:
-        #probes_fasta = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/batrachium_prones/targets.fasta")
-        probes_fasta = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/brassica_probes/kasper_mega_probes.fasta")
-        #output_fasta = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/batrachium_prones/test_translation.fasta")
-        output_fasta = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/brassica_probes/test_translation.fasta")
+        # probes_fasta = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/batrachium_prones/targets.fasta")
+        probes_fasta = Path(
+            "/home/yjkbertrand/Documents/projects/nextpiper/debug/brassica_probes/kasper_mega_probes.fasta"
+        )
+        # output_fasta = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/batrachium_prones/test_translation.fasta")
+        output_fasta = Path(
+            "/home/yjkbertrand/Documents/projects/nextpiper/debug/brassica_probes/test_translation.fasta"
+        )
         find_cds(probes_fasta, output_fasta)
-
