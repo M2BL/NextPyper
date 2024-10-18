@@ -7,6 +7,8 @@ nextpyper:
         multi_probes:
     # Add customisable config here
     pipeline:
+        cp_cleaning:
+            min_sp_probes_cov: 80
         matching_probes: 
             bbduk_k: 19
             others: -Xmx4g

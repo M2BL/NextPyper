@@ -6,6 +6,7 @@ from snakemake.exceptions import WorkflowError
 from snakemake.utils import min_version
 from snakemake.utils import validate
 from pathlib import Path
+from collections import Counter
 import sys
 import os
 import re
@@ -13,6 +14,7 @@ import pandas as pd
 import polars as pl
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+from Bio import Entrez
 
 sys.path.append((Path(workflow.basedir) / "../src/").as_posix())
 sys.path.append((Path(workflow.basedir) / "scripts").as_posix())
@@ -35,7 +37,11 @@ pattern = config["args"]["probe_pattern"]
 multi_probes = config["args"]["multi_probes"]
 max_threads = config["args"]["threads"]
 
+use_ref_cps = config["args"]["use_ref_cps"]
+custom_cps = Path(custom_cps) if (custom_cps := config["args"]["custom_cps"]) else None
+
 silva_db = workflow.source_path(config["silva_db"])
+cp_refs_map = workflow.source_path(config["cp_refs_map"])
 
 ## Read Workflow parameters:
 pipeline = config["pipeline"]

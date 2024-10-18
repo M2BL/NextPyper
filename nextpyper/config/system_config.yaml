@@ -3,3 +3,4 @@ nextpyper:
     taper_path: "../deps/TAPER/correction_multi.jl"
     taper_params_path: "../config/taper_parameters.txt"
     silva_db: "../../data/silva_ref_NR_138.2_embryphyota_4501.fasta"
+    cp_refs_map: "../../data/cps_seqids.csv"
