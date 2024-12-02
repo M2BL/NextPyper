@@ -7,6 +7,10 @@ nextpyper:
         multi_probes:
     # Add customisable config here
     pipeline:
+        probes_translation:
+            translated_prop: 0.95
+            stop_per_1Kbp: 2 
+            min_exon_length: 20
         cp_cleaning:
             min_sp_probes_cov: 80
         matching_probes: 
