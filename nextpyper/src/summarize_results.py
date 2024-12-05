@@ -58,8 +58,8 @@ import numpy as np
 #               CONSTANTS
 # =======================================================================================
 
-CLEANING_PATTERN = r"(Input|Contaminants):\s+(\d+)"
-MATCHING_PATTERN = r"(Input|Result):\s+(\d+)"
+MATCHING_PATTERN = r"(Input|Contaminants):\s+(\d+)"
+CLEANING_PATTERN = r"(Input|Result):\s+(\d+)"
 
 SCF_PATTERN = re.compile(
     r"^(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?)", re.VERBOSE
@@ -107,13 +107,25 @@ def _get_raw_reads(sample: str, rootdir: Path) -> int:
         return json.load(file)["summary"]["before_filtering"]["total_reads"]
 
 
-def _get_preprocessed_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
+def _get_cleaned_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
     """Extract from bbduk logs the number of input and output reads. Depending on the
     pattern, the output would be tha matching (contaminants) or non matching (clean reads).
     """
 
     read_ext = re.compile(pat)
-    with (rootdir / f"logs/preprocessing/bbduk/{sample}.log").open() as file:
+    with (rootdir / f"logs/preprocessing/bbduk_cleaning/{sample}.log").open() as file:
+        return tuple(int(match[2]) for line in file if (match := read_ext.match(line)))
+
+
+def _get_matched_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
+    """Extract from bbduk logs the number of input and output reads. Depending on the
+    pattern, the output would be tha matching (contaminants) or non matching (clean reads).
+    """
+
+    read_ext = re.compile(pat)
+    with (
+        rootdir / f"logs/preprocessing/bbduk_probe_matching/{sample}.log"
+    ).open() as file:
         return tuple(int(match[2]) for line in file if (match := read_ext.match(line)))
 
 
@@ -193,7 +205,7 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
 
     ## Get Preprocessing stats:
     clean_stats = {
-        sample: _get_preprocessed_reads(sample, results_dir, CLEANING_PATTERN)
+        sample: _get_cleaned_reads(sample, results_dir, CLEANING_PATTERN)
         for sample in samples
     }
     stats["trimmed_reads"] = {
@@ -202,10 +214,11 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     stats["cleaned_reads"] = {
         sample: cleaned for sample, (trimmed, cleaned) in clean_stats.items()
     }
-    stats["probe_matching_reads"] = {
-        sample: _get_preprocessed_reads(sample, results_dir, MATCHING_PATTERN)[1]
-        for sample in samples
-    }
+    if (results_dir / "logs/preprocessing/bbduk_probe_matching").exists():
+        stats["probe_matching_reads"] = {
+            sample: _get_matched_reads(sample, results_dir, MATCHING_PATTERN)[1]
+            for sample in samples
+        }
 
     ## Get matched probes
     stats["probes_in_assembly"] = {
@@ -241,7 +254,7 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     for level in (25, 50, 75, 100, 125):
         stats[f"probes_at_{level}pct"] = (norm_table > level / 100).sum(axis=1)
 
-    return stats.reset_index().rename({"index": "samples"}, axis=1)
+    return stats.reset_index().rename({"index": "samples"}, axis=1), norm_table
 
 
 def snakemake_call(snakemake):
@@ -251,7 +264,7 @@ def snakemake_call(snakemake):
         wf_dir = Path(snakemake.input.workflowdir)
         out_stats = Path(snakemake.output[0])
 
-        df = summarize_workflow(wf_dir)
+        df, _ = summarize_workflow(wf_dir)
         df.to_csv(out_stats, index=False)
 
 
@@ -259,8 +272,14 @@ def main():
     results_dir = sys.argv[1]
     out_file = sys.argv[2]
 
-    df = summarize_workflow(Path(results_dir))
+    df, table = summarize_workflow(Path(results_dir))
     df.to_csv(out_file, index=False)
+
+    try:
+        tab_file = sys.argv[3]
+        table.T.to_csv(tab_file, float_format="%.2f")
+    except IndexError:
+        pass
 
 
 if __name__ == "__main__":
