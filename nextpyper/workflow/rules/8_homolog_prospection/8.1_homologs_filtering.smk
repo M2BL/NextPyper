@@ -1,39 +1,3 @@
-SAUTE_PATTERN = r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?):(?P<component>\d+?):[^ ]+$"
-
-BLAST_COLS = (
-    "query",
-    "subject",
-    "idt",
-    "aln_len",
-    "mismatches",
-    "gap_opens",
-    "qstart",
-    "qend",
-    "sstart",
-    "send",
-    "evalue",
-    "score",
-    "query_len",
-    "matches",
-)
-BLAST_USECOLS = (
-    "query",
-    "subject",
-    "mismatches",
-    "gap_opens",
-    "qstart",
-    "qend",
-    "query_len",
-    "matches",
-)
-
-
-def orient_scf(rec: SeqRecord, trans: bool) -> SeqRecord:
-    if trans:
-        rec.seq = rec.seq.reverse_complement()
-    return rec
-
-
 rule gather_matching_probes:
     input:
         direc=outdir / "logs/dones/splitting.done",
@@ -63,38 +27,40 @@ rule gather_matching_probes:
         SeqIO.write(probes_gen, Path(output[0]), "fasta")
 
 
-rule make_blast_probe_db:
+rule make_mmseqs_probe_db:
     input:
         outdir / "homolog_prospection/matching_probes.fasta",
     output:
-        multiext(
-            str(
-                outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta"
-            ),
-            ".pdb",
-            ".phr",
-            ".pin",
-            ".pot",
-            ".psq",
-            ".ptf",
-            ".pto",
-        ),
-    params:
-        outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta",
+        outdir / "homolog_prospection/candidates_filtering/dbs/probes/matching_probes",
     log:
-        outdir / "logs/homolog_prospection/blast_filtering/makedb.log",
+        outdir / "logs/homolog_prospection/candidates_filtering/make_probes_db.log",
     conda:
-        "../../envs/blast.yaml"
+        "../../envs/mmseqs2.yaml"
     shell:
-        "makeblastdb -dbtype prot -in {input} -out {params} 2> {log}"
+        "mmseqs createdb --dbtype 1 {input} {output} 2> {log}"
 
 
-rule scfs_blast_filtering:
+rule make_mmseqs_sample_dbs:
     input:
-        query=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
-        db=rules.make_blast_probe_db.output,
+        outdir / "saute/target_assembly/{sample}/target_vars.fasta",
     output:
-        outdir / "homolog_prospection/blast_filtering/blastx/{sample}.blast.tsv",
+        outdir / "homolog_prospection/candidates_filtering/dbs/samples/{sample}",
+    log:
+        outdir
+        / "logs/homolog_prospection/candidates_filtering/make_sample_db/{sample}.log",
+    conda:
+        "../../envs/mmseqs2.yaml"
+    shell:
+        "mmseqs createdb --dbtype 2 {input} {output} 2> {log}"
+
+
+rule candidates_to_probes_matching:
+    input:
+        probes=outdir
+        / "homolog_prospection/candidates_filtering/dbs/probes/matching_probes",
+        query=outdir / "homolog_prospection/candidates_filtering/dbs/samples/{sample}",
+    output:
+        outdir / "homolog_prospection/candidates_filtering/matching_tables/{sample}.tsv",
     params:
         db=outdir / "homolog_prospection/blast_filtering/db/matching_probes.fasta",
         others="-outfmt '6 std qlen nident'",
@@ -102,75 +68,26 @@ rule scfs_blast_filtering:
         outdir / "logs/homolog_prospection/blast_filtering/blastx/{sample}.log",
     threads: 4
     conda:
-        "../../envs/blast.yaml"
+        "../../envs/mmseqs2.yaml"
     shell:
-        "blastx -num_threads {threads} -query {input.query} -db {params.db} -out {output} {params.others} 2> {log}"
+        """
+        mkdir -p temp_{wildcards.sample}
+        mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -e 1.000E-06 --remove-tmp-files -a
+        mmseqs convertalis {input.query} {input.probes} {wildcards.sample}_results {output} --format-mode 4 --format-output query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch --threads {threads}
+        rm -r temp_{wildcards.sample}
+        rm *_results.*
+        """
 
 
-rule parse_blast_filtering:
+rule candidates_filtering:
     input:
         scfs=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
-        blast=outdir / "homolog_prospection/blast_filtering/blastx/{sample}.blast.tsv",
+        table=outdir
+        / "homolog_prospection/candidates_filtering/matching_tables/{sample}.tsv",
     output:
-        outdir / "homolog_prospection/blast_filtering/filtered_scfs/{sample}.fasta",
+        outdir / "homolog_prospection/candidates_filtering/filtered_scfs/{sample}.fasta",
     params:
         min_cov=homolog_scf_min_cov,
         min_idt=homolog_scf_min_idt,
-    run:
-        min_idt = params.min_idt
-        min_cov = params.min_cov
-
-        sel_cols = [
-            "query",
-            "subject",
-            "cis",
-            "matches",
-            "mismatches",
-            "gap_opens",
-            "query_len",
-        ]
-        group_cols = ["query", "subject", "cis"]
-
-
-        df = pl.read_csv(
-            input.blast, separator="\t", has_header=False, new_columns=BLAST_COLS
-        ).select(BLAST_USECOLS)
-
-        final_scfs = (
-            df.with_columns(
-                qprobe=pl.col("query").str.extract(SAUTE_PATTERN, 2),
-                cis=pl.col("qend") > pl.col("qstart"),
-            )
-            .filter(pl.col("subject").str.contains(pl.col("qprobe"), literal=True))
-            .select(sel_cols)
-            .group_by(group_cols)
-            .agg(
-                pl.sum("matches"),
-                pl.sum("mismatches"),
-                pl.sum("gap_opens"),
-                pl.first("query_len"),
-            )
-            .with_columns(
-                cov=(
-                    (pl.col("matches") + pl.col("mismatches")) * 3 / pl.col("query_len")
-                ),
-                idt=(
-                    pl.col("matches")
-                    / (pl.col("matches") + pl.col("mismatches") + pl.col("gap_opens"))
-                ),
-            )
-            .filter((pl.col("cov") > min_cov) & (pl.col("idt") > min_idt))
-            .group_by("query")
-            .agg(pl.all().sort_by("idt").last())
-            .select(["query", "cis"])
-            .with_columns(~pl.col("cis"))
-        )
-
-        filt_ids = dict(final_scfs.iter_rows())
-
-        filt_scfs = (
-            orient_scf(rec, trans)
-            for rec in SeqIO.parse(input.scfs, "fasta")
-            if (trans := filt_ids.get(rec.id)) is not None
-        )
-        SeqIO.write(filt_scfs, output[0], "fasta")
+    script:
+        "../../../src/homolog_filtering.py"

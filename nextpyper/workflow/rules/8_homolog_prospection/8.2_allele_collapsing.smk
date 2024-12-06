@@ -4,7 +4,7 @@ from vsearch import get_vsearch_kmer_consensus
 rule allele_clustering:
     input:
         cluster_fast=outdir
-        / "homolog_prospection/blast_filtering/filtered_scfs/{sample}.fasta",
+        / "homolog_prospection/candidates_filtering/filtered_scfs/{sample}.fasta",
     output:
         msaout=outdir / "homolog_prospection/allele_collapsing/vsearch/{sample}.fasta",
     log:

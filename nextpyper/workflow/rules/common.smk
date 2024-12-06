@@ -60,8 +60,8 @@ spades_k = "" if (argk := pipeline["spades"]["k"]) == "auto" else argk
 min_probe_cov = pipeline["split_graph_by_matching_probe"]["min_probe_coverage"]
 
 # Blastx filtering
-homolog_scf_min_cov = pipeline["blast_homolog_filtering"]["homolog_scf_min_cov"]
-homolog_scf_min_idt = pipeline["blast_homolog_filtering"]["homolog_scf_min_idt"]
+homolog_scf_min_cov = pipeline["homolog_filtering"]["homolog_scf_min_cov"]
+homolog_scf_min_idt = pipeline["homolog_filtering"]["homolog_scf_min_idt"]
 
 # Region separation
 min_probe_contig_sim = pipeline["region_separation"]["min_probe_contig_sim"]

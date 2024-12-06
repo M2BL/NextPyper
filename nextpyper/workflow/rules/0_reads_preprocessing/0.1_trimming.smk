@@ -81,7 +81,7 @@ def make_cleaning_reference(wildcards, input) -> str:
     refs = [input.rrna]
 
     if multi_probes and use_ref_cps:
-        refs.append(str((outdir / "preprocessed/ref_cps.fasta").resolve()))
+        refs.append(str(Path(input.ref_cps).resolve()))
 
     if custom_cps:
         refs.append(str(custom_cps.resolve()))
