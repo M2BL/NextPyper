@@ -6,7 +6,7 @@ from snakemake.exceptions import WorkflowError
 from snakemake.utils import min_version
 from snakemake.utils import validate
 from pathlib import Path
-from collections import Counter
+from collections import Counter, defaultdict
 import sys
 import os
 import re
@@ -21,6 +21,7 @@ sys.path.append((Path(workflow.basedir) / "scripts").as_posix())
 
 nextpyper_version = "0.0.1"
 
+from prefix_seqs import prefix_fasta
 from multi_seq_probes import group_probes, NoGrouping
 
 
@@ -59,9 +60,12 @@ spades_k = "" if (argk := pipeline["spades"]["k"]) == "auto" else argk
 # Split graph into probes
 min_probe_cov = pipeline["split_graph_by_matching_probe"]["min_probe_coverage"]
 
-# Blastx filtering
-homolog_scf_min_cov = pipeline["homolog_filtering"]["homolog_scf_min_cov"]
-homolog_scf_min_idt = pipeline["homolog_filtering"]["homolog_scf_min_idt"]
+# MMseqs filtering
+homolog_scf_min_cov = 0.05
+homolog_scf_min_idt = 0.1
+candidate_scf_min_cov = pipeline["homolog_filtering"]["homolog_scf_min_cov"]
+candidate_scf_min_idt = pipeline["homolog_filtering"]["homolog_scf_min_idt"]
+
 
 # Region separation
 min_probe_contig_sim = pipeline["region_separation"]["min_probe_contig_sim"]
@@ -100,9 +104,9 @@ sample_dict = SAMPLE_TABLE.set_index("sample").T.to_dict()
 sample_list = list(sample_dict)
 
 # Define pattern for matching final sequences
-saute_seq_pattern = re.compile(
-    r"(?P<sample>\w+)_Contig_(?P<probe>\w+)_(?P<cluster>\d+)-(?P<saute_info>[\d-]+)"
-)
+# saute_seq_pattern = re.compile(
+#     r"(?P<sample>\w+)_Contig_(?P<probe>\w+)_(?P<cluster>\d+)-(?P<saute_info>[\d-]+)"
+# )
 
 
 wildcard_constraints:

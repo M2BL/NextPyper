@@ -243,7 +243,7 @@ def citation(**kwargs):
     "--extra",
     help="extra info to add to all samples",
     type=str,
-    default=None,
+    default="targeted",
     show_default=True,
 )
 @click.option(

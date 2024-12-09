@@ -1,39 +1,29 @@
 from vsearch import get_vsearch_kmer_consensus
 
 
-def union_probes(wildcards):
-    if not multi_probes:
-        glob_match = glob_wildcards(
-            outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta"
-        )
-        return expand(
-            outdir / f"assembled/split_components/{{sample}}/{wildcards.probe}.fasta",
-            sample=glob_match.sample,
-        )
-    else:
-        glob_match = glob_wildcards(
-            outdir
-            / f"assembled/split_components/{{sample}}/{wildcards.probe}_{{cluster}}.fasta"
-        )
+def aggregate_sample_per_probe(wildcards):
+    probe_inputs = defaultdict(list)
+    for sample in sample_list:
+        checkpoint_output = checkpoints.homologs_filtering.get(sample=sample).output[0]
+        global_match = glob_wildcards(Path(checkpoint_output) / "{probe}.fasta")
 
-        return expand(
-            outdir
-            / f"assembled/split_components/{{sample}}/{wildcards.probe}_{{cluster}}.fasta",
-            zip,
-            sample=glob_match.sample,
-            cluster=glob_match.cluster,
-        )
+        for probe in global_match.probe:
+            probe_inputs[probe].append(
+                outdir / f"assembled/filtering/filtered_scfs/{sample}/{probe}.fasta"
+            )
+
+    return probe_inputs[wildcards.probe]
 
 
 rule merge_asms:
     input:
-        direc=outdir / "logs/dones/splitting.done",
-        probes=union_probes,
+        probe=aggregate_sample_per_probe,
+        chkpt=outdir / "logs/dones/splitting.done",
     output:
         outfile=outdir / "clustering/sample_merged_input/{probe}.fasta",
     shell:
         """
-        for file in {input.probes}; do 
+        for file in {input.probe}; do 
             cat $file 
         done > {output}
         touch {output}

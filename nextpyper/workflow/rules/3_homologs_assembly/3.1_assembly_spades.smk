@@ -1,64 +1,19 @@
-rule bam2fastq:
-    input:
-        aux=rules.distribute_reads.output,
-        bam=outdir / "mapped/per_probe/{sample}/{probe}.bam",
-    output:
-        out1=outdir / "assembled/inputs/{sample}/{probe}_R1.fastq",
-        out2=outdir / "assembled/inputs/{sample}/{probe}_R2.fastq",
-    log:
-        outdir / "logs/assembled/inputs/{sample}/{probe}.log",
-    conda:
-        "../../envs/assembly_spades.yaml"
-    shell:
-        "samtools fastq -1 {output.out1} -2 {output.out2} {input.bam} 2> {log}"
-
-
 rule spades_assembly:
     input:
-        in1=outdir / "assembled/inputs/{sample}/{probe}_R1.fastq",
-        in2=outdir / "assembled/inputs/{sample}/{probe}_R2.fastq",
+        in1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        in2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
     output:
-        out_dir=directory(outdir / "assembled/spades/{sample}/{probe}"),
-        contigs=outdir / "assembled/spades/{sample}/{probe}/contigs.fasta",
-        gfa=outdir
-        / "assembled/spades/{sample}/{probe}/assembly_graph_with_scaffolds.gfa",
+        out_dir=directory(outdir / "assembled/spades/{sample}/"),
+        contigs=outdir / "assembled/spades/{sample}/scaffolds.fasta",
     params:
-        "",
+        mode=lambda wildcards: (
+            "--rna" if sample_dict[wildcards.sample]["type"] == "rna" else "--meta"
+        ),
+        params=f"--only-assembler -k {spades_k}",
     log:
-        outdir / "logs/assembled/spades/{sample}/{probe}.log",
-    threads: 1
+        outdir / "logs/assembled/spades/{sample}.log",
+    threads: max(1, max_threads // len(sample_list))
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
-        "spades.py -t {threads} {params} -1 {input.in1} -2 {input.in2} -o {output.out_dir} > {log} 2>&1"
-
-
-# Input function to handle dynamically generated files via checkpoints.
-# See: https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#data-dependent-conditional-execution
-def aggregate_asms(wildcards):
-    checkpoint_output = checkpoints.distribute_reads.get(**wildcards).output[0]
-    return expand(
-        outdir / "assembled/spades/{sample}/{probe}",
-        sample=wildcards.sample,
-        probe=glob_wildcards(os.path.join(checkpoint_output, "{probe}.bam")).probe,
-    )  # glob_wilcards(path, wildcard_pattern) tries to match the given wildcard to
-    # the closest file generated so far by the workflow.
-
-
-# Collect all the dinamycally generated files (at run time)
-rule collect_assemblies:
-    input:
-        aggregate_asms,
-    output:
-        chkpt=outdir / "logs/assembled/collect/{sample}.chkpt",
-    shell:
-        "echo {input} | tr '[:space:]' '\n' >> {output.chkpt}"
-
-
-rule done_asms:
-    input:
-        chkpt=expand(
-            outdir / "logs/assembled/collect/{sample}.chkpt", sample=sample_list
-        ),
-    output:
-        done=touch(outdir / "logs/dones/assembly.done"),
+        "spades.py -t {threads} {params.mode} {params.params} -1 {input.in1} -2 {input.in2} -o {output.out_dir} > {log} 2>&1"
