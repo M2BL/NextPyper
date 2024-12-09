@@ -18,8 +18,11 @@ from snaketool_utils.cli_utils import (
 )
 
 sys.path.append(str((Path(__file__).parent / "workflow/scripts").resolve()))
+sys.path.append(str((Path(__file__).parent / "src").resolve()))
+
 from sample_table import make_table
 from multi_seq_probes import check_probes
+from summarize_results import summarize_workflow
 
 
 def snake_base(rel_path):
@@ -157,6 +160,11 @@ files per each sample (forward, reverse).
 
 # ToDo: Refine this help message
 validate_probes_msg = """
+
+"""
+
+# ToDo: Refine this help message
+summarize_run_msg = """
 
 """
 
@@ -313,9 +321,48 @@ def validate_probes(**kwargs):
     check_probes(probes_path, pattern, outsummary, outhierarchy)
 
 
+@click.option(
+    "--seqs_per_probe",
+    "seqs_per_probe",
+    help="Output sample table",
+    type=click.Path(writable=True, path_type=Path),
+    default=None,
+    show_default=True,
+)
+@click.option(
+    "--output",
+    "output",
+    help="Output sample table",
+    type=click.Path(writable=True, path_type=Path),
+    default="run_stats.csv",
+    show_default=True,
+)
+@click.option(
+    "--rundir",
+    "rundir",
+    help="Path to run directory",
+    type=click.Path(readable=True, exists=True, path_type=Path),
+    required=True,
+)
+@click.command(epilog=summarize_run_msg)
+def summarize_run(**kwargs):
+    """Summarize the results of a NextPyper run"""
+
+    run_directory_path = kwargs["rundir"]
+    out_table_path = kwargs["output"]
+    tab_file = kwargs["seqs_per_probe"]
+
+    df, table = summarize_workflow(run_directory_path)
+    df.to_csv(out_table_path, index=False)
+
+    if tab_file:
+        table.T.to_csv(tab_file, float_format="%.2f")
+
+
 cli.add_command(run)
 cli.add_command(make_sample_table)
 cli.add_command(validate_probes)
+cli.add_command(summarize_run)
 cli.add_command(config)
 cli.add_command(citation)
 
