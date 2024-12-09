@@ -136,7 +136,7 @@ def _get_matched_probes(sample: str, rootdir: Path) -> int:
     return len(
         {
             file.stem.rsplit("_", 1)[0]
-            for file in (rootdir / f"assembled/split_components/{sample}").glob(
+            for file in (rootdir / f"assembled/filtering/filtered_scfs/{sample}").glob(
                 "*.fasta"
             )
         }
