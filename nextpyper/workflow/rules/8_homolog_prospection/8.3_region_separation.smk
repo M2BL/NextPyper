@@ -49,11 +49,20 @@ checkpoint split_matching_probes:
         with open(log[0], "w") as outlog:
             sys.stdout = sys.stderr = outlog
 
-            probes = list(SeqIO.parse(input[0], "fasta"))
-            outfolder = Path(output[0])
-            outfolder.mkdir(exist_ok=True)
-            for probe, recs in group_probes(probes, pattern).items():
-                SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
+            if multi_probes:
+                probes = list(SeqIO.parse(input[0], "fasta"))
+                outfolder = Path(output[0])
+                outfolder.mkdir(exist_ok=True)
+                for probe, recs in group_probes(probes, pattern).items():
+                    SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
+
+            else:
+                outfolder = Path(output[0])
+                outfolder.mkdir(exist_ok=True)
+                ext_probe = re.compile(pattern)
+                for probe_rec in SeqIO.parse(input[0], "fasta"):
+                    probe = ext_probe.search(probe_rec.id)[1]
+                    SeqIO.write(probe_rec, outfolder / f"{probe}.fasta", "fasta")
 
 
 rule separate_cds_by_regions:
