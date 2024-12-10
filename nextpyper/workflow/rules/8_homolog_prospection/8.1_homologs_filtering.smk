@@ -90,5 +90,6 @@ rule candidates_filtering:
         min_cov=candidate_scf_min_cov,
         min_idt=candidate_scf_min_idt,
         separate_probes=False,
+        tpat=pattern,
     script:
         "../../../src/homolog_filtering.py"

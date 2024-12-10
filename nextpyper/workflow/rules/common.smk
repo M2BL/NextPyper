@@ -97,16 +97,15 @@ if multi_probes:
     except NoGrouping:
         # Single-sequence probe set
         multi_probes = False
+else:
+    cpat = re.compile(pattern)
+    all_probes_list = probes_list
+    probes_list = [cpat.search(probe)[1] for probe in all_probes_list]
 
 
 # Make useful structures for the inputs
 sample_dict = SAMPLE_TABLE.set_index("sample").T.to_dict()
 sample_list = list(sample_dict)
-
-# Define pattern for matching final sequences
-# saute_seq_pattern = re.compile(
-#     r"(?P<sample>\w+)_Contig_(?P<probe>\w+)_(?P<cluster>\d+)-(?P<saute_info>[\d-]+)"
-# )
 
 
 wildcard_constraints:

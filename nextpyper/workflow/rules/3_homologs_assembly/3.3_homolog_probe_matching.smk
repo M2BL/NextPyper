@@ -57,7 +57,7 @@ checkpoint homologs_filtering:
     log:
         outdir / "logs/assembled/filtering/scfs_filtering/{sample}.log",
     params:
-        min_cov=homolog_scf_min_cov,  #homolog_scf_min_cov,
+        min_cov=homolog_scf_min_cov,
         min_idt=homolog_scf_min_idt,
         separate_probes=lambda wildcards: True,
         qpat=lambda wildcards: False,
@@ -72,12 +72,7 @@ def aggregate_split(wildcards):
     for sample in sample_list:
         checkpoint_output = checkpoints.homologs_filtering.get(sample=sample).output[0]
         direcs.append(checkpoint_output)
-        # global_match = glob_wildcards(Path(checkpoint_output) / "{probe}.fasta")
     return direcs
-    # return expand(
-    #     outdir / f"assembled/split_components/{wildcards.sample}/{{probe}}.fasta",
-    #     probe=global_match.probe,
-    # )
 
 
 checkpoint done_assembly:
