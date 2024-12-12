@@ -62,6 +62,7 @@ def compute_hits(
     If qpat is None the sequences are not filtered by matching query and target probes.
     """
 
+    df.replace_column(8, df["theader"].str.split(" ").list.first())
     if qpat:
         pre_df = df.with_columns(
             qprobe=pl.col("query").str.extract(qpat, 2).cast(pl.Int64),

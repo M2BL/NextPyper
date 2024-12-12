@@ -33,6 +33,8 @@ rule homologs_to_probes_matching:
     params:
         fields="query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch",
         evalue="1.000E-06",
+        min_orf_len=15,
+        sensitivity=7.5,
     log:
         outdir / "logs/assembled/filtering/mmseqs/{sample}.log",
     threads: 4
@@ -41,7 +43,7 @@ rule homologs_to_probes_matching:
     shell:
         """
         mkdir -p temp_{wildcards.sample}
-        mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -e {params.evalue} --remove-tmp-files -a > {log} 2>&1
+        mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --remove-tmp-files -a > {log} 2>&1
         mmseqs convertalis {input.query} {input.probes} {wildcards.sample}_results {output} --format-mode 4 --format-output {params.fields} --threads {threads} >> {log} 2>&1
         rm -r temp_{wildcards.sample}
         rm *_results.*
