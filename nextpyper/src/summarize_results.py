@@ -62,7 +62,7 @@ MATCHING_PATTERN = r"(Input|Contaminants):\s+(\d+)"
 CLEANING_PATTERN = r"(Input|Result):\s+(\d+)"
 
 SCF_PATTERN = re.compile(
-    r"^(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>\d+?)_(?P<seed>\d+?)", re.VERBOSE
+    r"^(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>.+?)_(?P<seed>\d+?)", re.VERBOSE
 )
 
 # =======================================================================================
@@ -105,6 +105,14 @@ class AlnTable:
 def _get_raw_reads(sample: str, rootdir: Path) -> int:
     with (rootdir / f"logs/preprocessing/fastp/{sample}.json").open() as file:
         return json.load(file)["summary"]["before_filtering"]["total_reads"]
+
+
+def _get_raw_and_trimmed_reads(sample: str, rootdir: Path) -> int:
+    with (rootdir / f"logs/preprocessing/fastp/{sample}.json").open() as file:
+        report = json.load(file)
+        raw_reads = report["summary"]["before_filtering"]["total_reads"]
+        trimmed_reads = report["summary"]["after_filtering"]["total_reads"]
+        return raw_reads, trimmed_reads
 
 
 def _get_cleaned_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
@@ -199,21 +207,28 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     stats = pd.DataFrame(index=samples)
 
     ## Get the raw reads
-    stats["raw_reads"] = {
-        sample: _get_raw_reads(sample, results_dir) for sample in samples
+
+    trimmed_stats = {
+        sample: _get_raw_and_trimmed_reads(sample, results_dir) for sample in samples
+    }
+
+    stats["raw_reads"] = {sample: raw for sample, (raw, trim) in trimmed_stats.items()}
+    stats["trimmed_reads"] = {
+        sample: trim for sample, (raw, trim) in trimmed_stats.items()
     }
 
     ## Get Preprocessing stats:
-    clean_stats = {
-        sample: _get_cleaned_reads(sample, results_dir, CLEANING_PATTERN)
-        for sample in samples
-    }
-    stats["trimmed_reads"] = {
-        sample: trimmed for sample, (trimmed, cleaned) in clean_stats.items()
-    }
-    stats["cleaned_reads"] = {
-        sample: cleaned for sample, (trimmed, cleaned) in clean_stats.items()
-    }
+    if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
+        clean_stats = {
+            sample: _get_cleaned_reads(sample, results_dir, CLEANING_PATTERN)
+            for sample in samples
+        }
+
+    if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
+        stats["cleaned_reads"] = {
+            sample: cleaned for sample, (trimmed, cleaned) in clean_stats.items()
+        }
+
     if (results_dir / "logs/preprocessing/bbduk_probe_matching").exists():
         stats["probe_matching_reads"] = {
             sample: _get_matched_reads(sample, results_dir, MATCHING_PATTERN)[1]

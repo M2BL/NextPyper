@@ -107,8 +107,7 @@ def _generate_kmer_consensus(
     :return: None if there is a majority of gaps at all positions, raise EmptyConsensus exception.
     """
     if assembly_method == "SAUTE":
-        ## ToDo: Consider renaming the sequences, since at this point sample name is misleading.
-        prefix = msa[0].id.rsplit("_", 1)[0].replace("*", "").removeprefix("Contig_")
+        prefix = msa[0].id.replace("*", "").removeprefix("Contig_")
     else:
         # To be modified
         idx = msa[0].id.find("-")

@@ -64,7 +64,7 @@ rule fastp_pe:
     log:
         outdir / "logs/preprocessing/fastp/{sample}.log",
     params:
-        extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_right",
+        extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_tail",
     threads: 4
     conda:
         "../../envs/preprocessing.yaml"
