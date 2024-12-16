@@ -46,7 +46,7 @@ rule homologs_to_probes_matching:
         mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --remove-tmp-files -a > {log} 2>&1
         mmseqs convertalis {input.query} {input.probes} {wildcards.sample}_results {output} --format-mode 4 --format-output {params.fields} --threads {threads} >> {log} 2>&1
         rm -r temp_{wildcards.sample}
-        rm *_results.*
+        rm {wildcards.sample}_results.*
         """
 
 
