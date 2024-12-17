@@ -62,6 +62,8 @@ from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from Bio.Seq import Seq
 
+import networkx as nx
+
 # import gff_parser
 # gff_parser = reload(gff_parser)
 from gff_parser import Fragment, Cds
@@ -106,9 +108,10 @@ Region = namedtuple("Region", ["start", "end"])
 #     return [None, None]
 
 
-def merge_intervals(arr: list["OverlappingSeqs"]):
+def merge_intervals(arr: list["OverlappingSeqs"]) ->list["OverlappingSeqs"]:
     """
     Combine overlapping intervals of sequences and cluster their names.
+    We can thus separate the group of sequences according to non-overlapping intervals.
     """
     # Sorting based on the increasing order of the start intervals
     arr.sort(key=attrgetter("probe_start"))
@@ -265,7 +268,7 @@ class Exon_correspondence:
         other
         sensitivity: the range around the query coordinates that should be searched for a match.
 
-        Returns
+        Returns bool
         -------
 
         """
@@ -291,7 +294,7 @@ class Exon_correspondence:
 @dataclass
 class Boundary:
     """
-    coordinate on scaffole
+    coordinate on scaffold
     """
     __slots__ = ['scaffold_name', 'scaffold_start', 'scaffold_end']
     scaffold_name: str
@@ -395,6 +398,12 @@ class OverlappingSeqs:
     -probe_start: the smallest index on the probe (AA space) that has a matching sequence.
     -probe_end: the largest index on the probe (AA space) that has a matching sequence.
     -seq_names: a list of sequence names that overlap this region.
+    -cds_dict
+    -common_exons: exons found in at least a user defined proportion of scaffolds
+    -paralogs: list of scaffolds that are deemed to be paralogs.
+    To do: in the final paralog selection add the sequences that are present in OverlappingCds.cds_dict
+    but disappear in filtered_cds_dict.
+    -orthologs
     """
     probe_start: int
     probe_end: int
@@ -423,44 +432,63 @@ class OverlappingSeqs:
             for exon_pair in cds.exon_correspondences:
                 interval_tree_all_exons.put(Interval(exon_pair.exon_probe.start, exon_pair.exon_probe.end), contig)
 
+        # get for each interval the contigs that contain that interval
+        # a Node object contains two attributes the interval and the value which contains the name of the contigs:
+        # e.g. Node(interval=(36, 70), value=['Echinops_strigosus_ERR5033325-4471_NODE_678'])
         nodes = interval_tree_all_exons.tree_traversal_bsf_with_values()
-        print("nodes", nodes)
         valid_nodes = []
+        # all samples in the overlapping group
         matching_samples = [contig for contig in self.cds_dict if not self.cds_dict[contig].is_empty()]
         # Check for all samples that are too short if they could have the exon
         for node in nodes:
-            samples = node.value
+            contigs = node.value
             interval = node.interval
-            possible_samples = len(samples)  # samples with the exon plus samples that are not full length
-            missing_samples = set(matching_samples) - set(samples)
+            nbr_possible_samples = len(contigs)  # samples with the exon plus samples that are not full length
+            missing_samples = set(matching_samples) - set(contigs)
             # to the putative exons, add samples that are too short to cover it
             for sample in missing_samples:
                 sample_cds = self.cds_dict[sample]
                 sample_start = sample_cds.probe_start
                 sample_end = sample_cds.probe_end
                 if interval.hi <= sample_start or sample_end <= interval.lo:
-                    possible_samples += 1
+                    nbr_possible_samples += 1
                     node.value.append(sample)
-            if possible_samples / len(matching_samples) > min_proportion:
+            if nbr_possible_samples / len(matching_samples) > min_proportion:
                 valid_nodes.append(node)
-        print("valid nodes", valid_nodes)
-        self.common_exons = valid_nodes
+        # create the longest stretch of valid nodes
+        DG = nx.DiGraph()
+        for node in valid_nodes:
+            interval = node.interval
+            DG.add_weighted_edges_from([(interval.lo, interval.hi+1, {'length':interval.hi-interval.lo})])
+        longest_path = nx.dag_longest_path(DG, weight="length")
+        longest_path_nodes = [(longest_path[i], longest_path[i+1]-1) for i in range(len(longest_path) - 1) ]
+        # filter out the nodes that don't match the path
+        common_exons = []
+        for node in valid_nodes:
+            for longest_path_node in longest_path_nodes:
+                if node.interval.lo == longest_path_node[0] and node.interval.hi == longest_path_node[1]:
+                    common_exons.append(node)
+        self.common_exons = sorted(common_exons, key=lambda x: x.interval.lo)
 
     def eliminate_paralogs(self, overlap: int):
+        """
+        A paralog is defined as a contig missing an exon surrounded by common_exons
+        """
         if not self.common_exons:
             print("no valid exon")
-            # add all sequences to orthologs
+            # add all sequences to paralogs
             self.paralogs.extend(self.cds_dict)
             return
+
         for scaffold, cds in self.cds_dict.items():
             presence = []
-            valid_exons = self.common_exons
+            #valid_exons = self.common_exons
             for exon in cds.exon_correspondences:
                 print(f"{exon=}")
                 found_start = False
                 found_end = False
                 exon_start, exon_end = exon.exon_probe.start, exon.exon_probe.end
-                while valid_exons:
+                while self.common_exons:
                     target_exon = valid_exons[0]
                     print(f"{target_exon=}")
                     if scaffold in target_exon.value:
@@ -840,10 +868,10 @@ class OverlappingCds(MiniprotInit):
                     #print(self._boundary_scorer_parser(boundary_scorer_out))
                     cds.find_probe_exons(self._boundary_scorer_parser(boundary_scorer_out))
                     overlapping_gp.cds_dict[contig] = cds
-                print(list(overlapping_gp.cds_dict.items()))
+                #print(list(overlapping_gp.cds_dict.items()))
                 overlapping_gp.find_common_exons()
                 print("eliminate paralogs")
-                #overlapping_gp.eliminate_paralogs(15)
+                overlapping_gp.eliminate_paralogs(15)
                 #overlapping_gp.chop_sequences()
 
     def save_records(self):
