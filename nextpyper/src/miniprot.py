@@ -228,8 +228,14 @@ class RankCoverage:
         self.rank_score.append(item_0)
         self.coverage.append(item_1)
 
-    def get_total_score(self):
-        return sum(self.rank_score) / len(self.coverage)
+    def get_mean_score(self, nbr_contigs:int):
+        """The  score used for the global ranking is based on probe positions, the total number of
+        scaffolds and the scaffolds without a match. Missing matches get a penalty equal to the maximum rank,
+         e.g. rank_score=[0, 3, 1, 0], coverage=['contig_0', 'contig_1', 'contig_2', 'contig_3']
+         and nbr_contigs=6  produces a score of (4+6+6)/6"""
+        missing_contigs = nbr_contigs - len(self.coverage)
+        missing_scores = [nbr_contigs for _ in range(missing_contigs)]
+        return (sum(self.rank_score) + sum(missing_scores)) / nbr_contigs
 
 
 @dataclass
@@ -249,7 +255,7 @@ class Exon_correspondence:
     exon_scaffold: Exon
     length_on_scaffold: int
 
-    def check_identity(self, other:Exon, sensitivity: int):
+    def check_identity(self, other:Exon, sensitivity: int)->bool:
         """
         Given another probe exon coordinates, check if this exon is compatible:
         whether it is the same set of coordinates or whether this exon comes from
@@ -687,7 +693,7 @@ class OverlappingCds(MiniprotInit):
     -non_overlapping: list of OverlappingSeqs objects that keep track of overlapping sequences and position on probe.
     -best_probe: name of the probe version that has the overall best mapping score.
     """
-
+    user_probe: str = field(default=None)
     cds_dict: defaultdict[str, list[Cds]] = field(
         init=False, repr=False, default_factory=lambda: defaultdict(list)
     )
@@ -700,15 +706,24 @@ class OverlappingCds(MiniprotInit):
     def __post_init__(self):
         super().__post_init__()
         # run miniprot on each scaffold/probe combination
+        print(f"{self.user_probe=}")
         with tempfile.TemporaryDirectory() as tmpdirname:
             tmp_probe_paths = {}
             # write all probe records in separate file
-            for probe_name, record in list(self.probes_dict.items())[:]:
-                fasta_name = f"{probe_name}.fas"
+            if self.user_probe is not None and self.user_probe in self.probes_dict.keys():
+                print(f"User selected probe is {self.user_probe}")
+                fasta_name = f"{self.user_probe}.fas"
                 contig_fasta = Path(tmpdirname) / fasta_name
-                SeqIO.write(record, contig_fasta, "fasta")
-                tmp_probe_paths[probe_name] = contig_fasta
+                SeqIO.write(self.probes_dict[self.user_probe], contig_fasta, "fasta")
+                tmp_probe_paths[self.user_probe] = contig_fasta
 
+            else:
+                print("creating probe list")
+                for probe_name, record in list(self.probes_dict.items())[:]:
+                    fasta_name = f"{probe_name}.fas"
+                    contig_fasta = Path(tmpdirname) / fasta_name
+                    SeqIO.write(record, contig_fasta, "fasta")
+                    tmp_probe_paths[probe_name] = contig_fasta
             for contig, record in self.contigs_dict.items():
                 print(f"working on contig {contig}")
                 for probe_name, probe_path in tmp_probe_paths.items():
@@ -748,10 +763,12 @@ class OverlappingCds(MiniprotInit):
                 probe_ranks[probe_name].append_to(idx, contig)
 
         best_combination = sorted(
-            probe_ranks.items(), key=lambda x: x[1].get_total_score()
+            probe_ranks.items(), key=lambda x: x[1].get_mean_score(len(self.cds_dict))
         )[0]
+
         self.best_probe = best_combination[0]
         print(f"Best overall probe: {self.best_probe}")
+        # Keep only contigs that are covered by the best probe
         for contig in best_combination[1].coverage:
             self.filtered_cds_dict[contig] = [
                 cds
@@ -938,7 +955,8 @@ def main():
     probe_dir = Path('/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes')
     scaffolds_dir = Path('/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs')
     out_dir = Path('/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/test')
-    parameters = [8, 0.85, 0.1, 10]
+    parameters = [8, 0.85, 0.1, 10, 0.7,'TIUZ_probe4471']
+    #parameters = [8, 0.85, 0.1, 10, 0.7,]
     for scfs in scaffolds_dir.glob("*.fasta"):
         if not scfs.name == "4471.fasta":
             continue

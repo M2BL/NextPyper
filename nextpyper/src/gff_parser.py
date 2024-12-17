@@ -145,7 +145,8 @@ class Cds:
 
     def __repr__(self):
         if self.fragments:
-            return f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=}, strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()})"
+            return (f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=},"
+                    f"strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()}, global_score={self.get_global_score()})")
         else:
             return f"Cds()"
 
