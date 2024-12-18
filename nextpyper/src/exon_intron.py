@@ -34,7 +34,7 @@ GraphPath = namedtuple("GraphPath", ["path", "length"])
 
 @dataclass
 class Node:
-    key: int
+    key: int|str
     interval: Interval = field(repr=True)
     children: list["Node"] = field(init=False, default_factory=list)
     root: bool = field(init=False, default=True)
@@ -124,6 +124,9 @@ class ItervalGraph:
         return self
 
     def _find_roots(self) -> Self:
+        """
+        A root note has no parent node. Non-root nodes were tagged during graph construction.
+        """
         self.root_nodes = [node.get_key() for node in self.nodes if node.is_root()]
         return self
 
@@ -157,6 +160,7 @@ class ItervalGraph:
         return self
 
     def get_best_path(self) -> Optional[GraphPath]:
+        """Out of all the path found with the DFS, select the longest"""
         if not self.all_graph_path:
             return
         paths = sorted(self.all_graph_path, key=lambda x: x.length, reverse=True)
