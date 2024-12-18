@@ -68,7 +68,7 @@ import networkx as nx
 # gff_parser = reload(gff_parser)
 from gff_parser import Fragment, Cds
 from interval_tree import IntervalST, Interval, Node
-
+from exon_intron import ItervalGraph, GraphPath
 # # Parse the header of SAUTE scaffolds
 # saute_pattern = re.compile(
 #     r"^Contig_(?P<name>.*?):(?P<component>\d+?):[^ ]+$"
@@ -422,6 +422,7 @@ class OverlappingSeqs:
         min_proportion: minimum proportion of samples (that have a probe match) that have the exon.
             If a scaffold is too short, it is counted in the proportion anyway.
         min_overlap: min overlap between a target exon and the valid exons.
+        to do: check cases when the exon path is discontinuous.
         """
         interval_tree_all_exons = IntervalST()
         for contig in self.cds_dict:
@@ -456,24 +457,35 @@ class OverlappingSeqs:
             if nbr_possible_samples / len(matching_samples) > min_proportion:
                 valid_nodes.append(node)
         # create the longest stretch of valid nodes
-        DG = nx.DiGraph()
-        for node in valid_nodes:
-            interval = node.interval
-            DG.add_weighted_edges_from([(interval.lo, interval.hi+1, {'length':interval.hi-interval.lo})])
-        longest_path = nx.dag_longest_path(DG, weight="length")
-        longest_path_nodes = [(longest_path[i], longest_path[i+1]-1) for i in range(len(longest_path) - 1) ]
-        # filter out the nodes that don't match the path
+        # DG = nx.DiGraph()
+        # for node in valid_nodes:
+        #     interval = node.interval
+        #     DG.add_weighted_edges_from([(interval.lo, interval.hi+1, {'length':interval.hi-interval.lo})])
+        # longest_path = nx.dag_longest_path(DG, weight="length")
+        # longest_path_nodes = [(longest_path[i], longest_path[i+1]-1) for i in range(len(longest_path) - 1) ]
+        # print(longest_path_nodes)
+        print(f"{valid_nodes=}")
+        intervals_list = [node.interval for node in valid_nodes]
+        IG = ItervalGraph(intervals_list)
+        longest_path = IG.get_best_path()
+        longest_path_nodes = longest_path.path
+        print(f"{longest_path_nodes=}")
+        # # filter out the nodes that don't match the path
         common_exons = []
         for node in valid_nodes:
             for longest_path_node in longest_path_nodes:
                 if node.interval.lo == longest_path_node[0] and node.interval.hi == longest_path_node[1]:
                     common_exons.append(node)
-        self.common_exons = sorted(common_exons, key=lambda x: x.interval.lo)
+        self.common_exons = common_exons
+
 
     def eliminate_paralogs(self, overlap: int):
         """
         A paralog is defined as a contig missing an exon surrounded by common_exons
         """
+        def is_valid(target_exon, probe_exon) -> bool:
+            ...
+
         if not self.common_exons:
             print("no valid exon")
             # add all sequences to paralogs
@@ -482,17 +494,21 @@ class OverlappingSeqs:
 
         for scaffold, cds in self.cds_dict.items():
             presence = []
-            #valid_exons = self.common_exons
+            valid_exons = self.common_exons
+            target_exon = valid_exons[0]
+            valid_exons = valid_exons[1:]
             for exon in cds.exon_correspondences:
                 print(f"{exon=}")
                 found_start = False
                 found_end = False
                 exon_start, exon_end = exon.exon_probe.start, exon.exon_probe.end
-                while self.common_exons:
-                    target_exon = valid_exons[0]
+                #valid_exons = self.common_exons
+                while valid_exons:
                     print(f"{target_exon=}")
                     if scaffold in target_exon.value:
                         presence.append(True)
+                        target_exon
+                        valid_exons = valid_exons[1:]
                         break
                     probe_start = target_exon.interval.lo
                     probe_end = target_exon.interval.hi
@@ -500,6 +516,7 @@ class OverlappingSeqs:
                         found_start = True
                     if max(0, exon_end - overlap) <= probe_end < exon_end + overlap:
                         found_end = True
+                    #case fused exons
                     valid_exons = valid_exons[1:]
                     if not valid_exons and not all([found_start, found_end]):
                         presence.append(False)

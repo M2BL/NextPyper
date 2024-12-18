@@ -117,6 +117,12 @@ class Interval:
         self.lo = lo
         self.hi = hi
 
+    def overlaps(self, other: "Interval") -> bool:
+        """Find if another interval overlaps with this interval."""
+        if self.hi > other.lo:
+            return True
+        return False
+
 
     @classmethod
     def from_tuple(cls, tuple_lo_hi: tuple[Number]) -> "Interval":
