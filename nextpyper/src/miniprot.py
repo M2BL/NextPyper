@@ -49,9 +49,9 @@ from dataclasses import dataclass, field
 from collections import defaultdict, namedtuple, deque
 from importlib import reload
 from io import StringIO
+from itertools import chain
 from operator import attrgetter
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tempfile
@@ -61,54 +61,21 @@ from typing import Optional, Self, NamedTuple
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from Bio.Seq import Seq
+import pyabpoa as pa
 
-import networkx as nx
-
-# import gff_parser
-# gff_parser = reload(gff_parser)
 from gff_parser import Fragment, Cds
 from interval_tree import IntervalST, Interval, Node
 from exon_intron import ItervalGraph, GraphPath
-# # Parse the header of SAUTE scaffolds
-# saute_pattern = re.compile(
-#     r"^Contig_(?P<name>.*?):(?P<component>\d+?):[^ ]+$"
-# )
 
 Region = namedtuple("Region", ["start", "end"])
+
 
 # =======================================================================================
 #               FUNCTIONS
 # =======================================================================================
-#
-# def get_nuc_coordinates(
-#         probe_start: int, probe_end: int, fragments: list[Fragment]
-# ) -> list[Optional[int]]:
-#     """
-#     Given a start and end position on a probe in AA space, return the nucleotide coordinates of start and end.
-#     :param probe_start:
-#     :param probe_end:
-#     :param fragments: list of fragments
-#     :return: [None, None] if for some reason there are no AA-nt correspondence, otherwise [start, end]
-#     """
-#     correspondences = {}
-#     for fragment in fragments:
-#         correspondences.update(fragment.get_correspondence())
-#     while probe_start < probe_end:
-#         if (first := correspondences.get(probe_start)) is None:
-#             probe_start += 1
-#         if (last := correspondences.get(probe_end)) is None:
-#             probe_end -= 1
-#         if None not in [first, last]:
-#             return sorted(
-#                 [
-#                     first,
-#                     last,
-#                 ]
-#             )
-#     return [None, None]
 
 
-def merge_intervals(arr: list["OverlappingSeqs"]) ->list["OverlappingSeqs"]:
+def merge_intervals(arr: list["OverlappingSeqs"]) -> list["OverlappingSeqs"]:
     """
     Combine overlapping intervals of sequences and cluster their names.
     We can thus separate the group of sequences according to non-overlapping intervals.
@@ -138,20 +105,22 @@ def remove_gff(miniprot_out) -> bytes:
     for line in miniprot_out:
         if line.startswith("##PAF"):
             new_lines.append(line.replace("##PAF	", ""))
-        if (line.startswith("##ATN")
-                or line.startswith("##ATA")
-                or line.startswith("##AAS")
-                or line.startswith("##AQA")):
+        if (
+            line.startswith("##ATN")
+            or line.startswith("##ATA")
+            or line.startswith("##AAS")
+            or line.startswith("##AQA")
+        ):
             new_lines.append(line)
     return "".join(new_lines).encode()
 
 
 def run_miniprot(
-        probe_path: Path,
-        contig_path: Path,
-        treads=2,
-        min_similarity=0.85,
-        min_coverage=0.01,
+    probe_path: Path,
+    contig_path: Path,
+    treads=2,
+    min_similarity=0.85,
+    min_coverage=0.01,
 ) -> StringIO | str:
     """
     Wrapper for running miniprot.
@@ -178,22 +147,26 @@ def run_miniprot(
     except subprocess.TimeoutExpired as exc:
         print(f"Process timed out.\n{exc}")
         raise
-    # print(miniprot.stdout)
     return StringIO(miniprot.stdout)
 
 
-def run_miniprot_boundary_scorer(miniprot: bytes, boundary_scorer_out: Path, matrix_path: Path):
+def run_miniprot_boundary_scorer(
+    miniprot: bytes, boundary_scorer_out: Path, matrix_path: Path
+):
     """
     Wrapper for running miniprot_boundary_scorer.
     :return:
     """
-    boundary_scorer_cmd = f"miniprot_boundary_scorer -o {boundary_scorer_out} -s {matrix_path}"
+    boundary_scorer_cmd = (
+        f"miniprot_boundary_scorer -o {boundary_scorer_out} -s {matrix_path}"
+    )
     try:
         subprocess.run(
             boundary_scorer_cmd,
             timeout=10,
             shell=True,
-            input=miniprot, )
+            input=miniprot,
+        )
     except FileNotFoundError as exc:
         print(f"Process failed because the executable could not be found.\n{exc}")
         raise
@@ -231,7 +204,7 @@ class RankCoverage:
         self.rank_score.append(item_0)
         self.coverage.append(item_1)
 
-    def get_mean_score(self, nbr_contigs:int):
+    def get_mean_score(self, nbr_contigs: int):
         """The  score used for the global ranking is based on probe positions, the total number of
         scaffolds and the scaffolds without a match. Missing matches get a penalty equal to the maximum rank,
          e.g. rank_score=[0, 3, 1, 0], coverage=['contig_0', 'contig_1', 'contig_2', 'contig_3']
@@ -243,7 +216,7 @@ class RankCoverage:
 
 @dataclass
 class Exon:
-    __slots__ = ['start', 'end']
+    __slots__ = ["start", "end"]
     start: int
     end: int
 
@@ -253,12 +226,13 @@ class Exon_correspondence:
     """
     Probe to scaffold coordinates
     """
-    __slots__ = ['exon_probe', 'exon_scaffold', 'length_on_scaffold']
+
+    __slots__ = ["exon_probe", "exon_scaffold", "length_on_scaffold"]
     exon_probe: Exon
     exon_scaffold: Exon
     length_on_scaffold: int
 
-    def check_identity(self, other:Exon, sensitivity: int)->bool:
+    def check_identity(self, other: Exon, sensitivity: int) -> bool:
         """
         Given another probe exon coordinates, check if this exon is compatible:
         whether it is the same set of coordinates or whether this exon comes from
@@ -280,14 +254,17 @@ class Exon_correspondence:
         if self.exon_probe == other:
             return True
         # case two exon fusion left part
-        if ((probe_start - sensitivity <= other_probe_start <= probe_start + sensitivity) and (
-                other_probe_end - sensitivity <= probe_end )):
+        if (
+            probe_start - sensitivity <= other_probe_start <= probe_start + sensitivity
+        ) and (other_probe_end - sensitivity <= probe_end):
             return True
         # case two exon fusion right part
-        if ((probe_start <= other_probe_start + sensitivity)
-                and (probe_end - sensitivity <= other_probe_end <= probe_end + sensitivity)):
+        if (probe_start <= other_probe_start + sensitivity) and (
+            probe_end - sensitivity <= other_probe_end <= probe_end + sensitivity
+        ):
             return True
         return False
+
     # exon discovery score?
 
 
@@ -296,7 +273,8 @@ class Boundary:
     """
     coordinate on scaffold
     """
-    __slots__ = ['scaffold_name', 'scaffold_start', 'scaffold_end']
+
+    __slots__ = ["scaffold_name", "scaffold_start", "scaffold_end"]
     scaffold_name: str
     scaffold_start: int
     scaffold_end: int
@@ -306,11 +284,19 @@ class Boundary:
 class ParalogyCds(Cds):
     """
     Cds object with additional features to handle paralogy information
+    correspondence scaffold coordinates to probe coordinates
+    rev_correspondence probe coordinates to scaffold coordinates
+    exon_correspondences: Exon_correspondence(exon_probe=Exon(start=71, end=110), exon_scaffold=Exon(start=17, end=132), length_on_scaffold=115)
     """
+
     exon_probe_scaffold: list = field(init=False, default_factory=list)
     correspondence: dict[int, int] = field(default_factory=dict, init=False, repr=True)
-    rev_correspondence: dict[int, int] = field(default_factory=dict, init=False, repr=True)
-    exon_correspondences: list[Exon_correspondence] = field(default_factory=list, init=False, repr=True)
+    rev_correspondence: dict[int, int] = field(
+        default_factory=dict, init=False, repr=True
+    )
+    exon_correspondences: list[Exon_correspondence] = field(
+        default_factory=list, init=False, repr=True
+    )
     accepted_exons: list[Exon] = field(default_factory=list, init=False, repr=True)
 
     def __post_init__(self):
@@ -334,59 +320,22 @@ class ParalogyCds(Cds):
             probe_start = None
             probe_end = None
             for idx in [0, 1, 2, -1, -2]:
-                if (probe_start := self.rev_correspondence.get(scaff_exon.start + idx)) is not None:
+                if (
+                    probe_start := self.rev_correspondence.get(scaff_exon.start + idx)
+                ) is not None:
                     break
             for idx in [0, 1, 2, -1, -2]:
-                if (probe_end := self.rev_correspondence.get(scaff_exon.end + idx)) is not None:
+                if (
+                    probe_end := self.rev_correspondence.get(scaff_exon.end + idx)
+                ) is not None:
                     break
             if None not in [probe_start, probe_end]:
                 probe_exon = Exon(probe_start, probe_end)
                 length = scaff_exon.end - scaff_exon.start
-                self.exon_correspondences.append(Exon_correspondence(probe_exon, scaff_exon, length))
-                # print(
-            #     f"{scaff_exon.start=}\t{scaff_exon.end=}, {probe_start=}, {probe_end=}, length={scaff_exon.end - scaff_exon.start}")
+                self.exon_correspondences.append(
+                    Exon_correspondence(probe_exon, scaff_exon, length)
+                )
         return self
-
-    def find_scaffold_exon(self, probe_exon:Exon, sensitivity: int=10) -> Optional[Exon]:
-        """
-        Given a pair of coordinates on the probe, retrieve the coordinates on the scaffold
-        Parameters
-        ----------
-        probe_exon
-        sensitivity
-
-        Returns
-        -------
-
-        """
-        if sensitivity < 2:
-            sensitivity = 2
-        if sensitivity > 10:
-            sensitivity = 10
-        search_range = [0]
-        for (i, j) in zip(range(1, sensitivity), range(-1,-sensitivity,-1)):
-            search_range.extend([i,j])
-        scaffold_start = None
-        scaffold_end = None
-        for idx in search_range:
-            if (scaffold_start  := self.correspondence.get(probe_exon.start + idx)) is not None:
-                break
-        for idx in search_range:
-            if (scaffold_end := self.correspondence.get(probe_exon.end + idx)) is not None:
-                break
-        print(f"{scaffold_start=}, {scaffold_end=}")
-        if None in [scaffold_start, scaffold_end]:
-            return
-        return Exon(scaffold_start, scaffold_end)
-
-    def find_scaffold_intron(self, probe_start, probe_end, sensitivity: int=10) -> Optional[Exon]:
-        if sensitivity < 2:
-            sensitivity = 2
-        if sensitivity > 10:
-            sensitivity = 10
-        search_range = [0]
-        for (i, j) in zip(range(1, sensitivity), range(-1,-sensitivity,-1)):
-            search_range.extend([i,j])
 
 
 @dataclass
@@ -405,17 +354,21 @@ class OverlappingSeqs:
     but disappear in filtered_cds_dict.
     -orthologs
     """
+
     probe_start: int
     probe_end: int
     seq_names: list[str]
-    cds_dict: dict[str, ParalogyCds] = field(init=False, repr=False, default_factory=dict)
+    cds_dict: dict[str, ParalogyCds] = field(
+        init=False, repr=False, default_factory=dict
+    )
     common_exons: list[Node] = field(init=False, repr=False, default_factory=list)
     paralogs: list[str] = field(init=False, repr=False, default_factory=list)
-    orthologs: list[str] = field(init=False, repr=False, default_factory=list)
-    flank_left: list[Boundary] = field(init=False, repr=False, default_factory=list)
-    flank_right: list[Boundary] = field(init=False, repr=False, default_factory=list)
-    exons: defaultdict[Region, list[Boundary]] = field(default_factory=lambda: defaultdict(list))
-    introns: defaultdict[int, list[Boundary]] = field(default_factory=lambda: defaultdict(list))
+    scaffold_exons: defaultdict[Region, list[Boundary]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+    scaffold_introns: defaultdict[int, list[Boundary]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
 
     def find_common_exons(self, min_proportion=0.5, min_overlap=0.9):
         """
@@ -431,7 +384,10 @@ class OverlappingSeqs:
                 continue
 
             for exon_pair in cds.exon_correspondences:
-                interval_tree_all_exons.put(Interval(exon_pair.exon_probe.start, exon_pair.exon_probe.end), contig)
+                interval_tree_all_exons.put(
+                    Interval(exon_pair.exon_probe.start, exon_pair.exon_probe.end),
+                    contig,
+                )
 
         # get for each interval the contigs that contain that interval
         # a Node object contains two attributes the interval and the value which contains the name of the contigs:
@@ -439,12 +395,16 @@ class OverlappingSeqs:
         nodes = interval_tree_all_exons.tree_traversal_bsf_with_values()
         valid_nodes = []
         # all samples in the overlapping group
-        matching_samples = [contig for contig in self.cds_dict if not self.cds_dict[contig].is_empty()]
+        matching_samples = [
+            contig for contig in self.cds_dict if not self.cds_dict[contig].is_empty()
+        ]
         # Check for all samples that are too short if they could have the exon
         for node in nodes:
             contigs = node.value
             interval = node.interval
-            nbr_possible_samples = len(contigs)  # samples with the exon plus samples that are not full length
+            nbr_possible_samples = len(
+                contigs
+            )  # samples with the exon plus samples that are not full length
             missing_samples = set(matching_samples) - set(contigs)
             # to the putative exons, add samples that are too short to cover it
             for sample in missing_samples:
@@ -457,34 +417,27 @@ class OverlappingSeqs:
             if nbr_possible_samples / len(matching_samples) > min_proportion:
                 valid_nodes.append(node)
         # create the longest stretch of valid nodes
-        # DG = nx.DiGraph()
-        # for node in valid_nodes:
-        #     interval = node.interval
-        #     DG.add_weighted_edges_from([(interval.lo, interval.hi+1, {'length':interval.hi-interval.lo})])
-        # longest_path = nx.dag_longest_path(DG, weight="length")
-        # longest_path_nodes = [(longest_path[i], longest_path[i+1]-1) for i in range(len(longest_path) - 1) ]
-        # print(longest_path_nodes)
         print(f"{valid_nodes=}")
         intervals_list = [node.interval for node in valid_nodes]
         IG = ItervalGraph(intervals_list)
         longest_path = IG.get_best_path()
         longest_path_nodes = longest_path.path
         print(f"{longest_path_nodes=}")
-        # # filter out the nodes that don't match the path
+        # filter out the nodes that don't match the path
         common_exons = []
         for node in valid_nodes:
             for longest_path_node in longest_path_nodes:
-                if node.interval.lo == longest_path_node[0] and node.interval.hi == longest_path_node[1]:
+                if (
+                    node.interval.lo == longest_path_node[0]
+                    and node.interval.hi == longest_path_node[1]
+                ):
                     common_exons.append(node)
         self.common_exons = common_exons
-
 
     def eliminate_paralogs(self, overlap: int):
         """
         A paralog is defined as a contig missing an exon surrounded by common_exons
         """
-        def is_valid(target_exon, probe_exon) -> bool:
-            ...
 
         if not self.common_exons:
             print("no valid exon")
@@ -493,48 +446,205 @@ class OverlappingSeqs:
             return
 
         for scaffold, cds in self.cds_dict.items():
-            presence = []
-            valid_exons = self.common_exons
-            target_exon = valid_exons[0]
-            valid_exons = valid_exons[1:]
-            for exon in cds.exon_correspondences:
-                print(f"{exon=}")
-                found_start = False
-                found_end = False
-                exon_start, exon_end = exon.exon_probe.start, exon.exon_probe.end
-                #valid_exons = self.common_exons
-                while valid_exons:
-                    print(f"{target_exon=}")
-                    if scaffold in target_exon.value:
-                        presence.append(True)
-                        target_exon
-                        valid_exons = valid_exons[1:]
+            print(f"working on {scaffold}")
+            presence_of_probe_exon: list[bool] = []
+            probe_exon_to_scaffold_dict: dict[Region, Exon] = {}
+            valid_exons = deque(self.common_exons)
+            correspondences = deque(cds.exon_correspondences)
+
+            def is_compatible(
+                query_exon: Exon_correspondence,
+                probe_exon: Node,
+                first_exon_probe: bool,
+                last_exon_probe: bool,
+            ) -> bool:
+                """
+                Find if two probe intervals are compatible.
+                One set of non-overlapping most common intervals constitute the probe_exon.
+                The scaffold exon is queried against the probe_exon.
+                Flanking intervals of the query are treated differently.
+                A special case applies when there is a putative fused interval on the scaffold.
+                :param query_exon: the Exon_correspondence object under scrutiny.
+                :param probe_exon: an interval_tree Node object containing as attributes, an Interval object and a value
+                    that reports the name of all the contigs that display this exon.
+                :param first_exon_probe: if the probe_exon is the first on the exon path.
+                :param last_exon_probe: if the probe_exon is the last on the exon path.
+                """
+                query_start, query_end = (
+                    query_exon.exon_probe.start,
+                    query_exon.exon_probe.end,
+                )
+                probe_start = probe_exon.interval.lo
+                probe_end = probe_exon.interval.hi
+                # Cases we deal with the flanking exons, which can vary in size.
+                if first_exon_probe:
+                    if (
+                        query_start < probe_end
+                        and max(0, query_end - overlap)
+                        <= probe_end
+                        <= query_end + overlap
+                    ):
+                        # print("case 1")
+                        probe_exon_to_scaffold_dict[Region(probe_start, probe_end)] = (
+                            query_exon.exon_scaffold
+                        )
+                        return True
+                if last_exon_probe:
+                    if (
+                        max(0, query_start - overlap)
+                        <= probe_start
+                        <= query_start + overlap
+                    ) and query_end > probe_start:
+                        # print("case 2")
+                        probe_exon_to_scaffold_dict[Region(probe_start, probe_end)] = (
+                            query_exon.exon_scaffold
+                        )
+                        return True
+                # Case with regular exon
+                if (
+                    max(0, query_start - overlap)
+                    <= probe_start
+                    <= query_start + overlap
+                ) and (max(0, query_end - overlap) <= probe_end <= query_end + overlap):
+                    # print("case 3")
+                    probe_exon_to_scaffold_dict[Region(probe_start, probe_end)] = (
+                        query_exon.exon_scaffold
+                    )
+                    return True
+                # Cases including fused exons
+                if (
+                    max(0, query_start - overlap)
+                    <= probe_start
+                    <= query_start + overlap
+                ) and query_end > probe_end:
+                    print("fused exon case")
+                    # to do check that the rev_correspondence works in all cases
+                    new_exon_probe_start = probe_end
+                    new_exon_probe_end = query_end
+                    new_exon_scaffold_start = cds.rev_correspondence[probe_end] + 1
+                    new_exon_scaffold_end = query_exon.exon_scaffold.end
+                    new_length_on_scaffold = (
+                        new_exon_scaffold_end - new_exon_scaffold_start
+                    )
+                    new_exon_correspondence = Exon_correspondence(
+                        Exon(new_exon_probe_start, new_exon_probe_end),
+                        Exon(new_exon_scaffold_start, new_exon_scaffold_end),
+                        new_length_on_scaffold,
+                    )
+                    correspondences.appendleft(new_exon_correspondence)
+                    new_scaffold_exon = Exon(
+                        query_exon.exon_scaffold.start,
+                        cds.rev_correspondence[probe_end],
+                    )
+                    probe_exon_to_scaffold_dict[Region(probe_start, probe_end)] = (
+                        new_scaffold_exon
+                    )
+                    sys.exit("case4")
+                    return True
+                # print("case 5")
+                return False
+
+            # go through all the probe exons
+            first_exon_probe = True
+            while valid_exons:
+                if not correspondences:
+                    #  pad the rest of the array with False
+                    presence_of_probe_exon.extend(
+                        [
+                            False
+                            for _ in range(
+                                len(self.common_exons) - len(presence_of_probe_exon)
+                            )
+                        ]
+                    )
+                    break
+                probe_exon = valid_exons.popleft()
+
+                # search the probe exons in the scaffold exons
+                while correspondences:
+                    scaffold_exon = correspondences.popleft()
+                    # print(f"checking scaffold {scaffold_exon}")
+                    if not correspondences:
+                        last_exon_probe = True
+                    else:
+                        last_exon_probe = False
+                    compatibility = is_compatible(
+                        scaffold_exon,
+                        probe_exon,
+                        first_exon_probe,
+                        last_exon_probe,
+                    )
+                    first_exon_probe = False
+                    if compatibility:
+                        # Continue with the next probe and scaffold intervals.
+                        presence_of_probe_exon.append(True)
                         break
-                    probe_start = target_exon.interval.lo
-                    probe_end = target_exon.interval.hi
-                    if max(0, exon_start - overlap) <= probe_start < exon_start + overlap:
-                        found_start = True
-                    if max(0, exon_end - overlap) <= probe_end < exon_end + overlap:
-                        found_end = True
-                    #case fused exons
-                    valid_exons = valid_exons[1:]
-                    if not valid_exons and not all([found_start, found_end]):
-                        presence.append(False)
+                    if not correspondences:
+                        #  All scaffolds intervals have been checked, reset the search.
+                        presence_of_probe_exon.append(False)
+                        first_exon_probe = True
+                        correspondences = deque(cds.exon_correspondences)
                         break
-                    if found_start and found_end:
-                        presence.append(True)
-                        break
-                    elif not found_start and not found_end:
-                        presence.append(False)
-                        break
-            print(f"{presence}")
-            if all(presence):
-                self.orthologs.append(scaffold)
+                    continue
+            # print(f"{presence_of_probe_exon}\n")
+            # Check if a missing exon is surrounded by two identified exons
+            ortholog = True
+            if set(presence_of_probe_exon) == {False}:
+                ortholog = False
+            elif set(presence_of_probe_exon) == {True}:
+                pass
             else:
-                self.paralogs.append(scaffold)
-            # print(f"{scaffold=}\t{presence=}")
-        print(f"{self.orthologs=}")
-        print(f"{self.paralogs=}")
+                flag_true = False
+                flag_false = False
+                target_idx = presence_of_probe_exon[0]
+                queue = presence_of_probe_exon[1:]
+                while queue:
+                    if target_idx == True:
+                        if flag_true and flag_false:
+                            ortholog = False
+                            break
+                        flag_true = True
+                    elif target_idx == False:
+                        if flag_true:
+                            flag_false = True
+                    target_idx = queue[0]
+                    queue = queue[1:]
+
+            if ortholog:
+                for region, exon in probe_exon_to_scaffold_dict.items():
+                    boundary = Boundary(scaffold, exon.start, exon.end)
+                    self.scaffold_exons[region].append(boundary)
+            else:
+                self.paralogs.extend(scaffold)
+
+        print("exons:", list(self.scaffold_exons.items()))
+        self.compute_introns()
+        print("introns", list(self.scaffold_introns.items()))
+
+    def compute_introns(self):
+        """
+        Once orthologs have been identified, we can focus on intron, defined as region bounded
+        by exons
+        """
+        if self.scaffold_exons and len(self.common_exons) > 1:
+            for idx in range(len(self.scaffold_exons) - 1):
+                first_region = list(self.scaffold_exons.keys())[idx]
+                second_region = list(self.scaffold_exons.keys())[idx + 1]
+                for first_boundary in self.scaffold_exons[first_region]:
+                    for second_boundary in self.scaffold_exons[second_region]:
+                        if (
+                            first_boundary.scaffold_name
+                            == second_boundary.scaffold_name
+                        ):
+                            break
+                    else:
+                        continue
+                    intron_boundary = Boundary(
+                        first_boundary.scaffold_name,
+                        first_boundary.scaffold_end,
+                        second_boundary.scaffold_start,
+                    )
+                    self.scaffold_introns[idx].append(intron_boundary)
 
     def combine(self, other: list[str]) -> Self:
         """
@@ -543,112 +653,11 @@ class OverlappingSeqs:
         self.seq_names.extend(other)
         return self
 
-    def get_seq_names(self) -> list[str]:
-        return self.seq_names
-
-    def get_probe_interval(self) -> str:
-        """
-        Get the boundaries of the probe covered by the group of sequences.
-        """
-        return f"start_{self.probe_start}_end_{self.probe_end}"
-
-    def chop_sequences(self):
-        """
-        Cut the different sequences into introns/exons/flanking
-        Returns
-        -------
-
-        """
-        #  Deal with the first exon and flanking left region
-        print("chop chop")
-        probe_exons = deque(self.common_exons)
-        idx = 0
-        previous_exon = None
-        fully_covered_scaffolds = [] # scaffolds that have been fully chopped
-        while probe_exons:
-            current_exon = probe_exons.popleft()
-            print(f"{current_exon=}")  # Node object
-            exon_start, exon_end = current_exon.interval.lo, current_exon.interval.hi
-            probe_exon = Exon(exon_start, exon_end)
-            current_region = Region(exon_start, exon_end)
-            print(f"{current_region=}")
-            for scaffold in self.orthologs:
-                # if scaffold != "Corymbium_cymosum_SRR6072274-7021_0_226":
-                #     continue
-                print(f"{scaffold=}")
-
-                paracds = self.cds_dict[scaffold]
-                print(paracds)
-                print(f"{idx=}")
-                current_accepted_exons = paracds.accepted_exons.copy()
-                for correspondence in paracds.exon_correspondences:
-                    if (has_exon:= correspondence.check_identity(probe_exon, 10)) is True:
-                        print(f"correspondence {correspondence=}")
-                        break
-                else:
-                    print(f"no correspondence found for probe exon {probe_exon=} in scaffold {scaffold=}")
-                #  Case the exon is in the scaffold
-                if not has_exon:
-                    # Check that we have reached the end of the sequence
-                    if not previous_exon:
-                        continue
-                    if scaffold not in fully_covered_scaffolds and paracds.accepted_exons:
-                        exon_left = paracds.accepted_exons[-1].end
-                        self.introns[previous_exon.end +1].append(Boundary(scaffold, exon_left, -1))
-                        fully_covered_scaffolds.append(scaffold)
-                        print(f"for scaffold {scaffold=} reaching the end for exon {previous_exon.end}, {probe_exon.end}")
-                    continue
-
-                scaffold_exon = paracds.find_scaffold_exon(probe_exon)
-                print(f"found one matching exon: {scaffold_exon=}")
-                if not scaffold_exon:
-                    sys.exit(f"no scaffold exon found for probe exon {probe_exon=} in scaffold {scaffold=}")
-                scaffold_start, scaffold_end = scaffold_exon.start, scaffold_exon.end+3
-                print(f"adding exon {scaffold_start=}, {scaffold_end=}")
-                self.exons[current_region].append(Boundary(scaffold, scaffold_start, scaffold_end))
-                paracds.accepted_exons.append(Exon(scaffold_start, scaffold_end))
-                print(
-                    f"Case the exon is in the scaffold, scaffold boundaries are {scaffold_start=}, {scaffold_end=}")
-                if idx ==0:
-                    print("adding to left flank")
-                    if scaffold_start != 0:
-                        self.flank_left.append(Boundary(scaffold, 0, scaffold_start))
-
-                if idx == len(self.common_exons)-1:
-                    self.flank_right.append(Boundary(scaffold, scaffold_end, -1))
-                    print("adding to right flank")
-
-                #  Add intron information
-                if current_accepted_exons:
-                    print(f"{current_accepted_exons=}")
-                    exon_left= current_accepted_exons[-1].end
-                    #  Case no intron
-                    if exon_left== scaffold_start:
-                        continue
-                    #  Case regular intron
-                    print(f"assigning intron {exon_left =}, {scaffold_start=}")
-                    self.introns[exon_start].append(Boundary(scaffold, exon_left , scaffold_start))
-                    continue
-
-                #  Case left truncated scaffold
-                if previous_exon and not current_accepted_exons:
-                    self.introns[exon_start].append(Boundary(scaffold, 0, scaffold_start))
-                    continue
-            idx += 1
-            previous_exon = probe_exon
-        print("introns",list(self.introns.items()))
-        print("exons", list(self.exons.items()))
-        print("flanking right,",list(self.flank_right))
-        print("flanking left,",list(self.flank_left))
-
     def __repr__(self):
-        return (f"probe_start={self.probe_start}, probe_end={self.probe_end},"
-                f"{sorted(self.seq_names)}")
-
-class TrimmedSeqs(NamedTuple):
-    flank_left: list[SeqRecord]
-    probe_match: list[SeqRecord]
-    flank_right: list[SeqRecord]
+        return (
+            f"probe_start={self.probe_start}, probe_end={self.probe_end},"
+            f"{sorted(self.seq_names)}"
+        )
 
 
 @dataclass
@@ -710,7 +719,9 @@ class MiniprotInit:
         except Exception as err:
             sys.exit(f"[ERROR] {err}")
 
-    def _run_miniprot(self, record, probe_path_temp, contig_path_temp, paralogy=False) -> Cds:
+    def _run_miniprot(
+        self, record, probe_path_temp, contig_path_temp, paralogy=False
+    ) -> Cds:
         SeqIO.write(record, contig_path_temp, "fasta")
         miniprot_out = run_miniprot(
             probe_path_temp,
@@ -738,6 +749,7 @@ class OverlappingCds(MiniprotInit):
     -non_overlapping: list of OverlappingSeqs objects that keep track of overlapping sequences and position on probe.
     -best_probe: name of the probe version that has the overall best mapping score.
     """
+
     user_probe: str = field(default=None)
     cds_dict: defaultdict[str, list[Cds]] = field(
         init=False, repr=False, default_factory=lambda: defaultdict(list)
@@ -755,7 +767,10 @@ class OverlappingCds(MiniprotInit):
         with tempfile.TemporaryDirectory() as tmpdirname:
             tmp_probe_paths = {}
             # write all probe records in separate file
-            if self.user_probe is not None and self.user_probe in self.probes_dict.keys():
+            if (
+                self.user_probe is not None
+                and self.user_probe in self.probes_dict.keys()
+            ):
                 print(f"User selected probe is {self.user_probe}")
                 fasta_name = f"{self.user_probe}.fas"
                 contig_fasta = Path(tmpdirname) / fasta_name
@@ -777,7 +792,10 @@ class OverlappingCds(MiniprotInit):
                     contig_path = Path(tmpdirname) / fasta_name
                     cds = self._run_miniprot(record, probe_path, contig_path)
                     cds.probe_name = probe_name
-                    if not cds.is_empty() and cds.global_identity>=self.min_global_identity:
+                    if (
+                        not cds.is_empty()
+                        and cds.global_identity >= self.min_global_identity
+                    ):
                         self.cds_dict[contig].append(cds)
                 print("cds", self.cds_dict.get(contig))
             print("computing rank score")
@@ -787,7 +805,7 @@ class OverlappingCds(MiniprotInit):
             print("sorting overlapping")
             self._sorting_overlapping()
             print("done sorting overlapping")
-            #print("non_overlapping", self.non_overlapping)
+            # print("non_overlapping", self.non_overlapping)
 
     def _compute_rank_score(self) -> Self:
         """
@@ -849,7 +867,7 @@ class OverlappingCds(MiniprotInit):
             if not line:
                 continue
             splt = line.split("\t")
-            if splt[2] == 'CDS' and splt[6] == "+":
+            if splt[2] == "CDS" and splt[6] == "+":
                 exons.append(Exon(int(splt[3]) - 1, int(splt[4]) - 3))
         return exons
 
@@ -872,91 +890,106 @@ class OverlappingCds(MiniprotInit):
                 #  Run miniprot on each contig on each group of overlapping sequences
                 for contig in overlapping_gp.seq_names:
                     record = self.contigs_dict[contig]
-                    #print(f"working on paralogy contig {contig}")
                     contig_path = Path(tmpdirname) / f"{contig}.fas"
-                    miniprot_out = self._run_miniprot(record, probe_path, contig_path, paralogy=True)
+                    miniprot_out = self._run_miniprot(
+                        record, probe_path, contig_path, paralogy=True
+                    )
                     cds = ParalogyCds(miniprot_out)
                     cds.length = len(SeqIO.read(contig_path, "fasta").seq)
-                    #print(contig, cds)
                     miniprot_out.seek(0)
-                    boundary_scorer_out = Path(tmpdirname) / f"{contig_path.stem}_boundary.gfa"
+                    boundary_scorer_out = (
+                        Path(tmpdirname) / f"{contig_path.stem}_boundary.gfa"
+                    )
                     # run miniprot_boundary scorer
-                    run_miniprot_boundary_scorer(remove_gff(miniprot_out), boundary_scorer_out, substitution_matrix)
-                    #print(self._boundary_scorer_parser(boundary_scorer_out))
-                    cds.find_probe_exons(self._boundary_scorer_parser(boundary_scorer_out))
+                    run_miniprot_boundary_scorer(
+                        remove_gff(miniprot_out),
+                        boundary_scorer_out,
+                        substitution_matrix,
+                    )
+                    # use boundary scorer to define the exon/intron boundaries
+                    cds.find_probe_exons(
+                        self._boundary_scorer_parser(boundary_scorer_out)
+                    )
                     overlapping_gp.cds_dict[contig] = cds
-                #print(list(overlapping_gp.cds_dict.items()))
                 overlapping_gp.find_common_exons()
                 print("eliminate paralogs")
-                overlapping_gp.eliminate_paralogs(15)
-                #overlapping_gp.chop_sequences()
+                overlapping_gp.eliminate_paralogs(5)
 
-    def save_records(self):
+    def save_records(self, outdir: Path):
         import os
-        os.chdir("/home/yjkbertrand/Documents/projects/nextpiper/debug/chopped_seqs")
-        stem_name = self.probes_path.stem
-        print(f"saving {stem_name }")
-        
-        for overlapping_gp in self.non_overlapping:
-            prefix = f"{stem_name}_{overlapping_gp.probe_start}_{overlapping_gp.probe_end:}"
-            if overlapping_gp.exons:
-                for exon, boundaries in overlapping_gp.exons.items():
-                    name = f"{prefix}_exon_{exon.start}_{exon.end}.fasta"
-                    records = []
-                    for boundary in boundaries:
-                        print(boundary)
-                        scaffold_name = boundary.scaffold_name
-                        start = boundary.scaffold_start
-                        end = boundary.scaffold_end
-                        print(f"{self.contigs_dict[scaffold_name]=}")
-                        chopped_seq = str(self.contigs_dict[scaffold_name].seq)[start:end]
-                        new_record = SeqRecord(Seq(chopped_seq), name="", description="", id=scaffold_name)
-                        print(f"new record: {new_record}")
-                        records.append(new_record)
-                    SeqIO.write(records, name, "fasta")
-            if overlapping_gp.introns:
-                for intron, boundaries in overlapping_gp.introns.items():
-                    name = f"{prefix}_intron_{intron}.fasta"
-                    records = []
-                    for boundary in boundaries:
-                        print(boundary)
-                        scaffold_name = boundary.scaffold_name
-                        start = boundary.scaffold_start
-                        end = boundary.scaffold_end
-                        print(f"{self.contigs_dict[scaffold_name]=}")
-                        chopped_seq = str(self.contigs_dict[scaffold_name].seq)[start:end]
-                        new_record = SeqRecord(Seq(chopped_seq), name="", description="", id=scaffold_name)
-                        print(f"new record: {new_record}")
-                        records.append(new_record)
-                    SeqIO.write(records, name, "fasta")
-                    
-            if overlapping_gp.flank_left:
-                left_flank_records = []
-                for boundary in overlapping_gp.flank_left:
-                    scaffold_name = boundary.scaffold_name
-                    start = boundary.scaffold_start
-                    end = boundary.scaffold_end
-                    chopped_seq = str(self.contigs_dict[scaffold_name].seq)[start:end]
-                    new_record = SeqRecord(Seq(chopped_seq), name="", description="", id=scaffold_name)
-                    left_flank_records.append(new_record)
-                SeqIO.write(left_flank_records,  f"{prefix}_left_flank.fasta", "fasta")
-            if overlapping_gp.flank_right:
-                right_flank_records = []
-                for boundary in overlapping_gp.flank_right:
-                    scaffold_name = boundary.scaffold_name
-                    start = boundary.scaffold_start
-                    seq = str(self.contigs_dict[scaffold_name].seq)
-                    if start == len(seq):
-                        continue
-                    chopped_seq = seq[start:]
-                    new_record = SeqRecord(Seq(chopped_seq), name="", description="", id=scaffold_name)
-                    right_flank_records.append(new_record)
-                SeqIO.write(right_flank_records, f"{prefix}_right_flank.fasta", "fasta")
-            
-            if overlapping_gp.paralogs:
-                paralog_records = [self.contigs_dict[para] for para in overlapping_gp.paralogs]
-                SeqIO.write(paralog_records, f"{prefix}_paralogs.fasta", "fasta")
 
+        # os.chdir("/home/yjkbertrand/Documents/projects/nextpiper/debug/chopped_seqs")
+        stem_name = self.probes_path.stem
+        print(f"saving {stem_name}")
+
+        for overlapping_gp in self.non_overlapping:
+            prefix = (
+                f"{stem_name}_{overlapping_gp.probe_start}_{overlapping_gp.probe_end:}"
+            )
+
+            if overlapping_gp.scaffold_exons:
+                #  Save exons
+                name = f"{prefix}_exons.fasta"
+                out_path_exon = outdir / name
+                aligned_records: list[list[SeqRecord]] = []
+                for exon, boundaries in overlapping_gp.scaffold_exons.items():
+                    records = []
+                    for boundary in boundaries:
+                        scaffold_name = boundary.scaffold_name
+                        start = boundary.scaffold_start
+                        end = boundary.scaffold_end
+                        chopped_seq = str(self.contigs_dict[scaffold_name].seq)[
+                            start:end
+                        ]
+                        records.append(
+                            SeqRecord(
+                                Seq(chopped_seq),
+                                name="",
+                                description="",
+                                id=scaffold_name,
+                            )
+                        )
+                    aligned_records.append(_align_abpoa(records))
+                combined_records = _combine_aln(aligned_records)
+                SeqIO.write(combined_records, out_path_exon, "fasta")
+                #  Save supercontigs
+                super_name = f"{prefix}_supercontigs.fasta"
+                out_path_supercontigs = outdir / super_name
+                super_records = [self.contigs_dict[rec.id] for rec in combined_records]
+                SeqIO.write(super_records, out_path_supercontigs, "fasta")
+
+            if overlapping_gp.scaffold_introns:
+                name = f"{prefix}_intron.fasta"
+                out_path_intron = outdir / name
+                aligned_records: list[list[SeqRecord]] = []
+                for intron, boundaries in overlapping_gp.scaffold_introns.items():
+                    records = []
+                    for boundary in boundaries:
+                        scaffold_name = boundary.scaffold_name
+                        start = boundary.scaffold_start
+                        end = boundary.scaffold_end
+                        chopped_seq = str(self.contigs_dict[scaffold_name].seq)[
+                            start:end
+                        ]
+                        records.append(
+                            SeqRecord(
+                                Seq(chopped_seq),
+                                name="",
+                                description="",
+                                id=scaffold_name,
+                            )
+                        )
+                    aligned_records.append(_align_abpoa(records))
+                combined_records = _combine_aln(aligned_records)
+                SeqIO.write(combined_records, out_path_intron, "fasta")
+
+            if overlapping_gp.paralogs:
+                paralog_records = [
+                    self.contigs_dict[para] for para in overlapping_gp.paralogs
+                ]
+                name = f"{prefix}_paralogs.fasta"
+                out_path_paralogs = outdir / name
+                SeqIO.write(paralog_records, out_path_paralogs, "fasta")
 
     def save_best_probe(self, fasta_file: str) -> None:
         fasta_path = Path(fasta_file)
@@ -964,6 +997,38 @@ class OverlappingCds(MiniprotInit):
         print(f"Saving best probe to fasta file {fasta_file}")
         SeqIO.write([self.probes_dict[self.best_probe]], fasta_path, "fasta")
 
+
+def _align_abpoa(records: list[SeqRecord]) -> list[SeqRecord]:
+    print("aligning")
+    new_records = []
+    a = pa.msa_aligner(is_aa=False)
+    seqs = [str(rec.seq) for rec in records]
+    res = a.msa(seqs, out_cons=False, out_msa=True)
+    for idx, rec in enumerate(records):
+        new_records.append(
+            SeqRecord(Seq(res.msa_seq[idx]), id=rec.id, name="", description="")
+        )
+    return new_records
+
+
+def _combine_aln(alignments: list[list[SeqRecord]]) -> list[SeqRecord]:
+    """Combine several msa, for instance when several exons need to be combined."""
+    msa_dicts = []
+    msa_length = []
+    for msa in alignments:
+        msa_length.append(len(msa[0].seq))
+        msa_dicts.append({rec.id: str(rec.seq) for rec in msa})
+    rec_ids = set(list(chain(*[d.keys() for d in msa_dicts])))
+    new_records = []
+    for rec_id in rec_ids:
+        seq = ""
+        for idx, msa_dict in enumerate(msa_dicts):
+            if rec_id in msa_dict:
+                seq += msa_dict[rec_id]
+            else:
+                seq += "-" * msa_length[idx]
+        new_records.append(SeqRecord(Seq(seq), id=rec_id, name="", description=""))
+    return new_records
 
 
 def snakemake_call(snakemake):
@@ -997,11 +1062,16 @@ def main():
     #     '/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_scfs')
     # out_dir = Path(
     #     '/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/output_scfs')
-    probe_dir = Path('/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes')
-    scaffolds_dir = Path('/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs')
-    out_dir = Path('/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/test')
-    parameters = [8, 0.85, 0.1, 10, 0.7,'TIUZ_probe4471']
-    #parameters = [8, 0.85, 0.1, 10, 0.7,]
+    probe_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes"
+    )
+    scaffolds_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs"
+    )
+    out_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/test"
+    )
+    parameters = [8, 0.85, 0.1, 10, 0.7, "TIUZ_probe4471"]
     for scfs in scaffolds_dir.glob("*.fasta"):
         if not scfs.name == "4471.fasta":
             continue
@@ -1012,7 +1082,7 @@ def main():
         matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
         olc.paralogy_search(matrix)
         print("saving")
-        #olc.save_records()
+        olc.save_records(out_dir)
         # olc.save_scaffolds(out_dir)
         break
 
@@ -1021,6 +1091,7 @@ def main():
     # olc = OverlappingCds(str(probes), str(scfs), *parameters)
     # matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
     # olc.paralogy_search(matrix)
+
 
 if __name__ == "__main__":
     if "snakemake" in globals():
