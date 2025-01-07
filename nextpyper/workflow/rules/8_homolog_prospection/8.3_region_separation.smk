@@ -12,7 +12,7 @@ def rename_rec(rec: SeqRecord, sample: str) -> SeqRecord:
 checkpoint per_probe_scaffold_grouping:
     input:
         expand(
-            outdir / "homolog_prospection/allele_collapsing/consensus/{sample}.fasta",
+            outdir / "homolog_prospection/allele_collapsing/vsearch/{sample}.fasta",
             sample=sample_list,
         ),
     output:
