@@ -8,19 +8,7 @@
 #
 #       All rights reserved.
 """
-Functions and classes for running miniprot in different steps of the pipeline.
-
-The class ComponentFilter is used after the SAUTE assembly to discard the scaffolds that do not match
-the selected probes. At this step, the probe set should have been downsized as the complexity of the search is
-quadratic. Filtered scaffolds are then used for a vsearch clustering. The scaffolds file can be per sample or per probe
-per sample. Adjust the probe file accordingly.
-#  Usage example:
-    probe_fasta = ".../test_data/test_clustering/probes_aa.fasta"
-    scaffolds_fasta = "../test_data/test_clustering/sp_1.fasta
-    # load the data, perform the computation:
-    cpf = ComponentFilter(probe_fasta, scaffolds_fasta)
-    # save the results in fasta format:
-    cpf.save("../test_data/test_clustering/sp_1_filtered.fasta")
+Functions and classes for running miniprot in different steps of the pipeline
 
 The class OverlappingCds is used after the vsearch clustering of SAUTE scaffolds and consensus estimation.
 It maps all probe versions against the consensus sequences of vsearch clusters. It seeks
@@ -28,13 +16,21 @@ to find the best mapping probe version over all the consensus sequences and use 
 a common reference in order to determine which sequences are not overlapping.
 Strictly non-overlapping sequences (there are no bridging scaffolds) are saved in separate
 files.
+Exon-intron boundaries are then inferred with miniprot-boundary-scored (https://anaconda.org/bioconda/miniprot-boundary-scorer)
+that rely on a AA substitution matrix. The most common boundaries are used to discriminate scaffolds that do not
+present these boundaries. These scaffolds are treated as paralogs.
 #  Usage example:
     probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
     consensus_contig_fasta = "../test_data/test_clustering/gene_3_consensus.fasta"
-    # load the data, perform the computation:
+    # load the data, perform the computation in order to separate non-overlapping sequences:
     olc = OverlappingCds(probe_fasta, consensus_contig_fasta)
+    # perform paralogy search
+    matrix = "../test_data/test_paralogy_2/blosum62.csv"
+    olc.paralogy_search(matrix)
     # specify a folder where each non-overlapping group of sequences is saved in fasta format.
-    olc.save_scaffolds("../test_data/test_clustering/non_overlapping/")
+    # For each group, putative aligned exons and introns sequences are produced as well as unaligned supercontigs.
+    # Putative paralogs are saved in a separate file.
+    olc.save_records("../test_data/test_clustering/non_overlapping/")
     # save the sequence of the best overall mapping probe.
     olc.save_best_probe("../test_data/test_clustering/gene_3_best_probe.fasta")
 """
@@ -844,7 +840,6 @@ class OverlappingCds(MiniprotInit):
         """
         Separate the Cds by overlap with the probe sequence.
         Populate the non_overlapping attribute
-        :return:
         """
         interval_list = []
         for contig, cds in self.filtered_cds_dict.items():
@@ -860,6 +855,7 @@ class OverlappingCds(MiniprotInit):
     def _boundary_scorer_parser(self, boundary_scorer_path: Path) -> list[Exon]:
         """
         Parser of the miniprot_boundary_scorer output.
+        Create for each record a list of Exon objects.
         """
         lines = boundary_scorer_path.read_text().split("\n")
         exons = []
@@ -916,9 +912,6 @@ class OverlappingCds(MiniprotInit):
                 overlapping_gp.eliminate_paralogs(5)
 
     def save_records(self, outdir: Path):
-        import os
-
-        # os.chdir("/home/yjkbertrand/Documents/projects/nextpiper/debug/chopped_seqs")
         stem_name = self.probes_path.stem
         print(f"saving {stem_name}")
 
@@ -991,10 +984,9 @@ class OverlappingCds(MiniprotInit):
                 out_path_paralogs = outdir / name
                 SeqIO.write(paralog_records, out_path_paralogs, "fasta")
 
-    def save_best_probe(self, fasta_file: str) -> None:
-        fasta_path = Path(fasta_file)
+    def save_best_probe(self, fasta_path: Path) -> None:
         fasta_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"Saving best probe to fasta file {fasta_file}")
+        print(f"Saving best probe to fasta file {fasta_path}")
         SeqIO.write([self.probes_dict[self.best_probe]], fasta_path, "fasta")
 
 
@@ -1012,7 +1004,8 @@ def _align_abpoa(records: list[SeqRecord]) -> list[SeqRecord]:
 
 
 def _combine_aln(alignments: list[list[SeqRecord]]) -> list[SeqRecord]:
-    """Combine several msa, for instance when several exons need to be combined."""
+    """Combine several msa, for instance when several exons need to be combined.
+    Missing sequences are padded with '-'"""
     msa_dicts = []
     msa_length = []
     for msa in alignments:
@@ -1083,7 +1076,6 @@ def main():
         olc.paralogy_search(matrix)
         print("saving")
         olc.save_records(out_dir)
-        # olc.save_scaffolds(out_dir)
         break
 
     # scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/5899_test.fasta"
