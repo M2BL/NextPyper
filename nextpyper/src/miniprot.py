@@ -300,6 +300,9 @@ class ParalogyCds(Cds):
         self._reverse_correspondence()
 
     def _reverse_correspondence(self) -> Self:
+        """
+        Populate the correspondence, rev_correspondence, start_on_probe and end_on_probe attributes.
+        """
         for fragment in self.fragments:
             for k, v in fragment.correspondence.items():
                 self.correspondence[k] = v
@@ -927,10 +930,22 @@ class OverlappingCds(MiniprotInit):
                 aligned_records: list[list[SeqRecord]] = []
                 for exon, boundaries in overlapping_gp.scaffold_exons.items():
                     records = []
+                    # Adjusting the exon boundaries according in order to match the most common exon
                     for boundary in boundaries:
                         scaffold_name = boundary.scaffold_name
-                        start = boundary.scaffold_start
-                        end = boundary.scaffold_end
+                        paralogy_cds = overlapping_gp.cds_dict[scaffold_name]
+                        if (
+                            start := paralogy_cds.correspondence.get(exon.start)
+                        ) is not None:
+                            pass
+                        else:
+                            start = boundary.scaffold_start
+                        if (
+                            end := paralogy_cds.correspondence.get(exon.end)
+                        ) is not None:
+                            pass
+                        else:
+                            end = boundary.scaffold_end
                         chopped_seq = str(self.contigs_dict[scaffold_name].seq)[
                             start:end
                         ]
