@@ -41,6 +41,7 @@ max_threads = config["args"]["threads"]
 use_ref_cps = config["args"]["use_ref_cps"]
 custom_cps = Path(custom_cps) if (custom_cps := config["args"]["custom_cps"]) else None
 
+blosum62 = workflow.source_path(config["blosum62"])
 silva_db = workflow.source_path(config["silva_db"])
 cp_refs_map = workflow.source_path(config["cp_refs_map"])
 

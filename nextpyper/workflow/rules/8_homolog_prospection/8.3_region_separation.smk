@@ -75,6 +75,7 @@ rule separate_cds_by_regions:
         min_probe_contig_sim=min_probe_contig_sim,
         min_fragment_cov=min_fragment_cov,
         min_contig_length=min_contig_length,
+        matrix=blosum62,
     log:
         outdir / "logs/homolog_prospection/region_separation/separation.log",
     conda:
