@@ -5,3 +5,4 @@ channels:
     - defaults
 dependencies:
     - miniprot=0.13
+    - miniprot-boundary-scorer=1
