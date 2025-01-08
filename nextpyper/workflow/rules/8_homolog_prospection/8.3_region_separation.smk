@@ -1,5 +1,5 @@
 POS_ALLELE_PATTERN = re.compile(
-    r"^(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>.+?)_(?P<seed>\d+?)$", re.VERBOSE
+    r"^(?P<sample>.*?)-(?P<probe>.*?)_NODE_(?P<seed>\d+?):.*$", re.VERBOSE
 )
 
 
