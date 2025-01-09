@@ -1046,13 +1046,10 @@ def snakemake_call(snakemake):
         outdir = Path(snakemake.output[0])
         outdir.mkdir(exist_ok=True)
         probes_dir = Path(snakemake.input.probes_dir)
-        params = dict(**snakemake.params)
-        matrix = Path(params.pop("matrix"))
 
         for scfs in Path(snakemake.input.scfs_dir).glob("*.fasta"):
             probes = probes_dir / scfs.name
-            olc = OverlappingCds(probes, scfs, treads=snakemake.threads, **params)
-            olc.paralogy_search(matrix)
+            olc = OverlappingCds(probes, scfs, **snakemake.params)
 
             if not olc.non_overlapping:
                 print(f"Scaffolds from {probes.stem} did not yield any overlap")
@@ -1060,7 +1057,7 @@ def snakemake_call(snakemake):
                 continue
 
                 ## Save scfs
-            olc.save_records(outdir / "scfs" / scfs.stem)
+            olc.save_scaffolds(outdir / "scfs" / scfs.stem)
 
             ## Save Probes
             olc.save_best_probe(outdir / f"probes/{probes.name}")
@@ -1073,24 +1070,16 @@ def main():
     #     '/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_scfs')
     # out_dir = Path(
     #     '/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/output_scfs')
-    probe_dir = Path(sys.argv[1])
-    scaffolds_dir = Path(sys.argv[2])
-    matrix = Path(sys.argv[3])
-    out_dir = Path(sys.argv[4])
-    out_dir.mkdir(exist_ok=True)
-
-    # probe_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes"
-    # )
-    # scaffolds_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs"
-    # )
-    # out_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/test"
-    # )
-    # parameters = [8, 0.85, 0.1, 10, 0.7, "TIUZ_probe4471"]
-    parameters = [8, 0.85, 0.1, 10, 0.7]
-
+    probe_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes"
+    )
+    scaffolds_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs"
+    )
+    out_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/test"
+    )
+    parameters = [8, 0.85, 0.1, 10, 0.7, "TIUZ_probe4471"]
     for scfs in scaffolds_dir.glob("*.fasta"):
         if not scfs.name == "4471.fasta":
             continue
@@ -1098,6 +1087,7 @@ def main():
         print(f"{scfs=},  {probes=}")
         olc = OverlappingCds(str(probes), str(scfs), *parameters)
         print("overlapping:", olc)
+        matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
         olc.paralogy_search(matrix)
         print("saving")
         olc.save_records(out_dir)

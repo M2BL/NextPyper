@@ -19,7 +19,8 @@ import re
 from typing import Final, Optional, Self, TypedDict, Literal, Any
 from pathlib import Path
 
-from interval_tree import Interval
+# from interval_tree import Interval
+
 
 # Named tuple that keeps the nodes in a path either as their suffixes or their cds and the sum of their length.
 GraphPath = namedtuple("GraphPath", ["path", "length"])
@@ -32,10 +33,24 @@ GraphPath = namedtuple("GraphPath", ["path", "length"])
 #               CLASSES
 # =======================================================================================
 
+
+@dataclass
+class Exon:
+    __slots__ = ["start", "end"]
+    start: int
+    end: int
+
+    def overlaps(self, other: "Exon") -> bool:
+        first, second = sorted([self, other], key=lambda x: x.start)
+        if first.end > second.start:
+            return True
+        return False
+
+
 @dataclass
 class Node:
-    key: int|str
-    interval: Interval = field(repr=True)
+    key: int | str
+    interval: Exon = field(repr=True)
     children: list["Node"] = field(init=False, default_factory=list)
     root: bool = field(init=False, default=True)
 
@@ -64,7 +79,7 @@ class Node:
         return False
 
     def get_length(self) -> int:
-        return self.interval.hi - self.interval.lo
+        return self.interval.end - self.interval.start
 
     def get_children(self) -> list["Node"]:
         return self.children
@@ -108,7 +123,7 @@ class ItervalGraph:
         for idx, interval in enumerate(self.interval_list):
             node = Node(idx, interval)
             nodes.append(node)
-        self.nodes = sorted(nodes, key=lambda n: n.interval.lo)
+        self.nodes = sorted(nodes, key=lambda n: n.interval.start)
         return self
 
     def _create_edges(self) -> Self:
@@ -168,9 +183,20 @@ class ItervalGraph:
         interval_path = [self.node_dict[node].get_interval() for node in best.path]
         return GraphPath(interval_path, best.length)
 
+
 if __name__ == "__main__":
-    inputs = [(143, 178), (107, 142), (50, 70), (60,80), (71, 110), (111, 142), (40, 70), (150, 170), (190, 191)]
-    interval_list = [Interval(*x) for x in inputs]
+    inputs = [
+        (143, 178),
+        (107, 142),
+        (50, 70),
+        (60, 80),
+        (71, 110),
+        (111, 142),
+        (40, 70),
+        (150, 170),
+        (190, 191),
+    ]
+    interval_list = [Exon(*x) for x in inputs]
     print(interval_list)
-    IG =ItervalGraph(interval_list)
+    IG = ItervalGraph(interval_list)
     print(IG.get_best_path())
