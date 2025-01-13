@@ -74,6 +74,7 @@ def process_it(intervals: list[Interval]) -> IntervalTree:
 def find_longest_exon_stretch(putative_exons: list["PutativeExon"]) -> list["Exon"]:
     """
     Arrange the putative exons to find the longest exon stretch.
+    The search if done with and ItervalGraph structure.
     """
     possible_exons = []
     for putative_exon in putative_exons:
@@ -92,6 +93,8 @@ def find_longest_exon_stretch(putative_exons: list["PutativeExon"]) -> list["Exo
 class PutativeExon:
     """
     Keep the information about the actual sequence starting and ending points.
+    Unlike the Exon object, here the start and end are a list of all empirical coordinates that are deemed
+    to correspond to the same biological exon.
     """
 
     __slots__ = ["start_sequences", "end_sequences"]
@@ -112,6 +115,19 @@ class EndPoint:
 
 @dataclass
 class DiscoverExons:
+    """
+    Data structure for selecting the most common exon boundaries
+    Attributes
+    ----------
+    -exon_intervals: list of exon intervals found by miniprot boundary scorer for the scaffolds.
+    -expansion_threshold: length proportion of the exon that are expanded around the exons endpoints in oder
+        to form an interval. Start/stop intervals are then compared between putative exons.
+    Post Init
+    -starts: for each start point, the expansion produces an interval.
+    -ends: for each end point, the expansion produces an interval.
+    -exons: list of PutativeExon objects. Start and end of PutativeExon are provided as EndPoint objects.
+    """
+
     exon_intervals: list[Interval]
     expansion_threshold: float = field(default=0.1)
     starts: list[Interval] = field(default_factory=list, init=False, repr=True)
@@ -149,7 +165,7 @@ class DiscoverExons:
 
     def _find_exons(self) -> Self:
         """
-        Populate the eons attribute.
+        Populate the exon attribute.
         """
         # Fuse overlapping intervals for start and end points of exon intervals.
         intervals_start = sorted(process_it(self.starts), key=lambda i: i.begin)
@@ -224,7 +240,7 @@ class DiscoverExons:
                 putative_exons.append(
                     PutativeExon(start_interval.data, stop_interval.data)
                 )
-        # print("putative_exons", putative_exons)
+        print("putative_exons", putative_exons)
         self.exons = find_longest_exon_stretch(putative_exons)
         return self
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-#    Copyright (C) 2024
+#    Copyright (C) 2025
 #    Simón Villanueva CORRALES: simon.corrales@ibot.cas.cz
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
@@ -57,11 +57,14 @@ from typing import Optional, Self, NamedTuple
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from Bio.Seq import Seq
+from intervaltree import Interval
 import pyabpoa as pa
 
+from exon_discovery import DiscoverExons
 from gff_parser import Fragment, Cds
-from interval_tree import IntervalST, Interval, Node
-from exon_intron import ItervalGraph, GraphPath
+
+# from interval_tree import Node
+from exon_intron import ItervalGraph, GraphPath, Exon
 
 Region = namedtuple("Region", ["start", "end"])
 
@@ -211,16 +214,14 @@ class RankCoverage:
 
 
 @dataclass
-class Exon:
-    __slots__ = ["start", "end"]
-    start: int
-    end: int
-
-
-@dataclass
 class Exon_correspondence:
     """
     Probe to scaffold coordinates
+    Attributes
+    ----------
+    exon_probe: start-end coordinates on the probe.
+    exon_scaffold: start-end coordinates on the scaffold.
+    length_on_scaffold: nbr of AAs that are aligned between the probe and the scaffold.
     """
 
     __slots__ = ["exon_probe", "exon_scaffold", "length_on_scaffold"]
@@ -228,11 +229,11 @@ class Exon_correspondence:
     exon_scaffold: Exon
     length_on_scaffold: int
 
-    def check_identity(self, other: Exon, sensitivity: int) -> bool:
+    def check_compatibility(self, other: Exon, sensitivity: int) -> bool:
         """
         Given another probe exon coordinates, check if this exon is compatible:
         whether it is the same set of coordinates or whether this exon comes from
-        the fusion of two exons and the query is one of them.
+        the fusion of two exons and the query is one of them. Currently, only takes into account the fusion of two exons.
         Parameters
         ----------
         other
@@ -249,19 +250,17 @@ class Exon_correspondence:
         print(f"{probe_start=},{probe_end=},{other_probe_start=},{other_probe_end=}")
         if self.exon_probe == other:
             return True
-        # case two exon fusion left part
+        # case the other exon is made out of the fusion of two exons. This probe exon is the left part of the other exon.
         if (
             probe_start - sensitivity <= other_probe_start <= probe_start + sensitivity
         ) and (other_probe_end - sensitivity <= probe_end):
             return True
-        # case two exon fusion right part
+        # case the other exon is made out of the fusion of two exons. This probe exon is the right part of the other exon.
         if (probe_start <= other_probe_start + sensitivity) and (
             probe_end - sensitivity <= other_probe_end <= probe_end + sensitivity
         ):
             return True
         return False
-
-    # exon discovery score?
 
 
 @dataclass
@@ -347,11 +346,12 @@ class OverlappingSeqs:
     -probe_end: the largest index on the probe (AA space) that has a matching sequence.
     -seq_names: a list of sequence names that overlap this region.
     -cds_dict
-    -common_exons: exons found in at least a user defined proportion of scaffolds
+    -common_exons: exons found in a majority of scaffolds
     -paralogs: list of scaffolds that are deemed to be paralogs.
     To do: in the final paralog selection add the sequences that are present in OverlappingCds.cds_dict
     but disappear in filtered_cds_dict.
-    -orthologs
+    -scaffold_exons: for each exon region keep a list of scaffold Boundaries that correspond to this exon.
+    -scaffold_introns: for each intron region keep a list of scaffold Boundaries that correspond to this intron.
     """
 
     probe_start: int
@@ -360,7 +360,7 @@ class OverlappingSeqs:
     cds_dict: dict[str, ParalogyCds] = field(
         init=False, repr=False, default_factory=dict
     )
-    common_exons: list[Node] = field(init=False, repr=False, default_factory=list)
+    common_exons: list[Exon] = field(init=False, repr=False, default_factory=list)
     paralogs: list[str] = field(init=False, repr=False, default_factory=list)
     scaffold_exons: defaultdict[Region, list[Boundary]] = field(
         default_factory=lambda: defaultdict(list)
@@ -369,69 +369,32 @@ class OverlappingSeqs:
         default_factory=lambda: defaultdict(list)
     )
 
-    def find_common_exons(self, min_proportion=0.5, min_overlap=0.9):
+    def find_common_exons(
+        self,
+        min_overlapping=0.0,
+    ):
         """
         min_proportion: minimum proportion of samples (that have a probe match) that have the exon.
             If a scaffold is too short, it is counted in the proportion anyway.
-        min_overlap: min overlap between a target exon and the valid exons.
         to do: check cases when the exon path is discontinuous.
         """
-        interval_tree_all_exons = IntervalST()
+        #  Find the non overlapping exon regions
+        print("finding common exons")
+        exon_intervals = []
         for contig in self.cds_dict:
             cds = self.cds_dict[contig]
             if cds.is_empty():
                 continue
-
             for exon_pair in cds.exon_correspondences:
-                interval_tree_all_exons.put(
-                    Interval(exon_pair.exon_probe.start, exon_pair.exon_probe.end),
-                    contig,
+                exon_intervals.append(
+                    Interval(
+                        exon_pair.exon_probe.start, exon_pair.exon_probe.end, contig
+                    )
                 )
-
-        # get for each interval the contigs that contain that interval
-        # a Node object contains two attributes the interval and the value which contains the name of the contigs:
-        # e.g. Node(interval=(36, 70), value=['Echinops_strigosus_ERR5033325-4471_NODE_678'])
-        nodes = interval_tree_all_exons.tree_traversal_bsf_with_values()
-        valid_nodes = []
-        # all samples in the overlapping group
-        matching_samples = [
-            contig for contig in self.cds_dict if not self.cds_dict[contig].is_empty()
-        ]
-        # Check for all samples that are too short if they could have the exon
-        for node in nodes:
-            contigs = node.value
-            interval = node.interval
-            nbr_possible_samples = len(
-                contigs
-            )  # samples with the exon plus samples that are not full length
-            missing_samples = set(matching_samples) - set(contigs)
-            # to the putative exons, add samples that are too short to cover it
-            for sample in missing_samples:
-                sample_cds = self.cds_dict[sample]
-                sample_start = sample_cds.probe_start
-                sample_end = sample_cds.probe_end
-                if interval.hi <= sample_start or sample_end <= interval.lo:
-                    nbr_possible_samples += 1
-                    node.value.append(sample)
-            if nbr_possible_samples / len(matching_samples) > min_proportion:
-                valid_nodes.append(node)
-        # create the longest stretch of valid nodes
-        print(f"{valid_nodes=}")
-        intervals_list = [node.interval for node in valid_nodes]
-        IG = ItervalGraph(intervals_list)
-        longest_path = IG.get_best_path()
-        longest_path_nodes = longest_path.path
-        print(f"{longest_path_nodes=}")
-        # filter out the nodes that don't match the path
-        common_exons = []
-        for node in valid_nodes:
-            for longest_path_node in longest_path_nodes:
-                if (
-                    node.interval.lo == longest_path_node[0]
-                    and node.interval.hi == longest_path_node[1]
-                ):
-                    common_exons.append(node)
-        self.common_exons = common_exons
+        print(f"exon_intervals: {exon_intervals}")
+        exon_discovery = DiscoverExons(exon_intervals, min_overlapping)
+        self.common_exons = exon_discovery.get_exons()
+        print("common exons", self.common_exons)
 
     def eliminate_paralogs(self, overlap: int):
         """
@@ -446,7 +409,9 @@ class OverlappingSeqs:
 
         for scaffold, cds in self.cds_dict.items():
             print(f"working on {scaffold}")
-            presence_of_probe_exon: list[bool] = []
+            presence_of_probe_exon: list[bool] = (
+                []
+            )  # keep track of the presence of the valid exons in the scaffold
             probe_exon_to_scaffold_dict: dict[Region, Exon] = {}
             valid_exons = deque(self.common_exons)
             correspondences = deque(cds.exon_correspondences)
@@ -750,6 +715,7 @@ class OverlappingCds(MiniprotInit):
     """
 
     user_probe: str = field(default=None)
+    min_overlapping = 0.1
     cds_dict: defaultdict[str, list[Cds]] = field(
         init=False, repr=False, default_factory=lambda: defaultdict(list)
     )
@@ -910,7 +876,7 @@ class OverlappingCds(MiniprotInit):
                         self._boundary_scorer_parser(boundary_scorer_out)
                     )
                     overlapping_gp.cds_dict[contig] = cds
-                overlapping_gp.find_common_exons()
+                overlapping_gp.find_common_exons(self.min_overlapping)
                 print("eliminate paralogs")
                 overlapping_gp.eliminate_paralogs(5)
 
@@ -1073,17 +1039,30 @@ def main():
     probe_dir = Path(
         "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes"
     )
+    probe_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/bug_instances/probe"
+    )
+
     scaffolds_dir = Path(
         "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs"
+    )
+
+    scaffolds_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/bug_instances/scaffolds"
     )
     out_dir = Path(
         "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/test"
     )
+    out_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/bug_instances/out_dir"
+    )
     parameters = [8, 0.85, 0.1, 10, 0.7, "TIUZ_probe4471"]
+    parameters = [8, 0.85, 0.1, 10, 0.7, "HLJG_probe5220"]
     for scfs in scaffolds_dir.glob("*.fasta"):
-        if not scfs.name == "4471.fasta":
-            continue
-        probes = probe_dir / scfs.name
+        # if not scfs.name == "4471.fasta":
+        #     continue
+        probes_name = f"probes_{scfs.name.split('_')[1]}"
+        probes = probe_dir / probes_name
         print(f"{scfs=},  {probes=}")
         olc = OverlappingCds(str(probes), str(scfs), *parameters)
         print("overlapping:", olc)
