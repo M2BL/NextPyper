@@ -78,6 +78,7 @@ def merge_intervals(arr: list["OverlappingSeqs"]) -> list["OverlappingSeqs"]:
     """
     Combine overlapping intervals of sequences and cluster their names.
     We can thus separate the group of sequences according to non-overlapping intervals.
+    Used to cluster overlapping Exons from different scaffolds.
     """
     # Sorting based on the increasing order of the start intervals
     arr.sort(key=attrgetter("probe_start"))
@@ -207,7 +208,8 @@ class RankCoverage:
         """The  score used for the global ranking is based on probe positions, the total number of
         scaffolds and the scaffolds without a match. Missing matches get a penalty equal to the maximum rank,
          e.g. rank_score=[0, 3, 1, 0], coverage=['contig_0', 'contig_1', 'contig_2', 'contig_3']
-         and nbr_contigs=6  produces a score of (4+6+6)/6"""
+         and nbr_contigs=6 (i.e. missing 'contig_4', 'contig_6')  produces a score of (3+1+6+6)/6
+        """
         missing_contigs = nbr_contigs - len(self.coverage)
         missing_scores = [nbr_contigs for _ in range(missing_contigs)]
         return (sum(self.rank_score) + sum(missing_scores)) / nbr_contigs
@@ -229,38 +231,38 @@ class ExonCorrespondence:
     exon_scaffold: Exon
     length_on_scaffold: int
 
-    def check_compatibility(self, other: Exon, sensitivity: int) -> bool:
-        """
-        Given another probe exon coordinates, check if this exon is compatible:
-        whether it is the same set of coordinates or whether this exon comes from
-        the fusion of two exons and the query is one of them. Currently, only takes into account the fusion of two exons.
-        Parameters
-        ----------
-        other
-        sensitivity: the range around the query coordinates that should be searched for a match.
-
-        Returns bool
-        -------
-
-        """
-        probe_start = self.exon_probe.start
-        probe_end = self.exon_probe.end
-        other_probe_start = other.start
-        other_probe_end = other.end
-        print(f"{probe_start=},{probe_end=},{other_probe_start=},{other_probe_end=}")
-        if self.exon_probe == other:
-            return True
-        # case the other exon is made out of the fusion of two exons. This probe exon is the left part of the other exon.
-        if (
-            probe_start - sensitivity <= other_probe_start <= probe_start + sensitivity
-        ) and (other_probe_end - sensitivity <= probe_end):
-            return True
-        # case the other exon is made out of the fusion of two exons. This probe exon is the right part of the other exon.
-        if (probe_start <= other_probe_start + sensitivity) and (
-            probe_end - sensitivity <= other_probe_end <= probe_end + sensitivity
-        ):
-            return True
-        return False
+    # def check_compatibility(self, other: Exon, sensitivity: int) -> bool:
+    #     """
+    #     Given another probe exon coordinates, check if this exon is compatible:
+    #     whether it is the same set of coordinates or whether this exon comes from
+    #     the fusion of two exons and the query is one of them. Currently, only takes into account the fusion of two exons.
+    #     Parameters
+    #     ----------
+    #     other
+    #     sensitivity: the range around the query coordinates that should be searched for a match.
+    #
+    #     Returns bool
+    #     -------
+    #
+    #     """
+    #     probe_start = self.exon_probe.start
+    #     probe_end = self.exon_probe.end
+    #     other_probe_start = other.start
+    #     other_probe_end = other.end
+    #     print(f"{probe_start=},{probe_end=},{other_probe_start=},{other_probe_end=}")
+    #     if self.exon_probe == other:
+    #         return True
+    #     # case the other exon is made out of the fusion of two exons. This probe exon is the left part of the other exon.
+    #     if (
+    #         probe_start - sensitivity <= other_probe_start <= probe_start + sensitivity
+    #     ) and (other_probe_end - sensitivity <= probe_end):
+    #         return True
+    #     # case the other exon is made out of the fusion of two exons. This probe exon is the right part of the other exon.
+    #     if (probe_start <= other_probe_start + sensitivity) and (
+    #         probe_end - sensitivity <= other_probe_end <= probe_end + sensitivity
+    #     ):
+    #         return True
+    #     return False
 
 
 @dataclass
@@ -279,12 +281,15 @@ class Boundary:
 class ParalogyCds(Cds):
     """
     Cds object with additional features to handle paralogy information
-    correspondence scaffold coordinates to probe coordinates
-    rev_correspondence probe coordinates to scaffold coordinates
-    exon_correspondences: ExonCorrespondence(exon_probe=Exon(start=71, end=110), exon_scaffold=Exon(start=17, end=132), length_on_scaffold=115)
+    Post Init
+    -correspondence: scaffold coordinates to probe coordinates
+    -rev_correspondence: probe coordinates to scaffold coordinates
+    -exon_correspondences: list of ExonCorrespondence(exon_probe=Exon(start=71, end=110),
+        exon_scaffold=Exon(start=17, end=132), length_on_scaffold=115) that contains the
+        coordinates of exons on probe and scaffolds.
+    -accepted_exons: Most common exons as identified on the probes.
     """
 
-    exon_probe_scaffold: list = field(init=False, default_factory=list)
     correspondence: dict[int, int] = field(default_factory=dict, init=False, repr=True)
     rev_correspondence: dict[int, int] = field(
         default_factory=dict, init=False, repr=True
@@ -310,19 +315,21 @@ class ParalogyCds(Cds):
         self.end_on_probe = max(self.rev_correspondence)
         return self
 
-    def find_probe_exons(self, exons: list[Exon]) -> Self:
+    def _find_probe_exons(self, scaff_exons: list[Exon]) -> Self:
         """
-        Find coordinates pairs on the probe where exons are located
+        Find coordinates pairs on the probe where exons are located from scaffold coordinates.
+        Because there might be boundaries slight variation due to  miniprot alignment,
+        we search a few AA around the probe edge to find a correspondence on the scaffold.
         """
-        for scaff_exon in exons:
+        for scaff_exon in scaff_exons:
             probe_start = None
             probe_end = None
-            for idx in [0, 1, 2, -1, -2]:
+            for idx in [0, 1, -1, 2, -2]:
                 if (
                     probe_start := self.rev_correspondence.get(scaff_exon.start + idx)
                 ) is not None:
                     break
-            for idx in [0, 1, 2, -1, -2]:
+            for idx in [0, 1, -1, 2, -2]:
                 if (
                     probe_end := self.rev_correspondence.get(scaff_exon.end + idx)
                 ) is not None:
@@ -877,8 +884,8 @@ class OverlappingCds(MiniprotInit):
                         boundary_scorer_out,
                         substitution_matrix,
                     )
-                    # use boundary scorer to define the exon/intron boundaries
-                    cds.find_probe_exons(
+                    # use miniprot boundary scorer to define the exon/intron boundaries
+                    cds._find_probe_exons(
                         self._boundary_scorer_parser(boundary_scorer_out)
                     )
                     overlapping_gp.cds_dict[contig] = cds
