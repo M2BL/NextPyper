@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-#    Copyright (C) 2024
+#    Copyright (C) 2025
 #    Simón Villanueva CORRALES: simon.corrales@ibot.cas.cz
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
@@ -17,10 +17,6 @@ from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field, fields
 import re
 from typing import Final, Optional, Self, TypedDict, Literal, Any
-from pathlib import Path
-
-# from interval_tree import Interval
-
 
 # Named tuple that keeps the nodes in a path either as their suffixes or their cds and the sum of their length.
 GraphPath = namedtuple("GraphPath", ["path", "length"])

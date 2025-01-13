@@ -71,17 +71,22 @@ def process_it(intervals: list[Interval]) -> IntervalTree:
     return it
 
 
-def find_longest_exon_stretch(putative_exons: list["PutativeExon"]) -> list["Exon"]:
+def find_longest_exon_stretch(
+    putative_exons: list["PutativeExon"], expansion_interval: int = 0
+) -> list["Exon"]:
     """
     Arrange the putative exons to find the longest exon stretch.
     The search if done with and ItervalGraph structure.
+    -expansion_interval: number of AAs to substract from the start of the exon, to decide if it overlaps with the end.
     """
     possible_exons = []
     for putative_exon in putative_exons:
         start_points = [endpt.idx for endpt in putative_exon.start_sequences]
         end_points = [endpt.idx for endpt in putative_exon.end_sequences]
         valid_combinations = [
-            x for x in product(start_points, end_points) if x[0] < x[1]
+            x
+            for x in product(start_points, end_points)
+            if x[0] - expansion_interval < x[1]
         ]
         for combination in valid_combinations:
             possible_exons.append(Exon(*combination))
@@ -144,15 +149,15 @@ class DiscoverExons:
     def _get_starts_ends(self) -> Self:
         """
         Populate the starts and ends attributes.
-        MAX_EXPANSION_THRESHOLD is the range over an index that can encompass a second index.
+        MAX_EXPANSION_INTERVAL is the range in AA over an index that can encompass a second index.
         """
-        MAX_EXPANSION_THRESHOLD = 10
+        MAX_EXPANSION_INTERVAL = 10
         for elt in self.exon_intervals:
             # Remove the shortest exons
-            if elt.end - elt.begin <= MAX_EXPANSION_THRESHOLD:
+            if elt.end - elt.begin <= MAX_EXPANSION_INTERVAL:
                 continue
             expansion = max(
-                MAX_EXPANSION_THRESHOLD,
+                MAX_EXPANSION_INTERVAL,
                 (elt.end - elt.begin) * self.expansion_threshold,
             )
             start_min, start_max = max(elt.begin - expansion, 0), elt.begin + expansion
@@ -240,7 +245,6 @@ class DiscoverExons:
                 putative_exons.append(
                     PutativeExon(start_interval.data, stop_interval.data)
                 )
-        print("putative_exons", putative_exons)
         self.exons = find_longest_exon_stretch(putative_exons)
         return self
 
@@ -269,6 +273,7 @@ if __name__ == "__main__":
 
     input_intervals = [Interval(*x) for x in inputs]
     disco = DiscoverExons(input_intervals)
+    print("putative exons", disco.exons)
     # inputs_start = [
     #     (38, 42, [("x", 40)]),
     #     (38, 42, [("a", 40)]),

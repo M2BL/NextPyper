@@ -214,7 +214,7 @@ class RankCoverage:
 
 
 @dataclass
-class Exon_correspondence:
+class ExonCorrespondence:
     """
     Probe to scaffold coordinates
     Attributes
@@ -281,7 +281,7 @@ class ParalogyCds(Cds):
     Cds object with additional features to handle paralogy information
     correspondence scaffold coordinates to probe coordinates
     rev_correspondence probe coordinates to scaffold coordinates
-    exon_correspondences: Exon_correspondence(exon_probe=Exon(start=71, end=110), exon_scaffold=Exon(start=17, end=132), length_on_scaffold=115)
+    exon_correspondences: ExonCorrespondence(exon_probe=Exon(start=71, end=110), exon_scaffold=Exon(start=17, end=132), length_on_scaffold=115)
     """
 
     exon_probe_scaffold: list = field(init=False, default_factory=list)
@@ -289,7 +289,7 @@ class ParalogyCds(Cds):
     rev_correspondence: dict[int, int] = field(
         default_factory=dict, init=False, repr=True
     )
-    exon_correspondences: list[Exon_correspondence] = field(
+    exon_correspondences: list[ExonCorrespondence] = field(
         default_factory=list, init=False, repr=True
     )
     accepted_exons: list[Exon] = field(default_factory=list, init=False, repr=True)
@@ -331,7 +331,7 @@ class ParalogyCds(Cds):
                 probe_exon = Exon(probe_start, probe_end)
                 length = scaff_exon.end - scaff_exon.start
                 self.exon_correspondences.append(
-                    Exon_correspondence(probe_exon, scaff_exon, length)
+                    ExonCorrespondence(probe_exon, scaff_exon, length)
                 )
         return self
 
@@ -406,19 +406,22 @@ class OverlappingSeqs:
             # add all sequences to paralogs
             self.paralogs.extend(self.cds_dict)
             return
-
+        # Take each scaffold and search for the best fitting exon.
         for scaffold, cds in self.cds_dict.items():
             print(f"working on {scaffold}")
             presence_of_probe_exon: list[bool] = (
                 []
             )  # keep track of the presence of the valid exons in the scaffold
-            probe_exon_to_scaffold_dict: dict[Region, Exon] = {}
-            valid_exons = deque(self.common_exons)
-            correspondences = deque(cds.exon_correspondences)
+            probe_exon_to_scaffold_dict: dict[Region, Exon] = {}  #
+            valid_exons = deque(
+                self.common_exons
+            )  # Non overlapping exons, that are found in a majority of scaffolds.
+            correspondences = deque(cds.exon_correspondences)  # list
+            print(f"{correspondences=}")
 
             def is_compatible(
-                query_exon: Exon_correspondence,
-                probe_exon: Node,
+                query_exon: ExonCorrespondence,
+                probe_exon: Exon,
                 first_exon_probe: bool,
                 last_exon_probe: bool,
             ) -> bool:
@@ -428,7 +431,7 @@ class OverlappingSeqs:
                 The scaffold exon is queried against the probe_exon.
                 Flanking intervals of the query are treated differently.
                 A special case applies when there is a putative fused interval on the scaffold.
-                :param query_exon: the Exon_correspondence object under scrutiny.
+                :param query_exon: the ExonCorrespondence object under scrutiny.
                 :param probe_exon: an interval_tree Node object containing as attributes, an Interval object and a value
                     that reports the name of all the contigs that display this exon.
                 :param first_exon_probe: if the probe_exon is the first on the exon path.
@@ -438,8 +441,8 @@ class OverlappingSeqs:
                     query_exon.exon_probe.start,
                     query_exon.exon_probe.end,
                 )
-                probe_start = probe_exon.interval.lo
-                probe_end = probe_exon.interval.hi
+                probe_start = probe_exon.start
+                probe_end = probe_exon.end
                 # Cases we deal with the flanking exons, which can vary in size.
                 if first_exon_probe:
                     if (
@@ -490,7 +493,7 @@ class OverlappingSeqs:
                     new_length_on_scaffold = (
                         new_exon_scaffold_end - new_exon_scaffold_start
                     )
-                    new_exon_correspondence = Exon_correspondence(
+                    new_exon_correspondence = ExonCorrespondence(
                         Exon(new_exon_probe_start, new_exon_probe_end),
                         Exon(new_exon_scaffold_start, new_exon_scaffold_end),
                         new_length_on_scaffold,
@@ -706,6 +709,9 @@ class OverlappingCds(MiniprotInit):
     The probe is then used as reference for separating non overlapping scaffolds.
     Attributes
     ----------
+    -user_probe: if specified, the probe with the best matching score to the scaffold is not computed with miniprot.
+    -min_overlapping: proportion of the exon length that is used to find an overlap with another exon.
+        The length that is explored on each endpoint of the exon is capped with hard coded boundary.
     Post Init
     -cds_dict: dict of contig name as key and list of Cds object as value.
     -filtered_cds_dict: dict of contig name as key and the Cds that corresponds to the best overall probe,
