@@ -31,10 +31,10 @@ rule homologs_to_probes_matching:
     output:
         outdir / "assembled/filtering/matching_tables/{sample}.tsv",
     params:
-        fields="query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch",
-        evalue="1.000E-06",
-        min_orf_len=15,
-        sensitivity=7.5,
+        fields=mmseq_fields,
+        evalue=mmseq_evalue,
+        min_orf_len=min_orf_len,
+        sensitivity=mmseq_sens,
     log:
         outdir / "logs/assembled/filtering/mmseqs/{sample}.log",
     threads: 4

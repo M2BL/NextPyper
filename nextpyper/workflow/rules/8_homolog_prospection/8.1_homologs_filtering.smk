@@ -59,10 +59,10 @@ rule candidates_to_probes_matching:
     output:
         outdir / "homolog_prospection/candidates_filtering/matching_tables/{sample}.tsv",
     params:
-        fields="query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch",
-        evalue="1.000E-06",
-        min_orf_len=15,
-        sensitivity=7.5,
+        fields=mmseq_fields,
+        evalue=mmseq_evalue,
+        min_orf_len=min_orf_len,
+        sensitivity=mmseq_sens,
     log:
         outdir / "logs/homolog_prospection/candidates_filtering/mmseqs/{sample}.log",
     threads: 4
@@ -89,8 +89,8 @@ rule candidates_filtering:
         outdir
         / "logs/homolog_prospection/candidates_filtering/scfs_filtering/{sample}.log",
     params:
-        min_cov=candidate_scf_min_cov,
-        min_idt=candidate_scf_min_idt,
+        min_cov=homolog_scf_min_cov,
+        min_idt=homolog_scf_min_idt,
         separate_probes=lambda wildcards: False,
         tpat=lambda wildcards: pattern,
     script:
