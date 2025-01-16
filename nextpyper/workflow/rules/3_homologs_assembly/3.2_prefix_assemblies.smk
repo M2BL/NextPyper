@@ -18,5 +18,5 @@ rule prefix_and_filter_scfs_by_cov:
         """bioawk -c fastx '
         {{split($name, parts, "_"); 
         if((parts[6]*1)>=4)
-        {{print ">{wildcards.sample}-"$name; $seq }} }}' {input} > {output} 
+        {{print ">{wildcards.sample}-"$name; print $seq }} }}' {input} > {output} 
         """
