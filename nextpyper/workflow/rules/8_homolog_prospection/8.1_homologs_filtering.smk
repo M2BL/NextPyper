@@ -37,7 +37,7 @@ rule make_mmseqs_probe_db:
         "mmseqs createdb --dbtype 1 {input} {output} > {log} 2>&1"
 
 
-rule make_mmseqs_sample_dbs:
+use rule make_mmseqs_homologs_sample_dbs as make_mmseqs_sample_dbs with:
     input:
         outdir / "saute/target_assembly/{sample}/target_vars.fasta",
     output:
@@ -45,40 +45,20 @@ rule make_mmseqs_sample_dbs:
     log:
         outdir
         / "logs/homolog_prospection/candidates_filtering/make_sample_db/{sample}.log",
-    conda:
-        "../../envs/mmseqs2.yaml"
-    shell:
-        "mmseqs createdb --dbtype 2 {input} {output} > {log} 2>&1"
 
 
-rule candidates_to_probes_matching:
+use rule homologs_to_probes_matching as candidates_to_probes_matching with:
     input:
         probes=outdir
         / "homolog_prospection/candidates_filtering/dbs/probes/matching_probes",
         query=outdir / "homolog_prospection/candidates_filtering/dbs/samples/{sample}",
     output:
         outdir / "homolog_prospection/candidates_filtering/matching_tables/{sample}.tsv",
-    params:
-        fields=mmseq_fields,
-        evalue=mmseq_evalue,
-        min_orf_len=min_orf_len,
-        sensitivity=mmseq_sens,
     log:
         outdir / "logs/homolog_prospection/candidates_filtering/mmseqs/{sample}.log",
-    threads: 4
-    conda:
-        "../../envs/mmseqs2.yaml"
-    shell:
-        """
-        mkdir -p temp_{wildcards.sample}
-        mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --remove-tmp-files -a > {log} 2>&1
-        mmseqs convertalis {input.query} {input.probes} {wildcards.sample}_results {output} --format-mode 4 --format-output {params.fields} --threads {threads} >> {log} 2>&1
-        rm -r temp_{wildcards.sample}
-        rm {wildcards.sample}_results.*
-        """
 
 
-rule candidates_filtering:
+use rule homologs_filtering as candidates_filtering with:
     input:
         scfs=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
         table=outdir
@@ -93,5 +73,3 @@ rule candidates_filtering:
         min_idt=homolog_scf_min_idt,
         separate_probes=lambda wildcards: False,
         tpat=lambda wildcards: pattern,
-    script:
-        "../../../src/homolog_filtering.py"

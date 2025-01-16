@@ -43,15 +43,12 @@ blosum62 = workflow.source_path(config["blosum62"])
 ## Read Workflow parameters:
 pipeline = lookup("pipeline", within=config)
 
-# BBduk
-bbduk_k = lookup("matching_probes/bbduk_k", within=pipeline)
-other_bbduk = lookup("matching_probes/others", within=pipeline)
-
 # MMseqs2
 mmseq2_min_seq_id = lookup("multi_probe_clustering/mmseq2_min_seq_id", within=pipeline)
 
 # Spades
 spades_k = "" if (argk := lookup("spades/k", within=pipeline)) == "auto" else argk
+min_scf_cov = lookup("prefilter_by_cov/min_cov", within=pipeline)
 
 # Split graph into probes
 min_probe_cov = lookup(
