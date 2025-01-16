@@ -30,7 +30,7 @@ GraphPath = namedtuple("GraphPath", ["path", "length"])
 # =======================================================================================
 
 
-@dataclass
+@dataclass(frozen=True)
 class Exon:
     __slots__ = ["start", "end"]
     start: int

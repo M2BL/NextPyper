@@ -34,8 +34,12 @@ def fuse_intervals(intervals: list[Interval]) -> Interval:
     return Interval(min_value, max_value, data)
 
 
-def correctly_ordered(interval_0: Interval, interval_1: Interval) -> bool:
-    """Check that two consecutive intervals are correctly ordered, which mean
+def correctly_ordered(
+    interval_0: tuple[Interval, str], interval_1: tuple[Interval, str]
+) -> bool:
+    """
+    Interval_0 and interval_1 are tuples of interval and 'start'/'stop'.
+    Check that two consecutive intervals are correctly ordered, which mean
     checking that if they contain the same name, the second idx cannot larger than the first one.
     """
     # two consecutive starts or stops
@@ -46,9 +50,8 @@ def correctly_ordered(interval_0: Interval, interval_1: Interval) -> bool:
     common_names = set(sequence_0_dict) & set(sequence_1_dict)
     if not common_names:
         return True
-    for common_name in common_names:
-        if sequence_0_dict[common_name] > sequence_1_dict[common_name]:
-            return False
+    if interval_0[1] == "stop":
+        return False
     return True
 
 
@@ -81,8 +84,8 @@ def find_longest_exon_stretch(
     """
     possible_exons = []
     for putative_exon in putative_exons:
-        start_points = [endpt.idx for endpt in putative_exon.start_sequences]
-        end_points = [endpt.idx for endpt in putative_exon.end_sequences]
+        start_points = set([endpt.idx for endpt in putative_exon.start_sequences])
+        end_points = set([endpt.idx for endpt in putative_exon.end_sequences])
         valid_combinations = [
             x
             for x in product(start_points, end_points)
@@ -130,20 +133,20 @@ class DiscoverExons:
     Post Init
     -starts: for each start point, the expansion produces an interval.
     -ends: for each end point, the expansion produces an interval.
-    -exons: list of PutativeExon objects. Start and end of PutativeExon are provided as EndPoint objects.
+    -exons: list of Exon objects.
     """
 
     exon_intervals: list[Interval]
     expansion_threshold: float = field(default=0.1)
     starts: list[Interval] = field(default_factory=list, init=False, repr=True)
     ends: list[Interval] = field(default_factory=list, init=False, repr=True)
-    exons: list[PutativeExon] = field(default_factory=list, init=False, repr=True)
+    exons: list[Exon] = field(default_factory=list, init=False, repr=True)
 
     def __post_init__(self):
         self._get_starts_ends()
         self._find_exons()
 
-    def get_exons(self):
+    def get_exons(self) -> list[Exon]:
         return self.exons
 
     def _get_starts_ends(self) -> Self:
@@ -158,7 +161,7 @@ class DiscoverExons:
                 continue
             expansion = max(
                 MAX_EXPANSION_INTERVAL,
-                (elt.end - elt.begin) * self.expansion_threshold,
+                int((elt.end - elt.begin) * self.expansion_threshold),
             )
             start_min, start_max = max(elt.begin - expansion, 0), elt.begin + expansion
             end_min, end_max = elt.end - expansion, elt.end + expansion
@@ -172,7 +175,7 @@ class DiscoverExons:
         """
         Populate the exon attribute.
         """
-        # Fuse overlapping intervals for start and end points of exon intervals.
+        # Fuse overlapping intervals for start and end points of exon intervals using interval tree.
         intervals_start = sorted(process_it(self.starts), key=lambda i: i.begin)
         intervals_end = sorted(process_it(self.ends), key=lambda i: i.end)
         # Process the sorted list of start and end intervals.
@@ -180,9 +183,9 @@ class DiscoverExons:
         all_intervals.extend((interval, "start") for interval in intervals_start)
         all_intervals.extend((interval, "stop") for interval in intervals_end)
         tmp_sorted_intervals = deque(sorted(all_intervals, key=lambda x: x[0].begin))
-
         first_interval = tmp_sorted_intervals.popleft()
         sorted_intervals = [first_interval]
+        # Reorder the intervals
         while tmp_sorted_intervals:
             second_interval = tmp_sorted_intervals.popleft()
             if not correctly_ordered(first_interval, second_interval):
@@ -192,7 +195,7 @@ class DiscoverExons:
                 sorted_intervals.append(second_interval)
                 first_interval = second_interval
 
-        # print("sorted intervals", sorted_intervals)
+        print("sorted intervals", sorted_intervals)
         putative_exons = []
         start = sorted_intervals[0]
         start_interval = start[0]
@@ -200,7 +203,7 @@ class DiscoverExons:
         stop_interval = None
         queue = deque(sorted_intervals[1:])
         while queue:
-            # print(f"{start_interval=}, {stop_interval=}, {current_color=}")
+            print(f"{start_interval=}, {stop_interval=}, {current_color=}")
             elt = queue.popleft()
             # print("length of queue:", len(queue))
             elt_interval = elt[0]
@@ -210,6 +213,9 @@ class DiscoverExons:
                 if elt_color == "start":
                     if len(elt_interval.data) > len(start_interval.data):
                         start_interval = elt_interval
+                    if len(elt) == 0:
+                        # Something went wrong and the last colour is not "stop"
+                        break
                 elif elt_color == "stop":
                     current_color = "stop"
                     stop_interval = elt_interval
@@ -245,7 +251,20 @@ class DiscoverExons:
                 putative_exons.append(
                     PutativeExon(start_interval.data, stop_interval.data)
                 )
-        self.exons = find_longest_exon_stretch(putative_exons)
+        longest_stretch_exons = find_longest_exon_stretch(putative_exons)
+        if not longest_stretch_exons:
+            return self
+        # The boundaries need to be adjusted
+        queue = deque(longest_stretch_exons)
+        query = queue.popleft()
+        self.exons.append(query)
+        while queue:
+            target = queue.popleft()
+            if query.end != target.start:
+                self.exons.append(target)
+            else:
+                self.exons.append(Exon(target.start + 1, target.end))
+            query = target
         return self
 
 
