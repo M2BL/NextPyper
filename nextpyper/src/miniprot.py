@@ -145,7 +145,7 @@ def run_miniprot(
     except subprocess.TimeoutExpired as exc:
         print(f"Process timed out.\n{exc}")
         raise
-    # print(miniprot.stdout)
+    print(miniprot.stdout)
     return StringIO(miniprot.stdout)
 
 
@@ -536,7 +536,7 @@ class OverlappingSeqs:
                         probe_exon_to_scaffold_dict[current_probe_region] = (
                             scaffold_exon
                         )
-                        print("break_0-found")
+                        # print("break_0-found")
                         break
                     # check if decision could be delayed because of fused exons
                     print(
@@ -556,7 +556,7 @@ class OverlappingSeqs:
                             first_half_scaffold
                         )
                         scaffold_exons.appendleft(second_half_scaffold)
-                        print("break_1_delayed")
+                        # print("break_1_delayed")
                         break
 
                     if not scaffold_exons:
@@ -567,7 +567,7 @@ class OverlappingSeqs:
                         first_scaffold_exon = True
                         scaffold_exons = deque(cds.exon_correspondences)
                         temp_probe_exon_to_scaffold_dict = {}
-                        print("break_3-not found")
+                        # print("break_3-not found")
                         break
                     continue
                 if current_probe_region not in probe_exon_to_scaffold_dict.keys():
@@ -1131,12 +1131,19 @@ def main():
     parameters = [8, 0.85, 0.1, 10, 0.7, "TIUZ_probe4471"]
     parameters = [8, 0.85, 0.1, 10, 0.7, "HLJG_probe5220"]
     parameters = [8, 0.85, 0.1, 10, 0.7, "HLJG_probe5551"]
-    parameters = [8, 0.85, 0.1, 10, 0.7, "NVSO_probe6221"]
+    parameters = [8, 0.85, 0.1, 10, 0.7]
+    parameters = [
+        8,
+        0.85,
+        0.1,
+        10,
+        0.7,
+    ]
     for scfs in scaffolds_dir.glob("*.fasta"):
-        # if not scfs.name == "5551.fasta":
-        #     continue
-        if not scfs.name == "6221.fasta":
+        if not scfs.name == "5551.fasta":
             continue
+        # if not scfs.name == "6221.fasta":
+        #     continue
         # # probes_name = f"probes_{scfs.name.split('_')[1]}"
         # probes = probe_dir / probes_name
         probes = probe_dir / scfs.name
