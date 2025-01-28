@@ -8,7 +8,7 @@
 #
 #       All rights reserved.
 """
-Functions and classes for running miniprot in different steps of the pipeline
+Functions and classes for running miniprot.
 
 The class OverlappingCds is used after the vsearch clustering of SAUTE scaffolds and consensus estimation.
 It maps all probe versions against the consensus sequences of vsearch clusters. It seeks
@@ -16,23 +16,25 @@ to find the best mapping probe version over all the consensus sequences and use 
 a common reference in order to determine which sequences are not overlapping.
 Strictly non-overlapping sequences (there are no bridging scaffolds) are saved in separate
 files.
+Sequences that do not meet miniprot length and similarity thresholds are discarded.
 Exon-intron boundaries are then inferred with miniprot-boundary-scored (https://anaconda.org/bioconda/miniprot-boundary-scorer)
-that rely on a AA substitution matrix. The most common boundaries are used to discriminate scaffolds that do not
-present these boundaries. These scaffolds are treated as paralogs.
+that rely on a AA substitution matrix.
 #  Usage example:
     probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
     consensus_contig_fasta = "../test_data/test_clustering/gene_3_consensus.fasta"
-    # load the data, perform the computation in order to separate non-overlapping sequences:
-    olc = OverlappingCds(probe_fasta, consensus_contig_fasta)
-    # perform paralogy search
     matrix = "../test_data/test_paralogy_2/blosum62.csv"
-    olc.paralogy_search(matrix)
-    # specify a folder where each non-overlapping group of sequences is saved in fasta format.
-    # For each group, putative aligned exons and introns sequences are produced as well as unaligned supercontigs.
-    # Putative paralogs are saved in a separate file.
-    olc.save_records("../test_data/test_clustering/non_overlapping/")
+    parameters = [8, 0.85, 0.1, 10, 0.7] # See attribute definitions in the MiniprotInit class.
+    # load the data, perform the computation in order to separate non-overlapping sequences:
+    olc = OverlappingCds(probe_fasta, consensus_contig_fasta, matrix *parameters)
+    # Non overlapping sets of sequences are saved in a separate file.
+    out_dir = "../test_data/test_clustering/nonoverlapping"
+    min_exon_length = 10
+    olc.save_records(out_dir, 10)
     # save the sequence of the best overall mapping probe.
     olc.save_best_probe("../test_data/test_clustering/gene_3_best_probe.fasta")
+
+TODO: refactor find_global_boundaries() so that the alignments limits are inferred from the column's occupancy
+instead of the exon's boundaries.
 """
 
 __version__ = "0.1"
@@ -58,8 +60,6 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from intervaltree import Interval, IntervalTree
 
-
-from exon_discovery import DiscoverExons
 from gff_parser import Cds
 from exon_intron import Exon
 
@@ -199,7 +199,6 @@ def run_miniprot(
     except subprocess.TimeoutExpired as exc:
         print(f"Process timed out.\n{exc}")
         raise
-    # print(miniprot.stdout)
     return StringIO(miniprot.stdout)
 
 
@@ -734,7 +733,6 @@ class OverlappingCds(MiniprotInit):
     def save_records(self, outdir: Path, min_exon_size: int) -> None:
         stem_name = self.probes_path.stem
         print(f"saving {stem_name}")
-        print(self.non_overlapping)
         for overlapping_gp in self.non_overlapping:
             prefix = (
                 f"{stem_name}_{overlapping_gp.probe_start}_{overlapping_gp.probe_end:}"
