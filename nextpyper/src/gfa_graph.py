@@ -17,19 +17,20 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from dataclasses import dataclass, field
-from operator import itemgetter, attrgetter
-from itertools import chain, groupby
+from itertools import chain, starmap
 from pathlib import Path
-from typing import Self, NewType, Literal, Optional, Tuple
+from typing import Self, Literal, Optional
+import re
 import sys
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO
+import polars as pl
 
 from graph_alns_parser import Read, OrientedEdge
-from gfa2fasta import SeqPath
 
 
 # =============================================================================
@@ -120,6 +121,7 @@ class Assembly_graph:
     linked_edges: LinkSupport = field(
         default_factory=lambda: defaultdict(int), init=False
     )
+    paths: dict[str, Path_on_graph] = field(default_factory=dict, init=False)
     rev = {"+": "-", "-": "+"}
 
     def __post_init__(self):
@@ -139,7 +141,7 @@ class Assembly_graph:
                         coverage = float(_kc[len("KC:i:") :]) / len(seq)
                         self.edge_dict[node_id] = Edge(node_id, seq, coverage)
 
-                    case "L" | "J":
+                    case "L":
                         _, node_id1, pos1, node_id2, pos2, _match = line.strip().split(
                             "\t"
                         )
@@ -148,8 +150,21 @@ class Assembly_graph:
                         self.graph[(node_id2, self.rev[pos2])].append(
                             (node_id1, self.rev[pos1])
                         )
+                    case "J":
+                        _, node_id1, pos1, node_id2, pos2, _dist, *_tags = (
+                            line.strip().split("\t")
+                        )
+                        self.graph[(node_id1, pos1)].append((node_id2, pos2))
+                        self.graph[(node_id2, self.rev[pos2])].append(
+                            (node_id1, self.rev[pos1])
+                        )
                     case "P":
-                        continue
+                        _, name, path, _, *tags = line.split()
+                        edges = [
+                            OrientedEdge(seg[:-1], seg[-1])
+                            for seg in re.split(",|;", path)
+                        ]
+                        self.paths[name] = Path_on_graph(name, 0, None, edges)
                     case _:
                         raise NotImplementedError(
                             f"ERROR: found line of type {line[0]}"
@@ -243,8 +258,104 @@ class Assembly_graph:
 # =============================================================================
 
 
+def dfs_track_paths(graph, start, goal=None):
+    def dfs_helper(node, visited, current_path, all_dead_ends):
+        visited.add(node)
+        current_path.append(node)
+
+        # If we reach the goal, add the path
+        if goal is not None and node == goal:
+            all_dead_ends.append(current_path[:])
+
+        # Get all neighbors
+        neighbors = graph[node]
+
+        # If no unvisited neighbors (dead end) and no specific goal
+        if goal is None and all(n in visited for n in neighbors):
+            all_dead_ends.append(current_path[:])
+
+        # Explore neighbors
+        for neighbor in neighbors:
+            if neighbor not in visited:
+                dfs_helper(neighbor, visited, current_path, all_dead_ends)
+
+        # Backtrack: remove current node from path and visited
+        current_path.pop()
+        visited.remove(node)
+
+    visited = set()
+    current_path = []
+    all_dead_ends = []
+
+    dfs_helper(start, visited, current_path, all_dead_ends)
+    return all_dead_ends
+
+
+def extend_path(path: Path_on_graph, graph: Assembly_graph) -> list[OrientedEdge]:
+    """Given an assembly graph and a path, extend the given path following the graph topology
+    using a Depth First Search.
+
+    Return a list with all the extended paths, represented as list of oriented edges.
+    """
+
+    return [
+        path.edges[:-1] + list(starmap(OrientedEdge, ext))
+        for ext in dfs_track_paths(graph, path.edges[-1])
+    ]
+
+
+def get_seq_atts(
+    protopath: list[OrientedEdge], graph: Assembly_graph
+) -> tuple[int, float]:
+    """Given a list of OrientedEdges which represent a path, infer the length and coverage of
+    the sequence it encodes. Returns a tuple with both values.
+    """
+
+    ids = [edge.id for edge in protopath]
+    path_length = sum(graph.edge_dict[id].get_length() for id in ids) - (
+        graph.K * (len(protopath) - 1)
+    )
+    path_cov = sum(
+        graph.edge_dict[id].coverage * graph.edge_dict[id].get_length() for id in ids
+    ) / (path_length - graph.K)
+
+    return path_length, path_cov
+
+
+def snakemake_call(snakemake):
+    with open(snakemake.log[0], "w") as outlog:
+        sys.stdout = sys.stderr = outlog
+
+        graph_path = Path(snakemake.input.graph)
+        table_path = Path(snakemake.input.table)
+        out = Path(snakemake.output[0])
+
+        df = pl.read_csv(table_path, separator="\t", has_header=True)
+        matching_paths = df.select(pl.col("query")).unique().to_series().to_list()
+
+        graph = Assembly_graph(graph_path)
+
+        new_paths = [
+            Path_on_graph(
+                f"EDGE_{i}_length_{atts[0]}_cov_{atts[1]:.3f}", 0, None, protopath
+            )
+            for i, protopath in enumerate(
+                chain.from_iterable(
+                    extend_path(graph.paths[name], graph.graph)
+                    for name in matching_paths
+                )
+            )
+            if (atts := get_seq_atts(protopath, graph))
+        ]
+        new_scfs = [graph.retrieve_path(path) for path in new_paths]
+        SeqIO.write(new_scfs, out, "fasta")
+
+
 def main(): ...
 
 
 if __name__ == "__main__":
-    main()
+    if "snakemake" in globals():
+        snakemake_call(snakemake)
+    else:
+        main()

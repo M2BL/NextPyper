@@ -25,7 +25,7 @@ nextpyper:
         split_graph_by_matching_probe:
             min_probe_coverage: 0.1
         homolog_filtering:
-            homolog_scf_min_cov: 0.05
+            homolog_scf_min_cov: 0.2
             homolog_scf_min_idt: 0.0
         region_separation:
             min_probe_contig_sim: 0.85

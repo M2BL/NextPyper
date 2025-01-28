@@ -81,11 +81,11 @@ def compute_hits(
             pl.sum("nident"),
             pl.sum("mismatch"),
             pl.sum("gapopen"),
-            pl.first("qlen"),
+            pl.first("tlen"),
             pl.first("tprobe"),
         )
         .with_columns(
-            cov=(pl.col("nident") + pl.col("mismatch")) * 3 / pl.col("qlen"),
+            cov=(pl.col("nident") + pl.col("mismatch")) / pl.col("tlen"),
             idt=pl.col("nident")
             / (pl.col("nident") + pl.col("mismatch") + pl.col("gapopen")),
         )
