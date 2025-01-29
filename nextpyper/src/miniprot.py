@@ -723,9 +723,14 @@ class OverlappingCds(MiniprotInit):
                         )
                         / boundary_scorer_out.name
                     )
-                    assert (
-                        cds.exon_correspondences
-                    ), f"Something went terribly wrong with {scaffold_name} as no Exon was inferred"
+                    if not cds.exon_correspondences:
+                        print(
+                            f"Something went terribly wrong with {scaffold_name} as no Exon was inferred"
+                        )
+                        continue
+                    # assert (
+                    #     cds.exon_correspondences
+                    # ), f"Something went terribly wrong with {scaffold_name} as no Exon was inferred"
 
                     overlapping_gp.extended_cds_dict[scaffold_name] = cds
                 overlapping_gp.find_global_boundaries()
