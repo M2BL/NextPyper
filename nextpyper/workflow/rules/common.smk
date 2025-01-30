@@ -50,6 +50,9 @@ mmseq2_min_seq_id = lookup("multi_probe_clustering/mmseq2_min_seq_id", within=pi
 spades_k = "" if (argk := lookup("spades/k", within=pipeline)) == "auto" else argk
 min_scf_cov = lookup("prefilter_by_cov/min_cov", within=pipeline)
 
+# MMseqs prefiltering
+mmseq_prefilt_sens = lookup("mmseqs_prefiltering/sensitivity", within=pipeline)
+
 # Split graph into probes
 min_probe_cov = lookup(
     "split_graph_by_matching_probe/min_probe_coverage", within=pipeline

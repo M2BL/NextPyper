@@ -19,7 +19,7 @@ __version__ = "0.1"
 # =======================================================================================
 from collections import defaultdict
 from dataclasses import dataclass, field
-from itertools import chain, starmap
+from itertools import chain, count, starmap
 from pathlib import Path
 from typing import Self, Literal, Optional
 from functools import partial
@@ -43,9 +43,9 @@ LinkSupport = dict[tuple[str], int]
 @dataclass(slots=True)
 class Path_on_graph:
     name: str
-    start: int
-    end: int
     edges: list[OrientedEdge]
+    start: Optional[int] = field(default=0)
+    end: Optional[int] = field(default=None)
     length: Optional[int] = field(default=None)
     score: Optional[int] = field(default=None)
 
@@ -168,7 +168,7 @@ class Assembly_graph:
                             OrientedEdge(seg[:-1], seg[-1])
                             for seg in re.split(",|;", path)
                         ]
-                        self.paths[name] = Path_on_graph(name, 0, None, edges)
+                        self.paths[name] = Path_on_graph(name, edges)
                     case _:
                         raise NotImplementedError(
                             f"ERROR: found line of type {line[0]}"
@@ -348,6 +348,11 @@ def get_seq_atts(
     return path_length, path_cov
 
 
+def make_path_name(path: list[OrientedEdge], idx: int, graph):
+    atts = get_seq_atts(path, graph)
+    return f"EDGE_{idx}_length_{atts[0]}_cov_{atts[1]:.3f}"
+
+
 def snakemake_call(snakemake):
     with open(snakemake.log[0], "w") as outlog:
         sys.stdout = sys.stderr = outlog
@@ -360,8 +365,8 @@ def snakemake_call(snakemake):
 
         df = pd.read_csv(table_path, sep="\t")
         match_paths_plen = {
-            i: k
-            for _, (i, k) in df.loc[:, ["query", "tlen"]]
+            query: tlen
+            for _, (query, tlen) in df.loc[:, ["query", "tlen"]]
             .drop_duplicates()
             .groupby(by="query")
             .max("tlen")
@@ -369,25 +374,34 @@ def snakemake_call(snakemake):
             .iterrows()
         }
 
+        counter = count(1)
         graph = Assembly_graph(graph_path)
 
-        new_paths = [
-            Path_on_graph(
-                f"EDGE_{i}_length_{atts[0]}_cov_{atts[1]:.3f}", 0, None, protopath
+        path_extensions = {
+            name: extend_path(
+                graph.paths[name],
+                graph,
+                max_len=max(floor_len, plen * 3 * plen_scaling),
             )
-            for i, protopath in enumerate(
-                chain.from_iterable(
-                    extend_path(
-                        graph.paths[name],
-                        graph,
-                        max_len=max(floor_len, plen * 3 * plen_scaling),
-                    )
-                    for name, plen in match_paths_plen.items()
-                )
-            )
-            if (atts := get_seq_atts(protopath, graph))
-        ]
-        SeqIO.write((graph.retrieve_path(path) for path in new_paths), out, "fasta")
+            for name, plen in match_paths_plen.items()
+        }
+
+        newpaths = {
+            path: [
+                Path_on_graph(make_path_name(ext, next(counter), graph), ext)
+                for ext in extensions
+            ]
+            for path, extensions in path_extensions.items()
+        }
+
+        for path, exts in newpaths.items():
+            for newpath in exts:
+                print(f"{path}\t{newpath.name}")
+
+        seqs_iter = (
+            graph.retrieve_path(path) for path in chain.from_iterable(newpaths.values())
+        )
+        SeqIO.write(seqs_iter, out, "fasta")
 
 
 def main(): ...

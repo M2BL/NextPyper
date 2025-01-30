@@ -28,9 +28,9 @@ rule raw_assembly_to_probes_matching:
         fields=mmseq_fields,
         evalue=mmseq_evalue,
         min_orf_len=min_orf_len,
-        sensitivity=mmseq_sens,
+        sensitivity=mmseq_prefilt_sens,
     log:
-        outdir / "logs/assembled/filtering/mmseqs/{sample}.log",
+        outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
     threads: 4
     conda:
         "../../envs/mmseqs2.yaml"
@@ -49,19 +49,19 @@ rule extend_paths:
         graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
         table=outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
     output:
-        outdir / "assembled/prefiltering/{sample}.fasta",
+        outdir / "assembled/extension/{sample}.fasta",
     params:
         floor_len=floor_len_extension,
         plen_scaling=plen_scaling_factor,
     log:
-        outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
+        outdir / "logs/assembled/extension/raw_filtering/{sample}.log",
     script:
         "../../../src/gfa_graph.py"
 
 
 rule prefix_and_filter_scfs_by_cov:
     input:
-        outdir / "assembled/prefiltering/{sample}.fasta",
+        outdir / "assembled/extension/{sample}.fasta",
     output:
         outdir / "assembled/prefixed/{sample}.fasta",
     params:
