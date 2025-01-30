@@ -52,7 +52,7 @@ rule vsearch_renaming:
         """awk '/^>/ {{header=$0; sub(/^>/, "", header); 
         split(header, parts, "_"); 
         printf ">"; 
-        for(i=1; i<=length(parts)-4; i++) 
+        for(i=1; i<=length(parts)-2; i++) 
         {{printf "%s%s", (i>1?"_":""), parts[i]}}; 
         print ""}} !/^>/ {{print}}' {input} > {output}
         """

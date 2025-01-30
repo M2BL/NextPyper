@@ -1,10 +1,11 @@
 POS_ALLELE_PATTERN = re.compile(
-    r"^(?P<sample>.*?)-(?P<probe>.*?)_NODE_(?P<seed>\d+?):.*$", re.VERBOSE
+    r"^(?P<sample>.*?)\|(?P<seed>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+):[^ ]+$",
+    re.VERBOSE,
 )
 
 
 def rename_rec(rec: SeqRecord, sample: str) -> SeqRecord:
-    new_name = f"{sample}-{rec.id.split("-",1)[1]}"
+    new_name = f"{sample}|{rec.id.removeprefix("Contig_")}"
     rec.id = rec.name = rec.description = new_name
     return rec
 

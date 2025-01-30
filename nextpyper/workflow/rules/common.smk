@@ -55,6 +55,14 @@ min_probe_cov = lookup(
     "split_graph_by_matching_probe/min_probe_coverage", within=pipeline
 )
 
+# Scaffold extension
+floor_len_extension = lookup(
+    "scaffolds_extension/exploration/floor_len_extension", within=pipeline
+)
+plen_scaling_factor = lookup(
+    "scaffolds_extension/exploration/probe_len_scaling", within=pipeline
+)
+
 # MMseqs matching
 mmseq_fields = lookup("mmseqs_matching/fields", within=pipeline)
 mmseq_evalue = lookup("mmseqs_matching/evalue", within=pipeline)

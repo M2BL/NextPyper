@@ -72,4 +72,5 @@ use rule homologs_filtering as candidates_filtering with:
         min_cov=homolog_scf_min_cov,
         min_idt=homolog_scf_min_idt,
         separate_probes=lambda wildcards: False,
+        qpat=lambda wildcards: r"^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+):[^ ]+$",
         tpat=lambda wildcards: pattern,

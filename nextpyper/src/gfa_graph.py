@@ -22,13 +22,14 @@ from dataclasses import dataclass, field
 from itertools import chain, starmap
 from pathlib import Path
 from typing import Self, Literal, Optional
+from functools import partial
 import re
 import sys
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
-import polars as pl
+import pandas as pd
 
 from graph_alns_parser import Read, OrientedEdge
 
@@ -79,6 +80,9 @@ class Edge:
 
     def __post_init__(self):
         self.seq = Seq(self.raw_seq)
+
+    def __len__(self) -> int:
+        return len(self.seq)
 
     def has_match(self) -> bool:
         return bool(self.matching_exons)
@@ -258,17 +262,32 @@ class Assembly_graph:
 # =============================================================================
 
 
-def dfs_track_paths(graph, start, goal=None):
+def dfs_track_paths(
+    graph: Assembly_graph,
+    start: OrientedEdge,
+    max_len: int = 5000,
+    max_extensions: int = 10,
+    goal=None,
+):
+    def get_path_len(path: list[OrientedEdge], graph: Assembly_graph) -> int:
+        return sum(len(graph.edge_dict[node[0]]) for node in path)
+
     def dfs_helper(node, visited, current_path, all_dead_ends):
         visited.add(node)
         current_path.append(node)
+        max_len_exceeded = False
 
         # If we reach the goal, add the path
         if goal is not None and node == goal:
             all_dead_ends.append(current_path[:])
 
+        # Maximum len size check (avoids long recursions)
+        if get_path_len(current_path, graph) > max_len:
+            max_len_exceeded = True
+            all_dead_ends.append(current_path[:])
+
         # Get all neighbors
-        neighbors = graph[node]
+        neighbors = graph.graph[node]
 
         # If no unvisited neighbors (dead end) and no specific goal
         if goal is None and all(n in visited for n in neighbors):
@@ -276,7 +295,7 @@ def dfs_track_paths(graph, start, goal=None):
 
         # Explore neighbors
         for neighbor in neighbors:
-            if neighbor not in visited:
+            if not max_len_exceeded and neighbor not in visited:
                 dfs_helper(neighbor, visited, current_path, all_dead_ends)
 
         # Backtrack: remove current node from path and visited
@@ -288,10 +307,17 @@ def dfs_track_paths(graph, start, goal=None):
     all_dead_ends = []
 
     dfs_helper(start, visited, current_path, all_dead_ends)
-    return all_dead_ends
+    if len(all_dead_ends) > max_extensions:
+        return sorted(
+            all_dead_ends, key=partial(get_path_len, graph=graph), reverse=True
+        )[:max_extensions]
+    else:
+        return all_dead_ends
 
 
-def extend_path(path: Path_on_graph, graph: Assembly_graph) -> list[OrientedEdge]:
+def extend_path(
+    path: Path_on_graph, graph: Assembly_graph, max_len: int = 5000
+) -> list[OrientedEdge]:
     """Given an assembly graph and a path, extend the given path following the graph topology
     using a Depth First Search.
 
@@ -300,7 +326,7 @@ def extend_path(path: Path_on_graph, graph: Assembly_graph) -> list[OrientedEdge
 
     return [
         path.edges[:-1] + list(starmap(OrientedEdge, ext))
-        for ext in dfs_track_paths(graph, path.edges[-1])
+        for ext in dfs_track_paths(graph, path.edges[-1], max_len=max_len)
     ]
 
 
@@ -329,9 +355,19 @@ def snakemake_call(snakemake):
         graph_path = Path(snakemake.input.graph)
         table_path = Path(snakemake.input.table)
         out = Path(snakemake.output[0])
+        floor_len = snakemake.params.floor_len
+        plen_scaling = snakemake.params.plen_scaling
 
-        df = pl.read_csv(table_path, separator="\t", has_header=True)
-        matching_paths = df.select(pl.col("query")).unique().to_series().to_list()
+        df = pd.read_csv(table_path, sep="\t")
+        match_paths_plen = {
+            i: k
+            for _, (i, k) in df.loc[:, ["query", "tlen"]]
+            .drop_duplicates()
+            .groupby(by="query")
+            .max("tlen")
+            .reset_index()
+            .iterrows()
+        }
 
         graph = Assembly_graph(graph_path)
 
@@ -341,14 +377,17 @@ def snakemake_call(snakemake):
             )
             for i, protopath in enumerate(
                 chain.from_iterable(
-                    extend_path(graph.paths[name], graph.graph)
-                    for name in matching_paths
+                    extend_path(
+                        graph.paths[name],
+                        graph,
+                        max_len=max(floor_len, plen * 3 * plen_scaling),
+                    )
+                    for name, plen in match_paths_plen.items()
                 )
             )
             if (atts := get_seq_atts(protopath, graph))
         ]
-        new_scfs = [graph.retrieve_path(path) for path in new_paths]
-        SeqIO.write(new_scfs, out, "fasta")
+        SeqIO.write((graph.retrieve_path(path) for path in new_paths), out, "fasta")
 
 
 def main(): ...
