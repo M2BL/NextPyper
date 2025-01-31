@@ -363,6 +363,8 @@ def snakemake_call(snakemake):
         floor_len = snakemake.params.floor_len
         plen_scaling = snakemake.params.plen_scaling
 
+        # Try to extend only paths that match with probes
+        pat = re.compile(r"(?<=NODE_)\d+")
         df = pd.read_csv(table_path, sep="\t")
         match_paths_plen = {
             query: tlen
@@ -371,6 +373,10 @@ def snakemake_call(snakemake):
             .groupby(by="query")
             .max("tlen")
             .reset_index()
+            .sort_values(
+                by="query",
+                key=lambda names: [int(pat.search(name)[0]) for name in names],
+            )
             .iterrows()
         }
 

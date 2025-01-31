@@ -26,6 +26,11 @@ use rule raw_assembly_to_probes_matching as homologs_to_probes_matching with:
         query=outdir / "assembled/filtering/dbs/samples/{sample}",
     output:
         outdir / "assembled/filtering/matching_tables/{sample}.tsv",
+    params:
+        fields=mmseq_fields,
+        evalue=mmseq_evalue,
+        min_orf_len=min_orf_len,
+        sensitivity=mmseq_sens,
     log:
         outdir / "logs/assembled/filtering/mmseqs/{sample}.log",
 

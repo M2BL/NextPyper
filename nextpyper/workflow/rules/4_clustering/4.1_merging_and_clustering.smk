@@ -32,6 +32,7 @@ rule vsearch_clustering:
         cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
         centroids=outdir / "clustering/clusters/{probe}.fasta",
+        msaout=outdir / "clustering/msa/{probe}.fasta",
     log:
         outdir / "logs/clustering/vsearch/{probe}.log",
     params:

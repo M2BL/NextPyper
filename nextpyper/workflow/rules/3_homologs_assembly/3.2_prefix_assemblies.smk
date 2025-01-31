@@ -54,7 +54,7 @@ rule extend_paths:
         floor_len=floor_len_extension,
         plen_scaling=plen_scaling_factor,
     log:
-        outdir / "logs/assembled/extension/raw_filtering/{sample}.log",
+        outdir / "logs/assembled/extension/{sample}.log",
     script:
         "../../../src/gfa_graph.py"
 

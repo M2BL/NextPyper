@@ -17,8 +17,6 @@ nextpyper:
             k: 55,77
         mmseqs_prefiltering:
             sensitivity: 4
-        prefilter_by_cov:
-            min_cov: 4
         scaffolds_extension:
             exploration:
                 floor_len_extension: 3000
@@ -31,7 +29,7 @@ nextpyper:
             min_orf_len: 15
             sensitivity: 7.5
         homolog_filtering:
-            homolog_scf_min_cov: 0.2
+            homolog_scf_min_cov: 0.0
             homolog_scf_min_idt: 0.0
         region_separation:
             min_probe_contig_sim: 0.85
