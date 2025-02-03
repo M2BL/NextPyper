@@ -13,7 +13,7 @@ rule spades_assembly:
         params=f"--only-assembler -k {spades_k}",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
-    threads: max(1, max_threads // len(sample_list))
+    threads: 4
     conda:
         "../../envs/assembly_spades.yaml"
     shell:

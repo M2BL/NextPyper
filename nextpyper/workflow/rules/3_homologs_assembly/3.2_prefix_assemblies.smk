@@ -64,9 +64,12 @@ rule prefix_and_filter_scfs_by_cov:
         outdir / "assembled/extension/{sample}.fasta",
     output:
         outdir / "assembled/prefixed/{sample}.fasta",
-    params:
-        min_cov=min_scf_cov,
     conda:
         "../../envs/preprocessing.yaml"
     shell:
-        """bioawk -c fastx '{{split($name, parts, "_"); print ">{wildcards.sample}-"$name; print $seq}}' {input} > {output} """
+        """bioawk -c fastx '{{split($name, parts, "_"); 
+        printf ">{wildcards.sample}-"; 
+        for(i=1; i<=length(parts)-2; i++) 
+        {{printf "%s%s", (i>1?"_":""), parts[i]}}; 
+        print "\\n"$seq }}' {input} > {output}
+        """

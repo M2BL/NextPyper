@@ -31,7 +31,7 @@ rule vsearch_clustering:
     input:
         cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
-        centroids=outdir / "clustering/clusters/{probe}.fasta",
+        centroids=outdir / "clustering/centroids/{probe}.fasta",
         msaout=outdir / "clustering/msa/{probe}.fasta",
     log:
         outdir / "logs/clustering/vsearch/{probe}.log",
@@ -40,20 +40,3 @@ rule vsearch_clustering:
     threads: 1
     wrapper:
         "v4.3.0/bio/vsearch"
-
-
-rule vsearch_renaming:
-    input:
-        outdir / "clustering/clusters/{probe}.fasta",
-    output:
-        outdir / "clustering/consensus/{probe}.fasta",
-    conda:
-        "../../envs/preprocessing.yaml"
-    shell:
-        """awk '/^>/ {{header=$0; sub(/^>/, "", header); 
-        split(header, parts, "_"); 
-        printf ">"; 
-        for(i=1; i<=length(parts)-2; i++) 
-        {{printf "%s%s", (i>1?"_":""), parts[i]}}; 
-        print ""}} !/^>/ {{print}}' {input} > {output}
-        """
