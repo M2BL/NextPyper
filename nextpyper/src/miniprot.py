@@ -210,8 +210,9 @@ def run_miniprot_boundary_scorer(
     :return:
     """
     boundary_scorer_cmd = (
-        f"miniprot_boundary_scorer -o {boundary_scorer_out} -s {matrix_path}"
+        f"miniprot_boundary_scorer -o '{boundary_scorer_out}' -s {matrix_path}"
     )
+    print(boundary_scorer_cmd)
     try:
         subprocess.run(
             boundary_scorer_cmd,
@@ -717,12 +718,6 @@ class OverlappingCds(MiniprotInit):
                     cds._find_probe_exons(
                         self._boundary_scorer_parser(boundary_scorer_out)
                     )
-                    boundary_scorer_out.rename(
-                        Path(
-                            "/home/yjkbertrand/Documents/projects/nextpiper/test_data/temp"
-                        )
-                        / boundary_scorer_out.name
-                    )
                     if not cds.exon_correspondences:
                         print(
                             f"Something went terribly wrong with {scaffold_name} as no Exon was inferred"
@@ -831,7 +826,10 @@ def snakemake_call(snakemake):
                 continue
 
             ## Save scfs
-            olc.save_scaffolds(outdir / "scfs" / scfs.stem)
+            (outdir / "scfs" / scfs.stem).mkdir(parents=True, exist_ok=True)
+            olc.save_records(
+                outdir / "scfs" / scfs.stem, snakemake.params.min_exonic_length
+            )
 
             ## Save Probes
             olc.save_best_probe(outdir / f"probes/{probes.name}")

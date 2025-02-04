@@ -32,6 +32,6 @@ nextpyper:
             homolog_scf_min_cov: 0.1
             homolog_scf_min_idt: 0.6
         region_separation:
-            min_probe_contig_sim: 0.85
+            min_probe_scaffold_sim: 0.85
             min_fragment_cov: 0.1
-            min_contig_length: 10
+            min_exonic_length: 10

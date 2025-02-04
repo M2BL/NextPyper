@@ -76,9 +76,11 @@ homolog_scf_min_cov = lookup("homolog_filtering/homolog_scf_min_cov", within=pip
 homolog_scf_min_idt = lookup("homolog_filtering/homolog_scf_min_idt", within=pipeline)
 
 # Region separation
-min_probe_contig_sim = lookup("region_separation/min_probe_contig_sim", within=pipeline)
+min_probe_scaffold_sim = lookup(
+    "region_separation/min_probe_scaffold_sim", within=pipeline
+)
 min_fragment_cov = lookup("region_separation/min_fragment_cov", within=pipeline)
-min_contig_length = lookup("region_separation/min_contig_length", within=pipeline)
+min_exonic_length = lookup("region_separation/min_exonic_length", within=pipeline)
 
 # Validate Sample table
 cols = ["sample", "path_forward", "path_reverse", "type"]

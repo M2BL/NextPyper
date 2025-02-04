@@ -66,6 +66,40 @@ checkpoint split_matching_probes:
                     SeqIO.write(probe_rec, outfolder / f"{probe}.fasta", "fasta")
 
 
+# def collect_surviving_scfs(wildcards):
+#     chkpt_out = checkpoints.per_probe_scaffold_grouping.get(**wildcards).output[0]
+
+#     aux = glob_wildcards(
+#         outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta"
+#     )
+
+#     return expand(
+#         outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
+#         probe=aux.probe,
+#     )
+
+
+# rule separate_cds_by_regions:
+#     input:
+#         probe=outdir
+#         / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
+#         scf=collect_surviving_scfs,
+#         # scf=outdir / "homolog_prospection/region_separation/input_scfs",
+#     output:
+#         outdir / "homolog_prospection/region_separation/separation_output/{probe}",
+#     params:
+#         min_probe_scaffold_sim=min_probe_scaffold_sim,
+#         min_fragment_cov=min_fragment_cov,
+#         min_exonic_length=min_exonic_length,
+#         substitution_matrix=blosum62,
+#     log:
+#         outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
+#     conda:
+#         "../../envs/clustering.yaml"
+#     script:
+#         "../../../src/miniprot.py"
+
+
 rule separate_cds_by_regions:
     input:
         probes_dir=outdir / "homolog_prospection/region_separation/input_probes",
@@ -73,10 +107,10 @@ rule separate_cds_by_regions:
     output:
         directory(outdir / "homolog_prospection/region_separation/separation_output"),
     params:
-        min_probe_contig_sim=min_probe_contig_sim,
+        min_probe_scaffold_sim=min_probe_scaffold_sim,
         min_fragment_cov=min_fragment_cov,
-        min_contig_length=min_contig_length,
-        matrix=blosum62,
+        min_exonic_length=min_exonic_length,
+        substitution_matrix=blosum62,
     log:
         outdir / "logs/homolog_prospection/region_separation/separation.log",
     conda:
