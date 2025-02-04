@@ -4,6 +4,7 @@ rule spades_assembly:
         in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
     output:
         out_dir=directory(outdir / "assembled/spades/{sample}/"),
+        graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
         contigs=outdir / "assembled/spades/{sample}/scaffolds.fasta",
     params:
         mode=lambda wildcards: (
@@ -12,7 +13,7 @@ rule spades_assembly:
         params=f"--only-assembler -k {spades_k}",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
-    threads: max(1, max_threads // len(sample_list))
+    threads: 4
     conda:
         "../../envs/assembly_spades.yaml"
     shell:

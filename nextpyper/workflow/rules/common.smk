@@ -31,47 +31,54 @@ report: "../report/workflow.rst"
 SCHEMES_DIR = Path(workflow.basedir) / "schemes"
 
 # Read inputs
-probes_path = Path(config["args"]["probes"])
-outdir = Path(config["args"]["output"])
-path_samples = Path(config["args"]["input"])
-pattern = config["args"]["probe_pattern"]
-multi_probes = config["args"]["multi_probes"]
-max_threads = config["args"]["threads"]
-
-use_ref_cps = config["args"]["use_ref_cps"]
-custom_cps = Path(custom_cps) if (custom_cps := config["args"]["custom_cps"]) else None
+probes_path = Path(lookup("args/probes", within=config))
+outdir = Path(lookup("args/output", within=config))
+path_samples = Path(lookup("args/input", within=config))
+pattern = lookup("args/probe_pattern", within=config)
+multi_probes = lookup("args/multi_probes", within=config)
+max_threads = lookup("args/threads", within=config)
 
 blosum62 = workflow.source_path(config["blosum62"])
-silva_db = workflow.source_path(config["silva_db"])
-cp_refs_map = workflow.source_path(config["cp_refs_map"])
 
 ## Read Workflow parameters:
-pipeline = config["pipeline"]
-
-# BBduk
-bbduk_k = pipeline["matching_probes"]["bbduk_k"]
-other_bbduk = pipeline["matching_probes"]["others"]
+pipeline = lookup("pipeline", within=config)
 
 # MMseqs2
-mmseq2_min_seq_id = pipeline["multi_probe_clustering"]["mmseq2_min_seq_id"]
+mmseq2_min_seq_id = lookup("multi_probe_clustering/mmseq2_min_seq_id", within=pipeline)
 
 # Spades
-spades_k = "" if (argk := pipeline["spades"]["k"]) == "auto" else argk
+spades_k = "" if (argk := lookup("spades/k", within=pipeline)) == "auto" else argk
+
+# MMseqs prefiltering
+mmseq_prefilt_sens = lookup("mmseqs_prefiltering/sensitivity", within=pipeline)
 
 # Split graph into probes
-min_probe_cov = pipeline["split_graph_by_matching_probe"]["min_probe_coverage"]
+min_probe_cov = lookup(
+    "split_graph_by_matching_probe/min_probe_coverage", within=pipeline
+)
+
+# Scaffold extension
+floor_len_extension = lookup(
+    "scaffolds_extension/exploration/floor_len_extension", within=pipeline
+)
+plen_scaling_factor = lookup(
+    "scaffolds_extension/exploration/probe_len_scaling", within=pipeline
+)
+
+# MMseqs matching
+mmseq_fields = lookup("mmseqs_matching/fields", within=pipeline)
+mmseq_evalue = lookup("mmseqs_matching/evalue", within=pipeline)
+min_orf_len = lookup("mmseqs_matching/min_orf_len", within=pipeline)
+mmseq_sens = lookup("mmseqs_matching/sensitivity", within=pipeline)
 
 # MMseqs filtering
-homolog_scf_min_cov = 0.05
-homolog_scf_min_idt = 0.1
-candidate_scf_min_cov = pipeline["homolog_filtering"]["homolog_scf_min_cov"]
-candidate_scf_min_idt = pipeline["homolog_filtering"]["homolog_scf_min_idt"]
-
+homolog_scf_min_cov = lookup("homolog_filtering/homolog_scf_min_cov", within=pipeline)
+homolog_scf_min_idt = lookup("homolog_filtering/homolog_scf_min_idt", within=pipeline)
 
 # Region separation
-min_probe_contig_sim = pipeline["region_separation"]["min_probe_contig_sim"]
-min_fragment_cov = pipeline["region_separation"]["min_fragment_cov"]
-min_contig_length = pipeline["region_separation"]["min_contig_length"]
+min_probe_contig_sim = lookup("region_separation/min_probe_contig_sim", within=pipeline)
+min_fragment_cov = lookup("region_separation/min_fragment_cov", within=pipeline)
+min_contig_length = lookup("region_separation/min_contig_length", within=pipeline)
 
 # Validate Sample table
 cols = ["sample", "path_forward", "path_reverse", "type"]

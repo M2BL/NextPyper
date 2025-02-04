@@ -1,11 +1,3 @@
-from vsearch import get_vsearch_kmer_consensus
-
-
-def rename_vsearch(rec: SeqRecord) -> SeqRecord:
-    rec.id = rec.id.rsplit("_", 4)[0]
-    return rec
-
-
 def aggregate_sample_per_probe(wildcards):
     probe_inputs = defaultdict(list)
     for sample in sample_list:
@@ -39,7 +31,8 @@ rule vsearch_clustering:
     input:
         cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
-        centroids=outdir / "clustering/clusters/{probe}.fasta",
+        centroids=outdir / "clustering/centroids/{probe}.fasta",
+        msaout=outdir / "clustering/msa/{probe}.fasta",
     log:
         outdir / "logs/clustering/vsearch/{probe}.log",
     params:
@@ -47,17 +40,3 @@ rule vsearch_clustering:
     threads: 1
     wrapper:
         "v4.3.0/bio/vsearch"
-
-
-rule vsearch_renaming:
-    input:
-        outdir / "clustering/clusters/{probe}.fasta",
-    output:
-        outdir / "clustering/consensus/{probe}.fasta",
-    log:
-        outdir / "logs/clustering/consensus/{probe}.log",
-    run:
-        with open(log[0], "w") as outlog:
-            sys.stdout = sys.stderr = outlog
-            recs = [rename_vsearch(rec) for rec in SeqIO.parse(input[0], "fasta")]
-            SeqIO.write(recs, Path(output[0]), "fasta")

@@ -11,22 +11,26 @@ nextpyper:
             translated_prop: 0.95
             stop_per_1Kbp: 2 
             min_exon_length: 20
-        cp_cleaning:
-            min_sp_probes_cov: 80
-        matching_probes: 
-            bbduk_k: 19
-            others: -Xmx4g
         multi_probe_clustering:
             mmseq2_min_seq_id: 0.8
         spades:
             k: 55,77
-        prefilter_by_cov:
-            min_cov: 4
+        mmseqs_prefiltering:
+            sensitivity: 4
+        scaffolds_extension:
+            exploration:
+                floor_len_extension: 3000
+                probe_len_scaling: 3
         split_graph_by_matching_probe:
             min_probe_coverage: 0.1
+        mmseqs_matching:
+            fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
+            evalue: 1.000E-06
+            min_orf_len: 15
+            sensitivity: 7.5
         homolog_filtering:
-            homolog_scf_min_cov: 0.05
-            homolog_scf_min_idt: 0.0
+            homolog_scf_min_cov: 0.1
+            homolog_scf_min_idt: 0.6
         region_separation:
             min_probe_contig_sim: 0.85
             min_fragment_cov: 0.1

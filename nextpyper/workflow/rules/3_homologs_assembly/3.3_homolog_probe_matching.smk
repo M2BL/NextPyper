@@ -11,43 +11,28 @@ rule make_mmseqs_long_probes_db:
         "mmseqs createdb --dbtype 1 {input} {output} > {log} 2>&1 "
 
 
-rule make_mmseqs_homologs_sample_dbs:
+use rule make_mmseqs_raw_assembly_dbs as make_mmseqs_homologs_sample_dbs with:
     input:
         outdir / "assembled/prefixed/{sample}.fasta",
     output:
         outdir / "assembled/filtering/dbs/samples/{sample}",
     log:
         outdir / "logs/assembled/filtering/make_sample_db/{sample}.log",
-    conda:
-        "../../envs/mmseqs2.yaml"
-    shell:
-        "mmseqs createdb --dbtype 2 {input} {output} > {log} 2>&1"
 
 
-rule homologs_to_probes_matching:
+use rule raw_assembly_to_probes_matching as homologs_to_probes_matching with:
     input:
         probes=outdir / "assembled/filtering/dbs/probes/probes",
         query=outdir / "assembled/filtering/dbs/samples/{sample}",
     output:
         outdir / "assembled/filtering/matching_tables/{sample}.tsv",
     params:
-        fields="query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch",
-        evalue="1.000E-06",
-        min_orf_len=15,
-        sensitivity=7.5,
+        fields=mmseq_fields,
+        evalue=mmseq_evalue,
+        min_orf_len=min_orf_len,
+        sensitivity=mmseq_sens,
     log:
         outdir / "logs/assembled/filtering/mmseqs/{sample}.log",
-    threads: 4
-    conda:
-        "../../envs/mmseqs2.yaml"
-    shell:
-        """
-        mkdir -p temp_{wildcards.sample}
-        mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --remove-tmp-files -a > {log} 2>&1
-        mmseqs convertalis {input.query} {input.probes} {wildcards.sample}_results {output} --format-mode 4 --format-output {params.fields} --threads {threads} >> {log} 2>&1
-        rm -r temp_{wildcards.sample}
-        rm {wildcards.sample}_results.*
-        """
 
 
 checkpoint homologs_filtering:

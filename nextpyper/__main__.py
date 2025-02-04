@@ -204,21 +204,6 @@ summarize_run_msg = """
     default=r"(\d{4})$",
     show_default=True,
 )
-@click.option(
-    "--use-ref-cps/--no-ref-cps",
-    "use_ref_cps",
-    help="If using kew probes, whether to download reference chloroplasts for the most frequent species in the probe set for cpDNA filtering.",
-    default=True,
-    show_default=True,
-)
-@click.option(
-    "--custom-cps",
-    "custom_cps",
-    help="Custom cps to use for cpDNA filtering (fasta)",
-    type=click.Path(readable=True, exists=True),
-    required=False,
-    default=None,
-)
 @common_options
 def run(**kwargs):
     """Run NextPyper"""

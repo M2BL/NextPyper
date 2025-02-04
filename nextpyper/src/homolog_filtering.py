@@ -81,11 +81,11 @@ def compute_hits(
             pl.sum("nident"),
             pl.sum("mismatch"),
             pl.sum("gapopen"),
-            pl.first("qlen"),
+            pl.first("tlen"),
             pl.first("tprobe"),
         )
         .with_columns(
-            cov=(pl.col("nident") + pl.col("mismatch")) * 3 / pl.col("qlen"),
+            cov=(pl.col("nident") + pl.col("mismatch")) / pl.col("tlen"),
             idt=pl.col("nident")
             / (pl.col("nident") + pl.col("mismatch") + pl.col("gapopen")),
         )
@@ -114,6 +114,7 @@ def match_mmseqs_recs(
     qpat: str,
     tpat: str,
     sep_probes: bool = False,
+    log_results: bool = True,
 ) -> None:
     """Given a set of file with sequences, and a table with mmseqs2 matches against a set
     of probes, filter the sequences to those that match the probes with at least a minimum
@@ -131,6 +132,10 @@ def match_mmseqs_recs(
     df = pl.read_csv(table_path, separator="\t", has_header=True)
 
     filt_df = compute_hits(df, min_cov, min_idt, qpat, tpat)
+
+    # Save the computation results in the log
+    if log_results:
+        filt_df.write_csv(sys.stdout, separator="\t")
 
     # Separate the surviving sequences by probe
     if sep_probes:

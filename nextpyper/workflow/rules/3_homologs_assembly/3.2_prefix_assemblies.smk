@@ -1,7 +1,4 @@
-spades_pat = r"NODE_\d+_length_\d+_cov_(.*)"
-
-
-rule prefilter_scfs_by_cov:
+rule make_mmseqs_raw_assembly_dbs:
     input:
         branch(
             lookup(dpath="{sample}/type", within=sample_dict),
@@ -12,26 +9,67 @@ rule prefilter_scfs_by_cov:
             },
         ),
     output:
-        outdir / "assembled/prefiltered/{sample}.fasta",
-    params:
-        min_cov=lookup("prefilter_by_cov/min_cov", within=pipeline),
-    run:
-        head_pat = re.compile(spades_pat)
-        get_cov = lambda rec: float(head_pat.search(rec.id)[1])
-
-        gen_recs = (
-            rec
-            for rec in SeqIO.parse(input[0], "fasta")
-            if get_cov(rec) >= params.min_cov
-        )
-        SeqIO.write(gen_recs, output[0], "fasta")
+        outdir / "assembled/filtering/dbs/raw_assembly/{sample}",
+    log:
+        outdir / "logs/assembled/filtering/make_raw_assembly_db/{sample}.log",
+    conda:
+        "../../envs/mmseqs2.yaml"
+    shell:
+        "mmseqs createdb --dbtype 2 {input} {output} > {log} 2>&1"
 
 
-rule prefix_scfs:
+rule raw_assembly_to_probes_matching:
     input:
-        outdir / "assembled/prefiltered/{sample}.fasta",
+        probes=outdir / "assembled/filtering/dbs/probes/probes",
+        query=outdir / "assembled/filtering/dbs/raw_assembly/{sample}",
+    output:
+        outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
+    params:
+        fields=mmseq_fields,
+        evalue=mmseq_evalue,
+        min_orf_len=min_orf_len,
+        sensitivity=mmseq_prefilt_sens,
+    log:
+        outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
+    threads: 4
+    conda:
+        "../../envs/mmseqs2.yaml"
+    shell:
+        """
+        mkdir -p temp_{wildcards.sample}
+        mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --remove-tmp-files -a > {log} 2>&1
+        mmseqs convertalis {input.query} {input.probes} {wildcards.sample}_results {output} --format-mode 4 --format-output {params.fields} --threads {threads} >> {log} 2>&1
+        rm -r temp_{wildcards.sample}
+        rm {wildcards.sample}_results.*
+        """
+
+
+rule extend_paths:
+    input:
+        graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
+        table=outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
+    output:
+        outdir / "assembled/extension/{sample}.fasta",
+    params:
+        floor_len=floor_len_extension,
+        plen_scaling=plen_scaling_factor,
+    log:
+        outdir / "logs/assembled/extension/{sample}.log",
+    script:
+        "../../../src/gfa_graph.py"
+
+
+rule prefix_and_filter_scfs_by_cov:
+    input:
+        outdir / "assembled/extension/{sample}.fasta",
     output:
         outdir / "assembled/prefixed/{sample}.fasta",
-    run:
-        prefix = f"{wildcards.sample}-"
-        prefix_fasta(input[0], output[0], prefix)
+    conda:
+        "../../envs/preprocessing.yaml"
+    shell:
+        """bioawk -c fastx '{{split($name, parts, "_"); 
+        printf ">{wildcards.sample}-"; 
+        for(i=1; i<=length(parts)-2; i++) 
+        {{printf "%s%s", (i>1?"_":""), parts[i]}}; 
+        print "\\n"$seq }}' {input} > {output}
+        """
