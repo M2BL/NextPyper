@@ -29,8 +29,8 @@ nextpyper:
             min_orf_len: 15
             sensitivity: 7.5
         homolog_filtering:
-            homolog_scf_min_cov: 0.0
-            homolog_scf_min_idt: 0.0
+            homolog_scf_min_cov: 0.1
+            homolog_scf_min_idt: 0.6
         region_separation:
             min_probe_contig_sim: 0.85
             min_fragment_cov: 0.1
