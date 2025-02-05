@@ -9,7 +9,7 @@ rule gather_matching_probes:
     input:
         probes=outdir / "translated_probes/longest_cds.fasta",
         tables=expand(
-            outdir / "assembled/filtering/matching_tables/{samples}.tsv",
+            outdir / "logs/assembled/filtering/scfs_filtering/{samples}.log",
             samples=sample_list,
         ),
     output:
@@ -18,7 +18,7 @@ rule gather_matching_probes:
         "../../envs/preprocessing.yaml"
     shell:
         """
-        cat {input.tables} | cut -f 9 | sort | uniq > probe_ids.txt
+        cat {input.tables} | cut -f 2 | sort | uniq > probe_ids.txt
         seqkit grep -nf probe_ids.txt {input.probes} > {output}
         rm probe_ids.txt
         """

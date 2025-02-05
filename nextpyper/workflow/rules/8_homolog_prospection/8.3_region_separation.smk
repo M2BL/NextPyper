@@ -17,7 +17,10 @@ checkpoint per_probe_scaffold_grouping:
             sample=sample_list,
         ),
     output:
-        directory(outdir / "homolog_prospection/region_separation/input_scfs"),
+        expand(
+            outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
+            probe=probes_list,
+        ),
     log:
         outdir / "logs/homolog_prospection/region_separation/scfs_grouping.log",
     run:
@@ -33,87 +36,91 @@ checkpoint per_probe_scaffold_grouping:
                 all_recs, POS_ALLELE_PATTERN, match_group="probe"
             )
 
-            outfolder = Path(output[0])
+            outfolder = Path(output[0]).parent
             outfolder.mkdir(exist_ok=True)
             for probe, recs in grouped_scfs.items():
                 SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
 
+            for probe in probes_list:
+                (outfolder / f"{probe}.fasta").touch(exist_ok=True)
+
 
 checkpoint split_matching_probes:
     input:
-        outdir / "homolog_prospection/matching_probes.fasta",
+        probes=outdir / "homolog_prospection/matching_probes.fasta",
+        tables=expand(
+            outdir
+            / "logs/homolog_prospection/candidates_filtering/scfs_filtering/{samples}.log",
+            samples=sample_list,
+        ),
     output:
-        directory(outdir / "homolog_prospection/region_separation/input_probes"),
+        expand(
+            outdir
+            / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
+            probe=probes_list,
+        ),
     log:
         outdir / "logs/homolog_prospection/region_separation/probe_grouping.log",
-    run:
-        with open(log[0], "w") as outlog:
-            sys.stdout = sys.stderr = outlog
+    conda:
+        "../../envs/preprocessing.yaml"
+    shell:
+        """
+        cat {input.tables} | cut -f 2 | sort | uniq > probe_ids.txt
+        seqkit grep -nf probe_ids.txt {input.probes} > temp_matching_probes.fasta 2> {log}
+        rm probe_ids.txt
 
-            if multi_probes:
-                probes = list(SeqIO.parse(input[0], "fasta"))
-                outfolder = Path(output[0])
-                outfolder.mkdir(exist_ok=True)
-                for probe, recs in group_probes(probes, pattern).items():
-                    SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
-
-            else:
-                outfolder = Path(output[0])
-                outfolder.mkdir(exist_ok=True)
-                ext_probe = re.compile(pattern)
-                for probe_rec in SeqIO.parse(input[0], "fasta"):
-                    probe = ext_probe.search(probe_rec.id)[1]
-                    SeqIO.write(probe_rec, outfolder / f"{probe}.fasta", "fasta")
+        for outfile in {output}; do
+            name=$(basename $outfile .fasta)
+            seqkit grep -rnp "$name" temp_matching_probes.fasta > $outfile
+        done
+        rm temp_matching_probes.fasta
+        """
 
 
-# def collect_surviving_scfs(wildcards):
-#     chkpt_out = checkpoints.per_probe_scaffold_grouping.get(**wildcards).output[0]
-
-#     aux = glob_wildcards(
-#         outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta"
-#     )
-
-#     return expand(
-#         outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
-#         probe=aux.probe,
-#     )
-
-
-# rule separate_cds_by_regions:
-#     input:
-#         probe=outdir
-#         / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
-#         scf=collect_surviving_scfs,
-#         # scf=outdir / "homolog_prospection/region_separation/input_scfs",
-#     output:
-#         outdir / "homolog_prospection/region_separation/separation_output/{probe}",
-#     params:
-#         min_probe_scaffold_sim=min_probe_scaffold_sim,
-#         min_fragment_cov=min_fragment_cov,
-#         min_exonic_length=min_exonic_length,
-#         substitution_matrix=blosum62,
-#     log:
-#         outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
-#     conda:
-#         "../../envs/clustering.yaml"
-#     script:
-#         "../../../src/miniprot.py"
-
-
-rule separate_cds_by_regions:
+checkpoint separate_cds_by_regions:
     input:
-        probes_dir=outdir / "homolog_prospection/region_separation/input_probes",
-        scfs_dir=outdir / "homolog_prospection/region_separation/input_scfs",
+        probes=outdir
+        / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
+        scfs=outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
     output:
-        directory(outdir / "homolog_prospection/region_separation/separation_output"),
+        directory(
+            outdir
+            / "homolog_prospection/region_separation/separation_output/scfs/{probe}"
+        ),
     params:
         min_probe_scaffold_sim=min_probe_scaffold_sim,
         min_fragment_cov=min_fragment_cov,
         min_exonic_length=min_exonic_length,
         substitution_matrix=blosum62,
     log:
-        outdir / "logs/homolog_prospection/region_separation/separation.log",
+        outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
     conda:
         "../../envs/clustering.yaml"
     script:
         "../../../src/miniprot.py"
+
+
+rule align_regions:
+    input:
+        outdir / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
+    output:
+        directory(
+            outdir / "homolog_prospection/region_separation/alns/{probe}",
+        ),
+    params:
+        "--auto --adjustdirection",
+    log:
+        outdir / "logs/homolog_prospection/region_separation/alns/{probe}.log",
+    threads: 1
+    conda:
+        "../../envs/alignment.yaml"
+    shell:
+        """
+        rm -f {log}
+        mkdir -p {output}
+
+        for file in $(find {input} -name "*.fasta"); do
+            name=$(basename $file)
+            mafft {params} $file > {output}/$name 2>> {log}
+        done
+        """

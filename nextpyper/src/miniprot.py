@@ -812,27 +812,21 @@ def snakemake_call(snakemake):
     with open(snakemake.log[0], "w") as outlog:
         sys.stdout = sys.stderr = outlog
 
+        threads = snakemake.threads
         outdir = Path(snakemake.output[0])
-        outdir.mkdir(exist_ok=True)
-        probes_dir = Path(snakemake.input.probes_dir)
+        scfs = Path(snakemake.input.scfs)
+        probes = Path(snakemake.input.probes)
 
-        for scfs in Path(snakemake.input.scfs_dir).glob("*.fasta"):
-            probes = probes_dir / scfs.name
-            olc = OverlappingCds(probes, scfs, **snakemake.params)
-
-            if not olc.non_overlapping:
-                print(f"Scaffolds from {probes.stem} did not yield any overlap")
-                (outdir / "scfs" / scfs.stem).touch(exist_ok=True)
-                continue
+        outdir.mkdir(parents=True, exist_ok=True)
+        if scfs.stat().st_size > 0:
+            olc = OverlappingCds(probes, scfs, treads=threads, **snakemake.params)
 
             ## Save scfs
-            (outdir / "scfs" / scfs.stem).mkdir(parents=True, exist_ok=True)
-            olc.save_records(
-                outdir / "scfs" / scfs.stem, snakemake.params.min_exonic_length
-            )
+            outdir.mkdir(parents=True, exist_ok=True)
+            olc.save_records(outdir, snakemake.params.min_exonic_length)
 
             ## Save Probes
-            olc.save_best_probe(outdir / f"probes/{probes.name}")
+            olc.save_best_probe(outdir.parent.parent / f"probes/{probes.name}")
 
 
 def main():
