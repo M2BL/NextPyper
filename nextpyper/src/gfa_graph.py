@@ -29,6 +29,7 @@ import sys
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
+from Bio.Align import PairwiseAligner, Alignment
 import pandas as pd
 
 from graph_alns_parser import Read
@@ -229,6 +230,12 @@ class Assembly_graph:
             if path_edges.issuperset(set(link))
         }
 
+    @staticmethod
+    def _find_overlap(seq1: str, seq2: str) -> Alignment:
+        aligner = PairwiseAligner(scoring="megablast", mode="local")
+        alns = aligner.align(seq1, seq2)
+        return alns[0]
+
     def _retrieve_path(
         self,
         path: list[OrientedEdge],
@@ -248,10 +255,18 @@ class Assembly_graph:
         """
         id = path[0].id
         orientation = path[0].orientation
+        jump = path[0].jump
+
         if len(path) == 1:
             if (edge := self.edge_dict[id]) is not None:
                 if first_edge:
                     extension += edge.retrieve_seq(start, end, orientation)
+                elif jump:
+                    newseq = edge.retrieve_seq(0, end, orientation)
+                    ovlp_start, ovlp_end = self._find_overlap(
+                        extension, newseq
+                    ).coordinates[1, :]
+                    extension += newseq[ovlp_end:]
                 else:
                     extension += edge.retrieve_seq(0, end, orientation)[self.K :]
                 return extension
@@ -262,6 +277,12 @@ class Assembly_graph:
             if (edge := self.edge_dict[id]) is not None:
                 if first_edge:
                     extension += edge.retrieve_seq(start, None, orientation)
+                elif jump:
+                    newseq = edge.retrieve_seq(0, None, orientation)
+                    ovlp_start, ovlp_end = self._find_overlap(
+                        extension, newseq
+                    ).coordinates[1, :]
+                    extension += newseq[ovlp_end:]
                 else:
                     extension += edge.retrieve_seq(0, None, orientation)[self.K :]
                 return self._retrieve_path(path[1:], start, end, extension, False)
