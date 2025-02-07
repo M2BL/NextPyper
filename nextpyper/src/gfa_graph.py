@@ -21,7 +21,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain, count, starmap
 from pathlib import Path
-from typing import Self, Literal, Optional
+from typing import Self, Literal, Optional, NamedTuple
 from functools import partial
 import re
 import sys
@@ -31,13 +31,26 @@ from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 import pandas as pd
 
-from graph_alns_parser import Read, OrientedEdge
+from graph_alns_parser import Read
 
 
 # =============================================================================
 #                CLASSES
 # =============================================================================
 LinkSupport = dict[tuple[str], int]
+
+
+class OrientedEdge(NamedTuple):
+    id: str
+    orientation: Literal["+", "-"]
+    jump: bool = False
+
+    @classmethod
+    def from_seg(cls, seg) -> "OrientedEdge":
+        if match := re.match(r",|;", seg):
+            return cls(seg[1:-1], seg[-1], match[0] == ";")
+        else:
+            return cls(seg[:-1], seg[-1])
 
 
 @dataclass(slots=True)
@@ -135,6 +148,7 @@ class Assembly_graph:
         graph_path = Path(self.gfa_filename)
         assert graph_path.exists(), f"Graph file {self.gfa_filename} not found"
         with open(self.gfa_filename, "r") as file:
+            seg_pat = re.compile(r"[,|;]?\d+[+-]")
             for line in file:
                 match line[0]:
                     case "H":
@@ -150,23 +164,35 @@ class Assembly_graph:
                             "\t"
                         )
                         self.K = int(_match[:-1])
-                        self.graph[(node_id1, pos1)].append((node_id2, pos2))
-                        self.graph[(node_id2, self.rev[pos2])].append(
-                            (node_id1, self.rev[pos1])
+                        self.graph[OrientedEdge(node_id1, pos1)].append(
+                            OrientedEdge(node_id2, pos2)
+                        )
+                        self.graph[OrientedEdge(node_id2, self.rev[pos2])].append(
+                            OrientedEdge(node_id1, self.rev[pos1])
                         )
                     case "J":
                         _, node_id1, pos1, node_id2, pos2, _dist, *_tags = (
                             line.strip().split("\t")
                         )
-                        self.graph[(node_id1, pos1)].append((node_id2, pos2))
-                        self.graph[(node_id2, self.rev[pos2])].append(
-                            (node_id1, self.rev[pos1])
+                        self.graph[OrientedEdge(node_id1, pos1)].append(
+                            OrientedEdge(node_id2, pos2, True)
                         )
+                        self.graph[OrientedEdge(node_id2, self.rev[pos2])].append(
+                            (node_id1, self.rev[pos1], True)
+                        )
+
+                        ## Add to the Jump Links (J-Lines) the connections from L-Lines to prevent graph disconnection
+                        self.graph[OrientedEdge(node_id2, pos2, True)].extend(
+                            self.graph[OrientedEdge(node_id2, pos2)]
+                        )
+                        self.graph[OrientedEdge(node_id1, self.rev[pos1], True)].extend(
+                            OrientedEdge(node_id1, self.rev[pos1])
+                        )
+
                     case "P":
                         _, name, path, _, *tags = line.split()
                         edges = [
-                            OrientedEdge(seg[:-1], seg[-1])
-                            for seg in re.split(",|;", path)
+                            OrientedEdge.from_seg(seg) for seg in seg_pat.findall(path)
                         ]
                         self.paths[name] = Path_on_graph(name, edges)
                     case _:
