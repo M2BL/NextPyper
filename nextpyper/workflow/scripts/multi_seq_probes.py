@@ -95,7 +95,7 @@ def write_hierarchy(
     probe_counts: dict[str, list[str]], output: Path, sep: str = ","
 ) -> None:
     with output.open("w") as out:
-        for probe, names in probe_counts:
+        for probe, names in probe_counts.items():
             out.write(f"{probe}\t{sep.join(names)}\n")
 
 
