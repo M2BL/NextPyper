@@ -65,13 +65,13 @@ def compute_hits(
     df.replace_column(8, df["theader"].str.split(" ").list.first())
     if qpat:
         pre_df = df.with_columns(
-            qprobe=pl.col("query").str.extract(qpat, 2).cast(pl.Int64),
-            tprobe=pl.col("theader").str.extract(tpat, 1).cast(pl.Int64),
+            qprobe=pl.col("query").str.extract(qpat, 2),
+            tprobe=pl.col("theader").str.extract(tpat, 1),
             cis=pl.col("qend") > pl.col("qstart"),
         ).filter(pl.col("qprobe") == pl.col("tprobe"))
     else:
         pre_df = df.with_columns(
-            tprobe=pl.col("theader").str.extract(tpat, 1).cast(pl.Int64),
+            tprobe=pl.col("theader").str.extract(tpat, 1),
             cis=pl.col("qend") > pl.col("qstart"),
         )
 
