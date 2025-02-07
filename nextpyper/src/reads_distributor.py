@@ -20,6 +20,7 @@ from pathlib import Path
 from operator import attrgetter
 from collections import defaultdict
 from itertools import groupby
+import sys
 import pysam
 from typing import Optional
 
@@ -83,3 +84,5 @@ if __name__ == "__main__":
     # Snakemake rule execution by the "script:" directive
     if "snakemake" in globals():
         distribute_reads(str(snakemake.input), str(snakemake.output))
+    else:
+        distribute_reads(str(sys.argv[1]), str(sys.argv[2]))
