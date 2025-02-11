@@ -272,7 +272,12 @@ def dfs_track_paths(
     def get_path_len(path: list[OrientedEdge], graph: Assembly_graph) -> int:
         return sum(len(graph.edge_dict[node[0]]) for node in path)
 
-    def dfs_helper(node, visited, current_path, all_dead_ends):
+    def dfs_helper(
+        node: OrientedEdge,
+        visited: set[OrientedEdge],
+        current_path: list[OrientedEdge],
+        all_dead_ends: list[list[OrientedEdge]],
+    ):
         visited.add(node)
         current_path.append(node)
         max_len_exceeded = False
