@@ -42,15 +42,25 @@ LinkSupport = dict[tuple[str], int]
 
 @dataclass(slots=True)
 class Path_on_graph:
+    """
+    Sequence of OrientedEdges that compose a scaffold
+    Attributes
+    ----------
+    -name: scaffold's name.
+    -edge:
+    -start: possible start on the first OrientedEdge.
+    -end: possible end on the last OrientedEdge.
+    -length: length of the scaffold in nucleotides. To be implemented.
+    """
+
     name: str
     edges: list[OrientedEdge]
     start: Optional[int] = field(default=0)
     end: Optional[int] = field(default=None)
     length: Optional[int] = field(default=None)
-    score: Optional[int] = field(default=None)
 
     def get_parameters(self):
-        return self.name, self.edges, self.start, self.end, self.length, self.score
+        return self.name, self.edges, self.start, self.end, self.length
 
 
 @dataclass
@@ -286,7 +296,7 @@ def dfs_track_paths(
 
     def dfs_helper(
         node,
-        visited:list[OrientedEdge],
+        visited: list[OrientedEdge],
         current_path: list[OrientedEdge],
         all_dead_ends: list[list[OrientedEdge]],
     ):  # please add type hints
@@ -380,9 +390,13 @@ def snakemake_call(snakemake):
         graph_path = Path(snakemake.input.graph)
         table_path = Path(snakemake.input.table)
         out = Path(snakemake.output[0])
-        floor_len = snakemake.params.floor_len
-        plen_scaling = snakemake.params.plen_scaling
-
+        floor_len = (
+            snakemake.params.floor_len
+        )  # maximum extension of a path in nucleotide
+        plen_scaling = (
+            snakemake.params.plen_scaling
+        )  # float that multiplies the length of the probe for an alternative extension
+        # The selected extension is the max of these two thresholds.
         # Try to extend only paths that match with probes
         pat = re.compile(r"(?<=NODE_)\d+")
         df = pd.read_csv(table_path, sep="\t")
@@ -414,8 +428,10 @@ def snakemake_call(snakemake):
 
         newpaths = {
             path: [
-                Path_on_graph(make_path_name(ext, next(counter), graph), ext)
-                for ext in extensions
+                Path_on_graph(
+                    make_path_name(extension, next(counter), graph), extension
+                )
+                for extension in extensions
             ]
             for path, extensions in path_extensions.items()
         }
@@ -430,7 +446,10 @@ def snakemake_call(snakemake):
         SeqIO.write(seqs_iter, out, "fasta")
 
 
-def main(): ...
+def main():
+    data_dir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/dfs/graph_extension_data"
+    )
 
 
 if __name__ == "__main__":
