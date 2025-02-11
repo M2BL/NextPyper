@@ -173,7 +173,6 @@ class Assembly_graph:
                         raise NotImplementedError(
                             f"ERROR: found line of type {line[0]}"
                         )
-        return self
 
     def link_edges(self, reads: list[Read]) -> Self:
         """Given a list of paired reads, compute the link support that those pairs
@@ -268,31 +267,12 @@ def dfs_track_paths(
     start: OrientedEdge,
     max_len: int = 5000,
     max_extensions: int = 10,
-    goal=Optional[OrientedEdge],
+    goal=None,
 ):
-    """
-
-    Attributes
-    ----------
-    -graph: Assembly_graph
-    -start: OrientedEdge last edge on scaffold to be extended
-    -max_len: in nucleotides
-    -max_extensions: max number of paths
-    -goal: edge where to stop the DFS path exploration if needed
-    """
-
     def get_path_len(path: list[OrientedEdge], graph: Assembly_graph) -> int:
         return sum(len(graph.edge_dict[node[0]]) for node in path)
 
-    def dfs_helper(
-        node: OrientedEdge,
-        visited: list[OrientedEdge],
-        current_path: list[OrientedEdge],
-        all_dead_ends: list[list[OrientedEdge]],
-    ):  # please add type hints
-        """
-        -
-        """
+    def dfs_helper(node, visited, current_path, all_dead_ends):
         visited.add(node)
         current_path.append(node)
         max_len_exceeded = False
