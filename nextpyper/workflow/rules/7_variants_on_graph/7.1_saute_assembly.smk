@@ -41,7 +41,7 @@ rule saute_assembly:
         target_vars=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
         graph=outdir / "saute/target_assembly/{sample}/graph.gfa",
     params:
-        "--max_variants 10000 --extend_ends --remove_homopolymer_indels",
+        "--max_variants 10 --extend_ends --remove_homopolymer_indels",
     log:
         outdir / "logs/saute/{sample}.log",
     threads: 8
