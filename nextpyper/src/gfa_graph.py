@@ -231,10 +231,22 @@ class Assembly_graph:
         }
 
     @staticmethod
-    def _find_overlap(seq1: str, seq2: str) -> Alignment:
+    def _ovlp_extension(seq1: Seq, seq2: Seq, gap: int = 10) -> Seq:
+        """Use pairwise alignment to detect if seq1 and seq2 overlap. If they do
+        Use the alignment coordinates to merge them. Otherwise, scaffold them
+        with a gap of the given size."""
+
         aligner = PairwiseAligner(scoring="megablast", mode="local")
         alns = aligner.align(seq1, seq2)
-        return alns[0]
+
+        # Proceed as no overlap between the sequences. Add a gap of 10 N
+        if alns.score < 30:
+            return seq1 + Seq("N" * gap) + seq2
+
+        # Overlap detected. Use alignment coordinates to merge the sequences
+        else:
+            end1, start2 = alns[0].coordinates[0, :]
+            return seq1[:end1] + seq2[start2:]
 
     def _retrieve_path(
         self,
@@ -263,10 +275,7 @@ class Assembly_graph:
                     extension += edge.retrieve_seq(start, end, orientation)
                 elif jump:
                     newseq = edge.retrieve_seq(0, end, orientation)
-                    ovlp_start, ovlp_end = self._find_overlap(
-                        extension, newseq
-                    ).coordinates[1, :]
-                    extension += newseq[ovlp_end:]
+                    extension = self._ovlp_extension(extension, newseq)
                 else:
                     extension += edge.retrieve_seq(0, end, orientation)[self.K :]
                 return extension
@@ -279,10 +288,7 @@ class Assembly_graph:
                     extension += edge.retrieve_seq(start, None, orientation)
                 elif jump:
                     newseq = edge.retrieve_seq(0, None, orientation)
-                    ovlp_start, ovlp_end = self._find_overlap(
-                        extension, newseq
-                    ).coordinates[1, :]
-                    extension += newseq[ovlp_end:]
+                    extension = self._ovlp_extension(extension, newseq)
                 else:
                     extension += edge.retrieve_seq(0, None, orientation)[self.K :]
                 return self._retrieve_path(path[1:], start, end, extension, False)
