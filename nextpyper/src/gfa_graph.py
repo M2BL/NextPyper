@@ -245,7 +245,7 @@ class Assembly_graph:
 
         # Overlap detected. Use alignment coordinates to merge the sequences
         else:
-            end1, start2 = alns[0].coordinates[0, :]
+            end1, start2 = alns[0].coordinates[:, -1]
             return seq1[:end1] + seq2[start2:]
 
     def _retrieve_path(
