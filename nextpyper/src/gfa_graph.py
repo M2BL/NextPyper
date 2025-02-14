@@ -21,7 +21,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain, count, starmap
 from pathlib import Path
-from typing import Callable, Iterator, Self, Literal, Optional
+from typing import Callable, Iterator, Self, Literal, Optional, NamedTuple
 from functools import partial
 import re
 import sys
@@ -29,15 +29,29 @@ import sys
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
+from Bio.Align import PairwiseAligner, Alignment
 import pandas as pd
 
-from graph_alns_parser import Read, OrientedEdge
+from graph_alns_parser import Read
 
 
 # =============================================================================
 #                CLASSES
 # =============================================================================
 LinkSupport = dict[tuple[str], int]
+
+
+class OrientedEdge(NamedTuple):
+    id: str
+    orientation: Literal["+", "-"]
+    jump: bool = False
+
+    @classmethod
+    def from_seg(cls, seg) -> "OrientedEdge":
+        if match := re.match(r",|;", seg):
+            return cls(seg[1:-1], seg[-1], match[0] == ";")
+        else:
+            return cls(seg[:-1], seg[-1])
 
 
 @dataclass(slots=True)
@@ -145,6 +159,7 @@ class Assembly_graph:
         graph_path = Path(self.gfa_filename)
         assert graph_path.exists(), f"Graph file {self.gfa_filename} not found"
         with open(self.gfa_filename, "r") as file:
+            seg_pat = re.compile(r"[,|;]?\d+[+-]")
             for line in file:
                 match line[0]:
                     case "H":
@@ -160,23 +175,35 @@ class Assembly_graph:
                             "\t"
                         )
                         self.K = int(_match[:-1])
-                        self.graph[(node_id1, pos1)].append((node_id2, pos2))
-                        self.graph[(node_id2, self.rev[pos2])].append(
-                            (node_id1, self.rev[pos1])
+                        self.graph[OrientedEdge(node_id1, pos1)].append(
+                            OrientedEdge(node_id2, pos2)
+                        )
+                        self.graph[OrientedEdge(node_id2, self.rev[pos2])].append(
+                            OrientedEdge(node_id1, self.rev[pos1])
                         )
                     case "J":
                         _, node_id1, pos1, node_id2, pos2, _dist, *_tags = (
                             line.strip().split("\t")
                         )
-                        self.graph[(node_id1, pos1)].append((node_id2, pos2))
-                        self.graph[(node_id2, self.rev[pos2])].append(
-                            (node_id1, self.rev[pos1])
+                        self.graph[OrientedEdge(node_id1, pos1)].append(
+                            OrientedEdge(node_id2, pos2, True)
                         )
+                        self.graph[OrientedEdge(node_id2, self.rev[pos2])].append(
+                            (node_id1, self.rev[pos1], True)
+                        )
+
+                        ## Add to the Jump Links (J-Lines) the connections from L-Lines to prevent graph disconnection
+                        self.graph[OrientedEdge(node_id2, pos2, True)].extend(
+                            self.graph[OrientedEdge(node_id2, pos2)]
+                        )
+                        self.graph[OrientedEdge(node_id1, self.rev[pos1], True)].extend(
+                            OrientedEdge(node_id1, self.rev[pos1])
+                        )
+
                     case "P":
                         _, name, path, _, *tags = line.split()
                         edges = [
-                            OrientedEdge(seg[:-1], seg[-1])
-                            for seg in re.split(",|;", path)
+                            OrientedEdge.from_seg(seg) for seg in seg_pat.findall(path)
                         ]
                         self.paths[name] = Path_on_graph(name, edges)
                     case _:
@@ -214,6 +241,24 @@ class Assembly_graph:
             if path_edges.issuperset(set(link))
         }
 
+    @staticmethod
+    def _ovlp_extension(seq1: Seq, seq2: Seq, gap: int = 10) -> Seq:
+        """Use pairwise alignment to detect if seq1 and seq2 overlap. If they do
+        Use the alignment coordinates to merge them. Otherwise, scaffold them
+        with a gap of the given size."""
+
+        aligner = PairwiseAligner(scoring="megablast", mode="local")
+        alns = aligner.align(seq1, seq2)
+
+        # Proceed as no overlap between the sequences. Add a gap of 10 N
+        if alns.score < 30:
+            return seq1 + Seq("N" * gap) + seq2
+
+        # Overlap detected. Use alignment coordinates to merge the sequences
+        else:
+            end1, start2 = alns[0].coordinates[:, -1]
+            return seq1[:end1] + seq2[start2:]
+
     def _retrieve_path(
         self,
         path: list[OrientedEdge],
@@ -233,10 +278,15 @@ class Assembly_graph:
         """
         id = path[0].id
         orientation = path[0].orientation
+        jump = path[0].jump
+
         if len(path) == 1:
             if (edge := self.edge_dict[id]) is not None:
                 if first_edge:
                     extension += edge.retrieve_seq(start, end, orientation)
+                elif jump:
+                    newseq = edge.retrieve_seq(0, end, orientation)
+                    extension = self._ovlp_extension(extension, newseq)
                 else:
                     extension += edge.retrieve_seq(0, end, orientation)[self.K :]
                 return extension
@@ -247,6 +297,9 @@ class Assembly_graph:
             if (edge := self.edge_dict[id]) is not None:
                 if first_edge:
                     extension += edge.retrieve_seq(start, None, orientation)
+                elif jump:
+                    newseq = edge.retrieve_seq(0, None, orientation)
+                    extension = self._ovlp_extension(extension, newseq)
                 else:
                     extension += edge.retrieve_seq(0, None, orientation)[self.K :]
                 return self._retrieve_path(path[1:], start, end, extension, False)
