@@ -21,7 +21,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain, count, starmap
 from pathlib import Path
-from typing import Self, Literal, Optional
+from typing import Callable, Iterator, Self, Literal, Optional
 from functools import partial
 import re
 import sys
@@ -273,6 +273,54 @@ class Assembly_graph:
 # =============================================================================
 
 
+@dataclass(slots=True)
+class OptimalExtension:
+    """
+    Container of partial extensions of paths discovered during graph exploration.
+    The container holds the N best extensions where N is the size of the container
+    at instantiation. A function key function can be given to control how the "best"
+    extensions are determined.
+
+    extensions: a list containing the paths.
+    size: How many extensions to hold.
+    key: Function to score the extensions, which should receive a path as only argument.
+    """
+
+    extensions: list[list[OrientedEdge]] = field(default_factory=list)
+    size: int = field(default=10)
+    key: Optional[Callable[[list[OrientedEdge]], int]] = field(default=None)
+
+    def __len__(self) -> int:
+        return len(self.extensions)
+
+    def __repr__(self) -> str:
+        if self.key is None:
+            return f"OptimalExtension(size={self.size}, extensions={self.extensions})"
+        else:
+            ranks = list(map(self.key, self.extensions))
+            return f"OptimalExtension(size={self.size}, ranks={ranks})"
+
+    def __iter__(self) -> Iterator[list[OrientedEdge]]:
+        for path in iter(self.extensions):
+            yield path
+
+    def _purge(self) -> None:
+        while len(self) > self.size:
+            self.extensions.pop()
+
+    def add(self, path: list[OrientedEdge]) -> None:
+        self.extensions.append(path)
+        self.extensions.sort(reverse=True, key=self.key)
+        self._purge()
+        return Self
+
+    def extend(self, paths: list[list[OrientedEdge]]) -> None:
+        self.extensions.extend(paths)
+        self.extensions.sort(reverse=True, key=self.key)
+        self._purge()
+        return Self
+
+
 def dfs_track_paths(
     graph: Assembly_graph,
     start: OrientedEdge,
@@ -292,61 +340,53 @@ def dfs_track_paths(
     """
 
     def get_path_len(path: list[OrientedEdge], graph: Assembly_graph) -> int:
-        return sum(len(graph.edge_dict[node[0]]) for node in path)
+        return sum(len(graph.edge_dict[edge[0]]) for edge in path)
 
     def dfs_helper(
-        node,
-        visited: list[OrientedEdge],
+        edge: OrientedEdge,
         current_path: list[OrientedEdge],
-        all_dead_ends: list[list[OrientedEdge]],
-    ):  # please add type hints
+        extensions: OptimalExtension,
+    ):
         """
-        -
+        Help function to apply the DFS recursion.
+
+        edge: current edge being evaluated.
+        current_path: path (ordered list of edges being explored).
+        extensions: container with the best paths.
         """
-        visited.add(node)
-        current_path.append(node)
-        max_len_exceeded = False
+        current_path.append(edge)
 
         # If we reach the goal, add the path
-        if goal is not None and node == goal:
-            all_dead_ends.append(current_path[:])
+        if goal is not None and edge == goal:
+            extensions.add(current_path[:])
+            return
 
         # Maximum len size check (avoids long recursions)
         if get_path_len(current_path, graph) > max_len:
-            max_len_exceeded = True
-            all_dead_ends.append(current_path[:])
+            extensions.add(current_path[:])
+            return
 
-        # Get all neighbors
-        neighbors = graph.graph[node]
-
-        # If no unvisited neighbors (dead end) and no specific goal
-        if goal is None and all(n in visited for n in neighbors):
-            all_dead_ends.append(current_path[:])
+        # Reached a dead-end
+        if not (neighbors := graph.graph[edge]):
+            extensions.add(current_path[:])
+            return
 
         # Explore neighbors
         for neighbor in neighbors:
-            if not max_len_exceeded and neighbor not in visited:
-                dfs_helper(neighbor, visited, current_path, all_dead_ends)
+            dfs_helper(neighbor, current_path, extensions)
 
-        # Backtrack: remove current node from path and visited
-        current_path.pop()
-        visited.remove(node)
-
-    visited = set()
     current_path = []
-    all_dead_ends = []
+    extensions = OptimalExtension(
+        size=max_extensions, key=partial(get_path_len, graph=graph)
+    )
 
-    dfs_helper(start, visited, current_path, all_dead_ends)
-    if len(all_dead_ends) > max_extensions:
-        return sorted(
-            all_dead_ends, key=partial(get_path_len, graph=graph), reverse=True
-        )[:max_extensions]
-    else:
-        return all_dead_ends
+    dfs_helper(start, current_path, extensions)
+
+    return extensions
 
 
 def extend_path(
-    path: Path_on_graph, graph: Assembly_graph, max_len: int = 5000
+    path: Path_on_graph, graph: Assembly_graph, max_len: int = 5000, max_ext: int = 10
 ) -> list[OrientedEdge]:
     """Given an assembly graph and a path, extend the given path following the graph topology
     using a Depth First Search.
@@ -356,7 +396,9 @@ def extend_path(
 
     return [
         path.edges[:-1] + list(starmap(OrientedEdge, ext))
-        for ext in dfs_track_paths(graph, path.edges[-1], max_len=max_len)
+        for ext in dfs_track_paths(
+            graph, path.edges[-1], max_len=max_len, max_extensions=max_ext
+        )
     ]
 
 
