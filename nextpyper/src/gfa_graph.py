@@ -29,7 +29,7 @@ import sys
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
-from Bio.Align import PairwiseAligner, Alignment
+from Bio.Align import PairwiseAligner
 import pandas as pd
 
 from graph_alns_parser import Read
@@ -189,7 +189,7 @@ class Assembly_graph:
                             OrientedEdge(node_id2, pos2, True)
                         )
                         self.graph[OrientedEdge(node_id2, self.rev[pos2])].append(
-                            (node_id1, self.rev[pos1], True)
+                            OrientedEdge(node_id1, self.rev[pos1], True)
                         )
 
                         ## Add to the Jump Links (J-Lines) the connections from L-Lines to prevent graph disconnection
@@ -197,7 +197,7 @@ class Assembly_graph:
                             self.graph[OrientedEdge(node_id2, pos2)]
                         )
                         self.graph[OrientedEdge(node_id1, self.rev[pos1], True)].extend(
-                            OrientedEdge(node_id1, self.rev[pos1])
+                            self.graph[OrientedEdge(node_id1, self.rev[pos1])]
                         )
 
                     case "P":
@@ -321,11 +321,6 @@ class Assembly_graph:
         )
 
 
-# =============================================================================
-#                FUNCTIONS
-# =============================================================================
-
-
 @dataclass(slots=True)
 class OptimalExtension:
     """
@@ -372,6 +367,11 @@ class OptimalExtension:
         self.extensions.sort(reverse=True, key=self.key)
         self._purge()
         return Self
+
+
+# =============================================================================
+#                FUNCTIONS
+# =============================================================================
 
 
 def dfs_track_paths(
@@ -541,10 +541,7 @@ def snakemake_call(snakemake):
         SeqIO.write(seqs_iter, out, "fasta")
 
 
-def main():
-    data_dir = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/debug/dfs/graph_extension_data"
-    )
+def main(): ...
 
 
 if __name__ == "__main__":
