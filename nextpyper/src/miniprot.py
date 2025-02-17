@@ -212,7 +212,6 @@ def run_miniprot_boundary_scorer(
     boundary_scorer_cmd = (
         f"miniprot_boundary_scorer -o '{boundary_scorer_out}' -s {matrix_path}"
     )
-    print(boundary_scorer_cmd)
     try:
         subprocess.run(
             boundary_scorer_cmd,
@@ -270,7 +269,7 @@ class RankCoverage:
         return (sum(self.rank_score) + sum(missing_scores)) / nbr_scaffolds
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ExonCorrespondence:
     """
     Probe to scaffold coordinates
@@ -281,31 +280,28 @@ class ExonCorrespondence:
     length_on_scaffold: nbr of AAs that are aligned between the probe and the scaffold.
     """
 
-    __slots__ = ["exon_probe", "exon_scaffold", "length_on_scaffold"]
     exon_probe: Exon
     exon_scaffold: Exon
     length_on_scaffold: int
 
 
-@dataclass
+@dataclass(slots=True)
 class Boundary:
     """
     coordinate on scaffold
     """
 
-    __slots__ = ["scaffold_name", "scaffold_start", "scaffold_end"]
     scaffold_name: str
     scaffold_start: int
     scaffold_end: int
 
 
-@dataclass
+@dataclass(slots=True)
 class EndPoint:
     """
     Container for start or end of an exon.
     """
 
-    __slots__ = ["idx", "name"]
     idx: int
     name: str
 
@@ -723,14 +719,14 @@ class OverlappingCds(MiniprotInit):
                             f"Something went terribly wrong with {scaffold_name} as no Exon was inferred"
                         )
                         continue
-                    # assert (
-                    #     cds.exon_correspondences
-                    # ), f"Something went terribly wrong with {scaffold_name} as no Exon was inferred"
-
                     overlapping_gp.extended_cds_dict[scaffold_name] = cds
                 overlapping_gp.find_global_boundaries()
 
     def save_records(self, outdir: Path, min_exon_size: int) -> None:
+        """
+        Save exonic regions, supercontigs (the whole scaffold), and genotigs that include the sequence
+        within the probe boundaries.
+        """
         stem_name = self.probes_path.stem
         print(f"saving {stem_name}")
         for overlapping_gp in self.non_overlapping:
@@ -747,10 +743,7 @@ class OverlappingCds(MiniprotInit):
                 global_start = overlapping_gp.global_start
                 global_end = overlapping_gp.global_end
                 exon_records: list[SeqRecord] = []
-                super_records = [
-                    self.scaffold_dict[scaffold_name]
-                    for scaffold_name in overlapping_gp.extended_cds_dict
-                ]
+
                 for (
                     scaffold_name,
                     extended_cds,
@@ -799,8 +792,68 @@ class OverlappingCds(MiniprotInit):
                 #  Save supercontigs
                 super_name = f"{prefix}_supercontigs.fasta"
                 out_path_supercontigs = outdir / super_name
+                super_records = [
+                    self.scaffold_dict[scaffold_name]
+                    for scaffold_name in overlapping_gp.extended_cds_dict
+                ]
                 if super_records:
-                    SeqIO.write(super_records, out_path_supercontigs, "fasta")
+                    SeqIO.write(
+                        sorted(super_records, key=lambda x: x.id),
+                        out_path_supercontigs,
+                        "fasta",
+                    )
+                # save genotigs
+                genotigs_name = f"{prefix}_genotigs.fasta"
+                out_path_genotigs = outdir / genotigs_name
+                genotigs_records = []
+
+                for (
+                    scaffold_name,
+                    extended_cds,
+                ) in overlapping_gp.extended_cds_dict.items():
+                    seq = str(self.scaffold_dict[scaffold_name].seq)
+                    new_scaffold = ""
+                    first_exon = extended_cds.exon_correspondences[0]
+                    probe_start = first_exon.exon_probe.start
+                    scaffold_start = first_exon.exon_scaffold.start
+                    last_exon = extended_cds.exon_correspondences[-1]
+                    probe_end = last_exon.exon_probe.end
+                    scaffold_end = last_exon.exon_scaffold.end
+                    if global_start > probe_start:
+                        for idx in [0, 1, -1, 2, -2]:
+                            if (
+                                tmp_start := extended_cds.correspondence.get(
+                                    global_start + idx
+                                )
+                            ) is not None:
+                                scaffold_start = tmp_start
+                                break
+                    if probe_end > global_end:
+                        for idx in [0, -1, 1, -2, 2]:
+                            if (
+                                tmp_end := extended_cds.correspondence.get(
+                                    global_end + idx
+                                )
+                            ) is not None:
+                                scaffold_end = tmp_end
+                                break
+                    new_scaffold += seq[scaffold_start:scaffold_end]
+                    if len(new_scaffold) > min_exon_size:
+                        genotigs_records.append(
+                            SeqRecord(
+                                Seq(new_scaffold),
+                                name="",
+                                description="",
+                                id=scaffold_name,
+                            )
+                        )
+
+                if genotigs_records:
+                    SeqIO.write(
+                        sorted(genotigs_records, key=lambda x: x.id),
+                        out_path_genotigs,
+                        "fasta",
+                    )
 
     def save_best_probe(self, fasta_path: Path) -> None:
         fasta_path.parent.mkdir(parents=True, exist_ok=True)
@@ -888,16 +941,16 @@ def main():
 
     # break
 
-    # scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/5899_test.fasta"
-    # probes = probe_dir / "5899.fasta"
+    scf = "/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_scfs/5899.fasta"
+    probe = "/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_probes/5899.fasta"
     # olc = OverlappingCds(str(probes), str(scfs), *parameters)
     # matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
     # olc.paralogy_search(matrix)
-    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/temp/scfs_At4g32140.fasta"
-    probe = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/temp/probe_At4g32140.fasta"
+    # scf = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/temp/scfs_At4g32140.fasta"
+    # probe = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/temp/probe_At4g32140.fasta"
     matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
-    parameters = [8, 0.85, 0.1, 10, 0.7]
-    olc = OverlappingCds(str(probe), str(scfs), matrix, *parameters)
+    parameters = [8, 0.85, 0.1, 10, 0.7, "AJFN_5899"]
+    olc = OverlappingCds(str(probe), str(scf), matrix, *parameters)
     out_dir = Path(
         "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/bug_instances/out_dir"
     )
