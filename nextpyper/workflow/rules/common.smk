@@ -64,6 +64,7 @@ floor_len_extension = lookup(
 plen_scaling_factor = lookup(
     "scaffolds_extension/exploration/probe_len_scaling", within=pipeline
 )
+max_extensions = lookup("scaffolds_extension/output/max_extensions", within=pipeline)
 
 # MMseqs matching
 mmseq_fields = lookup("mmseqs_matching/fields", within=pipeline)

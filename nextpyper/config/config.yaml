@@ -21,6 +21,8 @@ nextpyper:
             exploration:
                 floor_len_extension: 3000
                 probe_len_scaling: 3
+            output:
+                max_extensions: 5
         split_graph_by_matching_probe:
             min_probe_coverage: 0.1
         mmseqs_matching:

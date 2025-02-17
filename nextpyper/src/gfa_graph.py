@@ -492,6 +492,9 @@ def snakemake_call(snakemake):
             snakemake.params.plen_scaling
         )  # float that multiplies the length of the probe for an alternative extension
         # The selected extension is the max of these two thresholds.
+
+        max_extensions = snakemake.params.max_extensions
+
         # Try to extend only paths that match with probes
         pat = re.compile(r"(?<=NODE_)\d+")
         df = pd.read_csv(table_path, sep="\t")
@@ -517,6 +520,7 @@ def snakemake_call(snakemake):
                 graph.paths[name],
                 graph,
                 max_len=max(floor_len, plen * 3 * plen_scaling),
+                max_ext=max_extensions,
             )
             for name, plen in match_paths_plen.items()
         }
