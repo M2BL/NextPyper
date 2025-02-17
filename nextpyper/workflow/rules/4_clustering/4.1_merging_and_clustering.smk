@@ -37,6 +37,6 @@ rule vsearch_clustering:
         outdir / "logs/clustering/vsearch/{probe}.log",
     params:
         extra="--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both",
-    threads: 1
+    threads: 4
     wrapper:
         "v4.3.0/bio/vsearch"

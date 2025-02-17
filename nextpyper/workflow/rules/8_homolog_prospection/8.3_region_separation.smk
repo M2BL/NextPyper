@@ -94,6 +94,7 @@ checkpoint separate_cds_by_regions:
         substitution_matrix=blosum62,
     log:
         outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
+    threads: 4
     conda:
         "../../envs/clustering.yaml"
     script:
@@ -108,10 +109,10 @@ rule align_regions:
             outdir / "homolog_prospection/region_separation/alns/{probe}",
         ),
     params:
-        "--auto",
+        "--auto --reorder",
     log:
         outdir / "logs/homolog_prospection/region_separation/alns/{probe}.log",
-    threads: 1
+    threads: 4
     conda:
         "../../envs/alignment.yaml"
     shell:
@@ -121,6 +122,6 @@ rule align_regions:
 
         for file in $(find {input} -name "*.fasta"); do
             name=$(basename $file)
-            mafft {params} $file > {output}/$name 2>> {log}
+            mafft --thread {threads} {params} $file > {output}/$name 2>> {log}
         done
         """
