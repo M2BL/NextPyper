@@ -53,6 +53,7 @@ rule extend_paths:
     params:
         floor_len=floor_len_extension,
         plen_scaling=plen_scaling_factor,
+        max_extensions=max_extensions,
     log:
         outdir / "logs/assembled/extension/{sample}.log",
     script:
