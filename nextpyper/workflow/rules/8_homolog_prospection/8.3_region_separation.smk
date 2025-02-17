@@ -108,7 +108,7 @@ rule align_regions:
             outdir / "homolog_prospection/region_separation/alns/{probe}",
         ),
     params:
-        "--auto --adjustdirection",
+        "--auto",
     log:
         outdir / "logs/homolog_prospection/region_separation/alns/{probe}.log",
     threads: 1
