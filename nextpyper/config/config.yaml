@@ -7,13 +7,15 @@ nextpyper:
         multi_probes:
     # Add customisable config here
     pipeline:
+        preprocessing:
+            trim_qual: 30
         probes_translation:
             translated_prop: 0.95
             stop_per_1Kbp: 2 
             min_exon_length: 20
         multi_probe_clustering:
             mmseq2_min_seq_id: 0.8
-        spades:
+        spades: # ToDo: device an adaptive kmer selection strategy (like spades. Hint: Saute has a good one)
             k: 55,77
         mmseqs_prefiltering:
             sensitivity: 4
