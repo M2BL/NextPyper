@@ -122,6 +122,12 @@ rule align_regions:
 
         for file in $(find {input} -name "*.fasta"); do
             name=$(basename $file)
-            mafft --thread {threads} {params} $file > {output}/$name 2>> {log}
+            nseqs=$(grep -c "^>" $file)
+
+            if [ "$nseqs" -gt 1 ]; then
+                mafft --thread {threads} {params} $file > {output}/$name 2>> {log}
+            else
+                cp $file {output}/$name
+            fi 
         done
         """

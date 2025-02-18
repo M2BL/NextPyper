@@ -16,8 +16,8 @@ nextpyper:
             min_exon_length: 20
         multi_probe_clustering:
             mmseq2_min_seq_id: 0.8
-        spades: # ToDo: device an adaptive kmer selection strategy (like spades. Hint: Saute has a good one)
-            k: 101,121
+        spades:
+            k: auto
         mmseqs_prefiltering:
             sensitivity: 4
         scaffolds_extension:

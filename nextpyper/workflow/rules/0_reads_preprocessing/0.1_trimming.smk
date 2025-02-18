@@ -29,7 +29,7 @@ rule fastp_pe:
         "(fastp --thread {threads} "
         "{params.extra} "
         "--cut_mean_quality {params.trim_qual} "
-        "--length_required {params.trim_min_qual} "
+        "--length_required {params.trim_min_len} "
         "--in1 {input.in1} --in2 {input.in2} "
         "--out1 {output.trim1} --out2 {output.trim2} "
         "--html {output.html} "

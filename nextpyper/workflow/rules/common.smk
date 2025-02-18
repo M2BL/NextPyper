@@ -7,6 +7,7 @@ from snakemake.utils import min_version
 from snakemake.utils import validate
 from pathlib import Path
 from collections import Counter, defaultdict
+import json
 import sys
 import os
 import re
@@ -51,7 +52,7 @@ trim_min_len = lookup("preprocessing/min_len", within=pipeline)
 mmseq2_min_seq_id = lookup("multi_probe_clustering/mmseq2_min_seq_id", within=pipeline)
 
 # Spades
-spades_k = "" if (argk := lookup("spades/k", within=pipeline)) == "auto" else argk
+spades_k = lookup("spades/k", within=pipeline)
 
 # MMseqs prefiltering
 mmseq_prefilt_sens = lookup("mmseqs_prefiltering/sensitivity", within=pipeline)
