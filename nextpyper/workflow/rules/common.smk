@@ -45,6 +45,7 @@ pipeline = lookup("pipeline", within=config)
 
 # Fastp
 trim_qual = lookup("preprocessing/trim_qual", within=pipeline)
+trim_min_len = lookup("preprocessing/min_len", within=pipeline)
 
 # MMseqs2
 mmseq2_min_seq_id = lookup("multi_probe_clustering/mmseq2_min_seq_id", within=pipeline)

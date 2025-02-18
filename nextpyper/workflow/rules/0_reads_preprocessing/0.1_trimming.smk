@@ -20,6 +20,7 @@ rule fastp_pe:
         outdir / "logs/preprocessing/fastp/{sample}.log",
     params:
         trim_qual=trim_qual,
+        trim_min_len=trim_min_len,
         extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_tail",
     threads: 4
     conda:
@@ -28,6 +29,7 @@ rule fastp_pe:
         "(fastp --thread {threads} "
         "{params.extra} "
         "--cut_mean_quality {params.trim_qual} "
+        "--length_required {params.trim_min_qual} "
         "--in1 {input.in1} --in2 {input.in2} "
         "--out1 {output.trim1} --out2 {output.trim2} "
         "--html {output.html} "
