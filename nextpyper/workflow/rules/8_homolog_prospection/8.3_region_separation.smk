@@ -94,7 +94,7 @@ checkpoint separate_cds_by_regions:
         substitution_matrix=blosum62,
     log:
         outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
-    threads: 4
+    threads: 2
     conda:
         "../../envs/clustering.yaml"
     script:
@@ -112,7 +112,7 @@ rule align_regions:
         "--auto --reorder",
     log:
         outdir / "logs/homolog_prospection/region_separation/alns/{probe}.log",
-    threads: 4
+    threads: 2
     conda:
         "../../envs/alignment.yaml"
     shell:
