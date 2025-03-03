@@ -898,6 +898,7 @@ def main():
         "min_global_identity": 0.6,
     }
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     olc = OverlappingCds(probes, scfs, matrix, treads=threads, **params)
 
     olc.save_records(out_dir, 10)
