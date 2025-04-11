@@ -80,6 +80,12 @@ class Path_on_graph:
         return self.name, self.edges, self.start, self.end, self.length
 
 
+class ColorInfo(NamedTuple):
+    probe: str
+    tlen: int
+    cis: bool
+
+
 @dataclass
 class Edge:
     """
@@ -333,6 +339,82 @@ class Assembly_graph:
             name="",
         )
 
+    def _get_path_intervals(self, path: str) -> list[Interval]:
+        """Given a path name, return a list of intervals specifying which edge that part of the
+        sequence comes from."""
+
+        def _get_edge_seq_len(edge_id) -> int:
+            return len(self.edge_dict[edge_id])
+
+        def _iter_path_edges(edge_ids) -> Iterator[int]:
+            it_edge_ids = iter(edge_ids)
+            yield _get_edge_seq_len(next(it_edge_ids))
+
+            for edge_id in it_edge_ids:
+                yield _get_edge_seq_len(edge_id) - self.K
+
+        edge_ids = tuple(edgei.id for edgei in self.paths[path].edges)
+        return [
+            Interval(start, end, edge_id)
+            for (start, end), edge_id in zip(
+                pairwise(accumulate(((_iter_path_edges(edge_ids))), initial=0)),
+                edge_ids,
+            )
+        ]
+
+    def color_edges(self, hits: pl.DataFrame) -> Self:
+        """Use a table of probe hits to color the edges of the graph, populating the attribute
+        'matching exons' of each edge with the interval they match of the best probe of
+        the graph's component they belong.
+        """
+
+        # We group by component to start to operate in the graph
+        comp_df = hits.group_by(["comp_id"]).agg(
+            pl.first("theader"),
+            pl.first("tlen"),
+            pl.col("query"),
+            pl.col("cis"),
+            pl.col("qstart"),
+            pl.col("qend"),
+            pl.col("tstart"),
+            pl.col("tend"),
+        )
+
+        for (
+            comp_id,
+            probe,
+            tlen,
+            paths,
+            ciss,
+            mqstarts,
+            mqends,
+            mtstarts,
+            mtends,
+        ) in comp_df.iter_rows():
+
+            for path, direc, tstarts, tends, qstarts, qends in zip(
+                paths, ciss, mtstarts, mtends, mqstarts, mqends
+            ):
+                if direc:
+                    qstarts, qends = qends, qstarts
+
+                colorinfo = ColorInfo(probe, tlen, direc)
+                path_intervals = self._get_path_intervals(path)
+                qinter = sorted(map(Interval, qstarts, qends))
+                tinter = sorted(map(Interval, tstarts, tends, repeat(colorinfo)))
+
+                for qint, tint in zip(qinter, tinter):
+                    for pint in path_intervals:
+                        if qint.overlaps(pint):
+                            edge_id = pint.data
+                            self.edge_dict[edge_id].matching_exons.append(tint)
+
+        for edge in self.edge_dict.values():
+            if edge.matching_exons:
+                tree = IntervalTree(edge.matching_exons)
+                tree.merge_overlaps(data_reducer=lambda x, y: x)
+                edge.matching_exons = sorted(tree)
+
 
 @dataclass(slots=True)
 class OptimalExtension:
@@ -489,6 +571,125 @@ def get_seq_atts(
 def make_path_name(path: list[OrientedEdge], idx: int, graph):
     atts = get_seq_atts(path, graph)
     return f"EDGE_{idx}_length_{atts[0]}_cov_{atts[1]:.3f}"
+
+
+def effective_cov(starts: list[int], ends: list[int]) -> int:
+    """
+    Compute the effective coverage of a set of matches (intervals), by
+    merging the intervals they define with their starts and ends.
+
+    Return the total amount of bases covered [int].
+    """
+
+    gen_iter = zip(chain.from_iterable(starts), chain.from_iterable(ends))
+    tree = IntervalTree.from_tuples(gen_iter)
+    tree.merge_overlaps()
+    return sum(inter.length() for inter in tree) + 1
+
+
+def find_components_best_probe(df: pl.DataFrame) -> pl.DataFrame:
+    """From a table of probe hits to the paths of a graph, compute which probe hits
+    best each of the components on the graph and add this information to the table.
+
+    Return simplified table with only the hits of the best probe per component.
+    """
+
+    # Collect all the hits of the same probe on the same path
+    df2 = df.group_by(["query", "theader", "cis"]).agg(
+        pl.sum("nident"),
+        pl.sum("mismatch"),
+        pl.sum("gapopen"),
+        pl.first("tlen"),
+        pl.first("comp_id"),
+        pl.col("qstart"),
+        pl.col("qend"),
+        pl.col("tstart"),
+        pl.col("tend"),
+    )
+
+    # Collect all the hits of a probe in a given component
+    df3 = df2.group_by(["theader", "comp_id"]).agg(
+        pl.sum("nident"),
+        pl.sum("mismatch"),
+        pl.first("tlen"),
+        pl.concat_list("tstart"),
+        pl.concat_list("tend"),
+    )
+
+    # Compute the "effective coverage" on the probe by hits on the same components
+    df4 = df3.with_columns(
+        eff_cov=pl.Series(
+            values=starmap(effective_cov, df3[["tstart", "tend"]].iter_rows()),
+            dtype=pl.Int64,
+        )
+    )
+
+    # Select the nest probe for each component (the dominant probe), by "alternative coverage"
+    # criterion. The alternative coverage is the Non-redundant number of matches found in the probe,
+    # over the length of the probe.
+    best_probes = (
+        df4.with_columns(
+            alt_cov=pl.col("eff_cov")
+            * (pl.col("nident") / (pl.col("nident") + pl.col("mismatch")))
+            / pl.col("tlen")
+        )
+        .sort(by=["comp_id", "alt_cov"], descending=True)
+        .group_by(["comp_id"])
+        .agg(pl.first("theader"))
+    )
+
+    return (
+        df2.join(best_probes, on="comp_id", suffix="_best")
+        .filter(pl.col("theader") == pl.col("theader_best"))
+        .sort(by="comp_id")
+    )
+
+
+def snakemake_call2(snakemake):
+    with open(snakemake.log[0], "w") as outlog:
+        sys.stdout = sys.stderr = outlog
+
+        graph_path = Path(snakemake.input.graph)
+        table_path = Path(snakemake.input.table)
+        out = Path(snakemake.output[0])
+        floor_len = (
+            snakemake.params.floor_len
+        )  # maximum extension of a path in nucleotide
+        plen_scaling = (
+            snakemake.params.plen_scaling
+        )  # float that multiplies the length of the probe for an alternative extension
+        # The selected extension is the max of these two thresholds.
+
+        max_extensions = snakemake.params.max_extensions
+
+        # Load the matches
+        df = pl.read_csv(table_path, separator="\t", has_header=True)
+
+        # Load the graph and a ditionary edge -> components
+        graph = Assembly_graph(graph_path)
+        comp_ids = {
+            edge: comp_id
+            for comp_id, edges in graph.components.items()
+            for edge in edges
+        }
+
+        # Add component information to the table of matches
+        path2comp = {
+            path: comp_ids[graph.paths[path].edges[0].id]
+            for path in df["query"].unique()
+        }
+
+        pre_comp = df.with_columns(
+            cis=pl.col("qend") > pl.col("qstart"),
+            comp_id=pl.col("query").replace_strict(path2comp),
+        )
+
+        # Find which probe is best for each component and color the graph
+        final_hits = find_components_best_probe(pre_comp)
+        graph.color_edges(final_hits)
+
+        # Explore the colored graph:
+        # ToDo: Implement
 
 
 def snakemake_call(snakemake):
