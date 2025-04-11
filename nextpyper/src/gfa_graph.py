@@ -19,7 +19,7 @@ __version__ = "0.1"
 # =======================================================================================
 from collections import defaultdict
 from dataclasses import dataclass, field
-from itertools import chain, count, starmap
+from itertools import chain, count, repeat, starmap, pairwise, accumulate
 from pathlib import Path
 from typing import Callable, Iterator, Self, Literal, Optional, NamedTuple
 from functools import partial
@@ -30,9 +30,12 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from Bio.Align import PairwiseAligner
+import polars as pl
 import pandas as pd
+from intervaltree import IntervalTree, Interval
 
 from graph_alns_parser import Read
+from union_find import UnionFind
 
 
 # =============================================================================
@@ -150,6 +153,7 @@ class Assembly_graph:
         default_factory=lambda: defaultdict(int), init=False
     )
     paths: dict[str, Path_on_graph] = field(default_factory=dict, init=False)
+    components: list[set[str]] = field(default_factory=list, init=False)
     rev = {"+": "-", "-": "+"}
 
     def __post_init__(self):
@@ -158,7 +162,7 @@ class Assembly_graph:
     def _parse_graph(self) -> Self:
         graph_path = Path(self.gfa_filename)
         assert graph_path.exists(), f"Graph file {self.gfa_filename} not found"
-        with open(self.gfa_filename, "r") as file:
+        with open(self.gfa_filename, "r") as file, UnionFind() as UV:
             seg_pat = re.compile(r"[,|;]?\d+[+-]")
             for line in file:
                 match line[0]:
@@ -181,6 +185,7 @@ class Assembly_graph:
                         self.graph[OrientedEdge(node_id2, self.rev[pos2])].append(
                             OrientedEdge(node_id1, self.rev[pos1])
                         )
+                        UV.union((node_id1, node_id2))
                     case "J":
                         _, node_id1, pos1, node_id2, pos2, _dist, *_tags = (
                             line.strip().split("\t")
@@ -199,6 +204,7 @@ class Assembly_graph:
                         self.graph[OrientedEdge(node_id1, self.rev[pos1], True)].extend(
                             self.graph[OrientedEdge(node_id1, self.rev[pos1])]
                         )
+                        UV.union((node_id1, node_id2))
 
                     case "P":
                         _, name, path, _, *tags = line.split()
@@ -210,6 +216,13 @@ class Assembly_graph:
                         raise NotImplementedError(
                             f"ERROR: found line of type {line[0]}"
                         )
+            # For ends here:
+            components = UV.get_components()
+            comp_list = list(map(list, UV.get_components()))
+            single_edges = set(self.edge_dict).difference(set(chain(*comp_list)))
+            components.extend([{edge} for edge in single_edges])
+            self.components = dict(enumerate(components, 1))
+
         return self
 
     def link_edges(self, reads: list[Read]) -> Self:
