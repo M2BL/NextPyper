@@ -19,7 +19,7 @@ __version__ = "0.1"
 # =======================================================================================
 from collections import defaultdict
 from dataclasses import dataclass, field
-from itertools import chain, count, repeat, starmap, pairwise, accumulate
+from itertools import chain, count, repeat, starmap, pairwise, accumulate, tee
 from pathlib import Path
 from typing import Callable, Iterator, Self, Literal, Optional, NamedTuple
 from functools import partial
@@ -343,23 +343,22 @@ class Assembly_graph:
         """Given a path name, return a list of intervals specifying which edge that part of the
         sequence comes from."""
 
-        def _get_edge_seq_len(edge_id) -> int:
-            return len(self.edge_dict[edge_id])
+        def _get_ovlp_coords(edge_lens):
+            starts, ends = tee(edge_lens, 2)
+            sum_start, sum_end = 0, next(ends)
+            yield sum_start, sum_end
 
-        def _iter_path_edges(edge_ids) -> Iterator[int]:
-            it_edge_ids = iter(edge_ids)
-            yield _get_edge_seq_len(next(it_edge_ids))
-
-            for edge_id in it_edge_ids:
-                yield _get_edge_seq_len(edge_id) - self.K
+            for start, end in zip(starts, ends):
+                sum_start += start - self.K
+                sum_end += end - self.K
+                yield sum_start, sum_end
 
         edge_ids = tuple(edgei.id for edgei in self.paths[path].edges)
+        edge_lens = [len(self.edge_dict[edge_id]) for edge_id in edge_ids]
+
         return [
             Interval(start, end, edge_id)
-            for (start, end), edge_id in zip(
-                pairwise(accumulate(((_iter_path_edges(edge_ids))), initial=0)),
-                edge_ids,
-            )
+            for (start, end), edge_id in zip(_get_ovlp_coords(edge_lens), edge_ids)
         ]
 
     def color_edges(self, hits: pl.DataFrame) -> Self:
