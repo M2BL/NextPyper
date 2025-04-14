@@ -520,7 +520,7 @@ def dfs_track_paths(
 
         # Explore neighbors
         for neighbor in neighbors:
-            dfs_helper(neighbor, current_path, extensions)
+            dfs_helper(neighbor, current_path[:], extensions)
 
     current_path = []
     extensions = OptimalExtension(
