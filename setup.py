@@ -62,6 +62,7 @@ setup(
         "pyabpoa>=1.5.3",
         "polars>=1.9",
         "intervaltree>=3.1",
+        "kmedoids>=0.5.3.1",
     ],
     entry_points={"console_scripts": ["nextpyper=nextpyper.__main__:main"]},
     include_package_data=True,
