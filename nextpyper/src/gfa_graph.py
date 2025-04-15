@@ -342,6 +342,23 @@ class Assembly_graph:
     def _get_path_intervals(self, path: str) -> list[Interval]:
         """Given a path name, return a list of intervals specifying which edge that part of the
         sequence comes from."""
+        edges = self.edge_dict[path][:]
+        edge = edges[0]
+        edge_id = self.edge_dict[edge.id]
+        length = self.edge_dict[edge_id]
+        start = 0
+        end = length
+        intervales = [Interval(start, end)]
+        edges = edges[1:]
+
+        while edges:
+            edge = edges[0]
+            edge_id = self.edge_dict[edge.id]
+            length = self.edge_dict[edge_id]
+            end = end + length - self.K
+            start = start - self.K
+            intervales.append(Interval(start, end))
+        return intervales
 
         def _get_ovlp_coords(edge_lens):
             it_start, it_ends = tee(accumulate(edge_lens))
@@ -661,7 +678,7 @@ def snakemake_call2(snakemake):
         # Load the matches
         df = pl.read_csv(table_path, separator="\t", has_header=True)
 
-        # Load the graph and a ditionary edge -> components
+        # Load the graph and a dictionary edge -> components
         graph = Assembly_graph(graph_path)
         comp_ids = {
             edge: comp_id
