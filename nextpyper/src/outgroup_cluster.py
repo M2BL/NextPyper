@@ -70,12 +70,9 @@ from union_find import UnionFind
 # =======================================================================================
 
 
-
 # =======================================================================================
 #               FUNCTIONS
 # =======================================================================================
-
-
 
 
 @dataclass
@@ -105,16 +102,18 @@ class Outgrp_cluster(MiniprotInit):
     """
 
     outgroups: list[str] = field(default_factory=list)
-    probe_coverage:float = field(default=0.5)
-    min_contig_overlap: int = field(default=300) #to compute distance
+    probe_coverage: float = field(default=0.5)
+    min_contig_overlap: int = field(default=300)  # to compute distance
     keep_singletons: bool = field(default=True)
-    cds_dict: dict[str, Cds] = field(init=False,repr=False, default_factory=dict)
+    cds_dict: dict[str, Cds] = field(init=False, repr=False, default_factory=dict)
 
     distance_matrix: npt.ArrayLike = field(init=False, repr=False, default=None)
 
     def __post_init__(self):
         super().__post_init__()
-        assert 0 < self.probe_coverage<= 1, "[ERROR] probe_coverage must be between 0 and 1"
+        assert (
+            0 < self.probe_coverage <= 1
+        ), "[ERROR] probe_coverage must be between 0 and 1"
         assert self.outgroups, "[ERROR] outgroups must be defined"
         outgroup_scaffolds = []
         for scaffold in self.contigs_dict:
@@ -124,7 +123,7 @@ class Outgrp_cluster(MiniprotInit):
         assert outgroup_scaffolds, "[ERROR] no scaffold from the outgroup was found"
         print("Running miniprot")
         with tempfile.TemporaryDirectory() as tmpdirname:
-            for (contig, record) in self.contigs_dict.items():
+            for contig, record in self.contigs_dict.items():
                 print(f"working on contig {contig}")
                 contig_path = Path(tmpdirname) / f"{contig}.fas"
                 cds = self._run_miniprot(record, self.probes_path, contig_path)
@@ -144,8 +143,9 @@ class Outgrp_cluster(MiniprotInit):
             for y in range(x + 1, len(self.contigs_dict)):
                 j = list(self.cds_dict.keys()).index(contig_names[y])
                 distance = self.distance_matrix[i, j]
-                print(f"distance between {contig_names[x]} and {contig_names[y]} is {distance}")
-
+                print(
+                    f"distance between {contig_names[x]} and {contig_names[y]} is {distance}"
+                )
 
     def _create_distance_matrix(
         self,
@@ -169,8 +169,8 @@ class Outgrp_cluster(MiniprotInit):
                     distance = math.nan
                 elif any(
                     [
-                        query_cds.get_global_sim() < self.min_probe_contig_sim,
-                        target_cds.get_global_sim() < self.min_probe_contig_sim,
+                        query_cds.get_global_sim() < self.min_probe_scaffold_sim,
+                        target_cds.get_global_sim() < self.min_probe_scaffold_sim,
                     ]
                 ):
                     distance = math.nan
@@ -183,7 +183,6 @@ class Outgrp_cluster(MiniprotInit):
                     )
                     if (distance := aln_frag.get_similarity()) is None:
                         distance = math.nan
-
 
                 distances.append(distance)
             lists.append(distances)
@@ -349,15 +348,19 @@ class Outgrp_cluster(MiniprotInit):
                 print(f"saving fasta {name_fasta}")
                 idx += 1
 
+
 def main():
 
     probe_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/best_probe_6488.fasta"
     contig_fasta = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/saute/paralogy_6488_vsearch_con.fasta"
     matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
-    #run_miniprot_boundary(probe_fasta, contig_fasta, matrix)
-    OC = Outgrp_cluster(probe_fasta, contig_fasta, outgroups=['Cichorium_intybus_ERR5033750'])
+    # run_miniprot_boundary(probe_fasta, contig_fasta, matrix)
+    OC = Outgrp_cluster(
+        probe_fasta, contig_fasta, outgroups=["Cichorium_intybus_ERR5033750"]
+    )
     # test_gff = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/saute/paralogy_6488_vsearch_con_aln_gff.gfa"
     # remove_gff(test_gff)
+
 
 if __name__ == "__main__":
 
