@@ -91,7 +91,6 @@ class Node:
 
 
 class Interval:
-
     """
     Data structure use in the interval search tree. It relies on the interval data
     structure found at:
@@ -122,7 +121,6 @@ class Interval:
         if self.hi > other.lo:
             return True
         return False
-
 
     @classmethod
     def from_tuple(cls, tuple_lo_hi: tuple[Number]) -> "Interval":
@@ -479,8 +477,6 @@ class IntervalST:
         print(result)
         return sorted(result, key=lambda x: x.interval[0])
 
-
-
     def height(self) -> int:
         """
         Height of the Search Tree
@@ -526,3 +522,4 @@ if __name__ == "__main__":
 
     # print("result value is ", ST.get(Interval(1, 6)))
     # print("search:", [x.value for x in ST.search(Interval(20, 21))])
+    print(ST.tree_traversal_bsf_with_values())
