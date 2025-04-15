@@ -19,7 +19,7 @@ __version__ = "0.1"
 # =======================================================================================
 from collections import defaultdict
 from dataclasses import dataclass, field
-from itertools import chain, count, repeat, starmap, tee
+from itertools import chain, count, repeat, starmap, accumulate, tee
 from pathlib import Path
 from typing import Callable, Iterator, Self, Literal, Optional, NamedTuple
 from functools import partial
@@ -344,14 +344,11 @@ class Assembly_graph:
         sequence comes from."""
 
         def _get_ovlp_coords(edge_lens):
-            starts, ends = tee(edge_lens, 2)
-            sum_start, sum_end = 0, next(ends)
-            yield sum_start, sum_end
+            it_start, it_ends = tee(accumulate(edge_lens))
+            yield 0, next(it_ends)
 
-            for start, end in zip(starts, ends):
-                sum_start += start - self.K
-                sum_end += end - self.K
-                yield sum_start, sum_end
+            for i, (start, end) in enumerate(zip(it_start, it_ends), 1):
+                yield start - self.K * i, end - self.K * i
 
         edge_ids = tuple(edgei.id for edgei in self.paths[path].edges)
         edge_lens = [len(self.edge_dict[edge_id]) for edge_id in edge_ids]
