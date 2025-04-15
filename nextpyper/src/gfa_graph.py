@@ -397,7 +397,8 @@ class Assembly_graph:
                 colorinfo = ColorInfo(probe, tlen, direc)
                 path_intervals = self._get_path_intervals(path)
                 qinter = sorted(map(Interval, qstarts, qends))
-                tinter = sorted(map(Interval, tstarts, tends, repeat(colorinfo)))
+                mod_tstarts = (tstart - 1 for tstart in tstarts)
+                tinter = sorted(map(Interval, mod_tstarts, tends, repeat(colorinfo)))
 
                 for qint, tint in zip(qinter, tinter):
                     for pint in path_intervals:
@@ -470,7 +471,8 @@ def dfs_track_paths(
     start: OrientedEdge,
     max_len: int = 5000,
     max_extensions: int = 10,
-    goal=Optional[OrientedEdge],
+    goal: Optional[OrientedEdge] = None,
+    key: Optional[Callable[[list[OrientedEdge]], int]] = None,
 ):
     """
 
@@ -481,6 +483,8 @@ def dfs_track_paths(
     -max_len: in nucleotides
     -max_extensions: max number of paths
     -goal: edge where to stop the DFS path exploration
+    -key: function to score the produced paths. The function has
+    to receive a single argument which has to be a path: list[OrientedEdge]
     """
 
     def get_path_len(path: list[OrientedEdge], graph: Assembly_graph) -> int:
@@ -519,18 +523,37 @@ def dfs_track_paths(
         for neighbor in neighbors:
             dfs_helper(neighbor, current_path[:], extensions)
 
+    if key is None:
+        key = partial(get_path_len, graph=graph)
+
     current_path = []
-    extensions = OptimalExtension(
-        size=max_extensions, key=partial(get_path_len, graph=graph)
-    )
+    extensions = OptimalExtension(size=max_extensions, key=key)
 
     dfs_helper(start, current_path, extensions)
 
     return extensions
 
 
+def probe_cov(path: list[OrientedEdge], graph: Assembly_graph) -> float:
+    tree = IntervalTree(
+        chain.from_iterable(graph.edge_dict[edge.id].matching_exons for edge in path)
+    )
+    if tree.is_empty():
+        return 0.0
+
+    tree.merge_overlaps(data_reducer=lambda x, _: x)
+    cov_bases = sum(interval.length() for interval in tree)
+    tlen = next(iter(tree)).data.tlen
+
+    return cov_bases / tlen
+
+
 def extend_path(
-    path: Path_on_graph, graph: Assembly_graph, max_len: int = 5000, max_ext: int = 10
+    path: Path_on_graph,
+    graph: Assembly_graph,
+    max_len: int = 5000,
+    max_ext: int = 10,
+    key: Optional[Callable[[list[OrientedEdge]], int]] = None,
 ) -> list[OrientedEdge]:
     """Given an assembly graph and a path, extend the given path following the graph topology
     using a Depth First Search.
@@ -541,7 +564,7 @@ def extend_path(
     return [
         path.edges[:-1] + list(starmap(OrientedEdge, ext))
         for ext in dfs_track_paths(
-            graph, path.edges[-1], max_len=max_len, max_extensions=max_ext
+            graph, path.edges[-1], max_len=max_len, max_extensions=max_ext, key=key
         )
     ]
 
