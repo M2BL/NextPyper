@@ -19,7 +19,7 @@ __version__ = "0.1"
 # =======================================================================================
 from collections import defaultdict
 from dataclasses import dataclass, field
-from itertools import chain, count, repeat, starmap, accumulate, tee
+from itertools import chain, count, repeat, starmap
 from pathlib import Path
 from typing import Callable, Iterator, Self, Literal, Optional, NamedTuple
 from functools import partial
@@ -342,38 +342,21 @@ class Assembly_graph:
     def _get_path_intervals(self, path: str) -> list[Interval]:
         """Given a path name, return a list of intervals specifying which edge that part of the
         sequence comes from."""
-        edges = self.edge_dict[path][:]
-        edge = edges[0]
-        edge_id = self.edge_dict[edge.id]
-        length = self.edge_dict[edge_id]
-        start = 0
-        end = length
-        intervales = [Interval(start, end)]
-        edges = edges[1:]
+
+        edges = self.paths[path].edges
+        edge, *edges = edges
+        length = len(self.edge_dict[edge.id])
+        start, end = 0, length
+        intervals = [Interval(start, end, edge.id)]
 
         while edges:
-            edge = edges[0]
-            edge_id = self.edge_dict[edge.id]
-            length = self.edge_dict[edge_id]
-            end = end + length - self.K
-            start = start - self.K
-            intervales.append(Interval(start, end))
-        return intervales
+            edge, *edges = edges
+            start += length - self.K
+            length = len(self.edge_dict[edge.id])
+            end += length - self.K
+            intervals.append(Interval(start, end, edge.id))
 
-        def _get_ovlp_coords(edge_lens):
-            it_start, it_ends = tee(accumulate(edge_lens))
-            yield 0, next(it_ends)
-
-            for i, (start, end) in enumerate(zip(it_start, it_ends), 1):
-                yield start - self.K * i, end - self.K * i
-
-        edge_ids = tuple(edgei.id for edgei in self.paths[path].edges)
-        edge_lens = [len(self.edge_dict[edge_id]) for edge_id in edge_ids]
-
-        return [
-            Interval(start, end, edge_id)
-            for (start, end), edge_id in zip(_get_ovlp_coords(edge_lens), edge_ids)
-        ]
+        return intervals
 
     def color_edges(self, hits: pl.DataFrame) -> Self:
         """Use a table of probe hits to color the edges of the graph, populating the attribute
