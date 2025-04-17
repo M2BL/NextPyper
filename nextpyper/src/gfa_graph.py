@@ -475,6 +475,16 @@ def dfs_track_paths(
     key: Optional[Callable[[list[OrientedEdge]], int]] = None,
 ):
     """
+    Given a starting node (from a path), compute and return compatible extensions by
+    following the given graph.
+
+    The number of returned extensions is limited to the "best" n, where n is controlled
+    by  _max_extensions_. The definition of "Best" can be customised by providing any
+    scoring function that accepts a path and returns a score. By default, length is
+    used (the longest path is the best).
+
+    Finally, the exploration of the graph is limited to max_len. Extensions longer than
+    this value are stopped early.
 
     Attributes
     ----------
@@ -488,7 +498,9 @@ def dfs_track_paths(
     """
 
     def get_path_len(path: list[OrientedEdge], graph: Assembly_graph) -> int:
-        return sum(len(graph.edge_dict[edge[0]]) for edge in path)
+        return sum(len(graph.edge_dict[edge[0]]) for edge in path) - graph.K * (
+            len(path) - 1
+        )
 
     def dfs_helper(
         edge: OrientedEdge,
