@@ -391,7 +391,7 @@ class Assembly_graph:
             for path, direc, tstarts, tends, qstarts, qends in zip(
                 paths, ciss, mtstarts, mtends, mqstarts, mqends
             ):
-                if direc:
+                if not direc:
                     qstarts, qends = qends, qstarts
 
                 colorinfo = ColorInfo(probe, tlen, direc)
