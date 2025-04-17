@@ -35,18 +35,18 @@ def _jaccard_similarity(list1: list, list2: list) -> float:
     return float(len(s1.intersection(s2)) / len(s1.union(s2)))
 
 
-def _compute_dist_matrix(paths: list[list[OrientedEdge]]):
+def _compute_dist_matrix(paths: list[list["OrientedEdge"]]):
     """
     Computes the distance matrix between paths using Jaccard similarity.
     """
-    mx = np.zeros((len(paths), len(paths)))
+    mx = np.eye(len(paths), dtype=np.float64) / 2
     for i in range(len(paths)):
         for j in range(i + 1, len(paths)):
             edges_i = [x.id for x in paths[i]]
             edges_j = [x.id for x in paths[j]]
             distance = _jaccard_similarity(edges_i, edges_j)
             mx[i, j] = distance
-    return mx + mx.T
+    return 1 - (mx + mx.T)
 
 
 def select_k_paths(
