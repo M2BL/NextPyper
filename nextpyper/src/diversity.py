@@ -18,11 +18,13 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 from itertools import groupby
+from typing import Callable, Optional, TYPE_CHECKING
 
 import kmedoids as km
 import numpy as np
 
-from gfa_graph import OrientedEdge, Assembly_graph
+if TYPE_CHECKING:
+    from gfa_graph import OrientedEdge, Assembly_graph
 
 # =============================================================================
 #                FUNCTIONS
@@ -50,24 +52,23 @@ def _compute_dist_matrix(paths: list[list["OrientedEdge"]]):
 
 
 def select_k_paths(
-    paths: list[list[OrientedEdge]], K: int, graph: Assembly_graph
-) -> list[list[OrientedEdge]]:
+    paths: list[list["OrientedEdge"]],
+    K: int,
+    graph: "Assembly_graph",
+    key: Optional[Callable[[list["OrientedEdge"]], int]] = None,
+) -> list[list["OrientedEdge"]]:
     """
     select K paths in order to sample as much edge diversity as possible.
     Paths are first clustered using Jaccard similarity as distance metric. Clustering algorithm is kmedoids.
+
+    A custom path scoring function can be provided as key, where the highest scoring path
+    will be chosen per cluster. The default function is length (longest path is chosen).
     """
 
-    def _select_longest_path(grouped_path: list[list[OrientedEdge]]):
-        """
-        Selects the longest path from a group of paths.
-        """
-        if len(grouped_path) == 1:
-            return grouped_path
-        length_paths = []
-        for path in grouped_path:
-            length = sum([len(graph.edge_dict[edge.id]) for edge in path])
-            length_paths.append((length, path))
-        return sorted(length_paths, key=lambda x: x[0], reverse=True)[0][1]
+    def _get_path_length(path: list["OrientedEdge"]) -> int:
+        return sum(len(graph.edge_dict[edge.id]) for edge in path) - (
+            graph.K * (len(path) - 1)
+        )
 
     if len(paths) <= K:
         return paths
@@ -76,34 +77,14 @@ def select_k_paths(
     cluster_idx = sorted(zip(clusters.labels, paths), key=lambda x: x[0])
     groups = []
     for _, g in groupby(cluster_idx, lambda x: x[0]):
-        groups.append([x[0] for x in g])
+        groups.append([x[1] for x in g])
     best_paths = []
     for group in groups:
-        best_paths.append(_select_longest_path(group))
+        best_paths.append(max(group, key=_get_path_length if key is None else key))
     return best_paths
 
 
-def main():
-    import string
-    from itertools import combinations, islice
-    from random import randrange, sample
-
-    np.set_printoptions(formatter={"all": lambda x: "{:.4g}".format(x)})
-    letters = list(string.ascii_lowercase)
-    edge_id = ["".join(x) for x in islice(combinations(letters, 3), 0, 20)]
-    nbr_path = 10
-    paths_ids = []
-    while len(paths_ids) < nbr_path:
-        path_length = randrange(3, 10)
-        paths_ids.append(sample(edge_id, path_length))
-    paths = []
-    for path in paths_ids:
-        paths.append([OrientedEdge(id, "+") for id in path])
-    print(paths)
-
-    distances = _compute_dist_matrix(paths)
-    for row in distances:
-        print(row)
+def main(): ...
 
 
 if __name__ == "__main__":
