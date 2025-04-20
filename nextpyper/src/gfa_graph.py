@@ -18,8 +18,9 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 from collections import defaultdict
+from operator import attrgetter
 from dataclasses import dataclass, field
-from itertools import chain, count, repeat, starmap
+from itertools import chain, count, repeat, starmap, groupby
 from pathlib import Path
 from typing import Callable, Iterator, Self, Literal, Optional, NamedTuple
 from functools import partial
@@ -31,11 +32,11 @@ from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from Bio.Align import PairwiseAligner
 import polars as pl
-import pandas as pd
 from intervaltree import IntervalTree, Interval
 
 from graph_alns_parser import Read
 from union_find import UnionFind
+from diversity import select_k_paths
 
 
 # =============================================================================
@@ -84,6 +85,18 @@ class ColorInfo(NamedTuple):
     probe: str
     tlen: int
     cis: bool
+
+
+class ExtLimits(NamedTuple):
+    """Parameters to control the maximum extension of a path during
+    graph exploration. The length limit is calculated by scaling the
+    probe length by scaling. The resulting number is constrained to
+    the range defined by [floor, ceiling].
+    """
+
+    floor: int
+    ceiling: int
+    scaling: float
 
 
 @dataclass
@@ -471,6 +484,7 @@ def dfs_track_paths(
     start: OrientedEdge,
     max_len: int = 5000,
     max_extensions: int = 10,
+    max_intron_size: Optional[int] = 2000,
     goal: Optional[OrientedEdge] = None,
     key: Optional[Callable[[list[OrientedEdge]], int]] = None,
 ):
@@ -502,6 +516,24 @@ def dfs_track_paths(
             len(path) - 1
         )
 
+    def exons_gap(path: list[OrientedEdge], graph: Assembly_graph) -> int:
+        "Determine the maximum gap (in nucleotides) between colored edges in a path"
+        if len(path) == 1:
+            return 0
+
+        gap = 0
+        gaps = []
+        for oedge in path:
+            if not (edge := graph.edge_dict[oedge.id]).matching_exons:
+                gap += len(edge) - graph.K
+            else:
+                gaps.append(gap)
+                gap = 0
+        else:
+            gaps.append(gap)
+
+        return max(gaps)
+
     def dfs_helper(
         edge: OrientedEdge,
         current_path: list[OrientedEdge],
@@ -523,6 +555,10 @@ def dfs_track_paths(
 
         # Maximum len size check (avoids long recursions)
         if get_path_len(current_path, graph) > max_len:
+            extensions.add(current_path[:])
+            return
+
+        if max_intron_size and exons_gap(current_path, graph) > max_intron_size:
             extensions.add(current_path[:])
             return
 
@@ -565,6 +601,7 @@ def extend_path(
     graph: Assembly_graph,
     max_len: int = 5000,
     max_ext: int = 10,
+    max_intron_size: int = 2000,
     key: Optional[Callable[[list[OrientedEdge]], int]] = None,
 ) -> list[OrientedEdge]:
     """Given an assembly graph and a path, extend the given path following the graph topology
@@ -573,35 +610,28 @@ def extend_path(
     Return a list with all the extended paths, represented as list of oriented edges.
     """
 
-    return [
-        path.edges[:-1] + list(starmap(OrientedEdge, ext))
-        for ext in dfs_track_paths(
-            graph, path.edges[-1], max_len=max_len, max_extensions=max_ext, key=key
-        )
-    ]
+    *edges, tail = path.edges
+    extensions = dfs_track_paths(graph, tail, max_len, max_ext, max_intron_size, key)
+    return [edges + ext for ext in extensions]
 
 
-def get_seq_atts(
-    protopath: list[OrientedEdge], graph: Assembly_graph
-) -> tuple[int, float]:
+def get_seq_atts(path: list[OrientedEdge], graph: Assembly_graph) -> tuple[int, float]:
     """Given a list of OrientedEdges which represent a path, infer the length and coverage of
     the sequence it encodes. Returns a tuple with both values.
     """
 
-    ids = [edge.id for edge in protopath]
-    path_length = sum(graph.edge_dict[id].get_length() for id in ids) - (
-        graph.K * (len(protopath) - 1)
+    edges = [graph.edge_dict[edge.id] for edge in path]
+    path_length = sum(len(edge) for edge in edges) - (graph.K * (len(path) - 1))
+    path_cov = sum(edge.coverage * len(edge) for edge in edges) / (
+        path_length - graph.K
     )
-    path_cov = sum(
-        graph.edge_dict[id].coverage * graph.edge_dict[id].get_length() for id in ids
-    ) / (path_length - graph.K)
 
     return path_length, path_cov
 
 
-def make_path_name(path: list[OrientedEdge], idx: int, graph):
-    atts = get_seq_atts(path, graph)
-    return f"EDGE_{idx}_length_{atts[0]}_cov_{atts[1]:.3f}"
+def make_path_name(path: list[OrientedEdge], idx: int, graph: Assembly_graph):
+    length, cov = get_seq_atts(path, graph)
+    return f"EDGE_{idx}_length_{length}_cov_{cov:.3f}"
 
 
 def effective_cov(starts: list[int], ends: list[int]) -> int:
@@ -676,9 +706,102 @@ def find_components_best_probe(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def snakemake_call2(snakemake):
+def colored_paths_extension(
+    graph: Assembly_graph,
+    hits: pl.DataFrame,
+    max_extensions: int = 10,
+    max_intron_size: int = 2000,
+    extension_len_limits: ExtLimits = ExtLimits(3000, 7000, 3.0),
+):
+    """
+    Given a graph colored by probe hits
+
+
+    Make Appropiate docstring."""
+
+    ## ToDo: Think about the K parameter
+
+    def _get_max_len(tlen: int, extension_limits: ExtLimits) -> int:
+        floor_len, ceil_len, plen_scaling = extension_limits
+        return min(max(floor_len, tlen * 3 * plen_scaling), ceil_len)
+
+    def _hash_path(path) -> int:
+        return hash(tuple(sorted(edge.id for edge in path)))
+
+    def is_contained(ext: list[OrientedEdge], ext_sets: tuple[set[str]]) -> bool:
+        qext = set(map(attrgetter("id"), ext))
+        return any(qext.issubset(edge_set) for edge_set in ext_sets if qext != edge_set)
+
+    get_max_len = partial(_get_max_len, extension_limits=extension_len_limits)
+    comp_pcov = partial(probe_cov, graph=graph)
+    get_path_length = partial(get_seq_atts, graph=graph)
+
+    path_extensions = {}
+
+    for comp, queries in groupby(
+        hits["query", "tlen", "comp_id"].iter_rows(), key=lambda x: x[2]
+    ):
+        # Compute extensions for all paths
+        comp_ext = {}
+        for name, tlen, _ in queries:
+            comp_ext[name] = extend_path(
+                graph.paths[name],
+                graph,
+                key=comp_pcov,
+                max_len=get_max_len(tlen),
+                max_ext=max_extensions,
+                max_intron_size=max_intron_size,
+            )
+
+        # Some extensions would be contained by others, we need to get rid of those
+        ext_sets = tuple(
+            set(map(attrgetter("id"), ext))
+            for ext in chain.from_iterable(comp_ext.values())
+        )
+
+        filt_comp_ext = defaultdict(list)
+        for name, extensions in comp_ext.items():
+            for ext in extensions:
+                if not is_contained(ext, ext_sets):
+                    filt_comp_ext[name].append(ext)
+
+        # Remove duplicated paths
+        signs = set()
+        filt_paths = []
+        for path in chain.from_iterable(filt_comp_ext.values()):
+            if (sign := _hash_path(path)) not in signs:
+                signs.add(sign)
+                filt_paths.append(path)
+
+        # Now use Kmedioids to select K
+        ## ToDo: How to select K? It should consider component size, ploidy?
+        selected_ext = select_k_paths(
+            filt_paths,
+            max_extensions,
+            graph,
+            key=lambda path: (comp_pcov(path), get_path_length(path)),
+        )
+
+        # Finally recover the original path names for logging
+        final_comp_ext = defaultdict(list)
+        path2name = {
+            _hash_path(path): name
+            for name, paths in filt_comp_ext.items()
+            for path in paths
+        }
+        for ext in selected_ext:
+            final_comp_ext[path2name[_hash_path(ext)]].append(ext)
+
+        path_extensions[comp] = final_comp_ext
+        # path_extensions.update(final_comp_ext)
+
+    return path_extensions
+
+
+def snakemake_call(snakemake):
     with open(snakemake.log[0], "w") as outlog:
         sys.stdout = sys.stderr = outlog
+        sys.setrecursionlimit(5000)
 
         graph_path = Path(snakemake.input.graph)
         table_path = Path(snakemake.input.table)
@@ -686,12 +809,18 @@ def snakemake_call2(snakemake):
         floor_len = (
             snakemake.params.floor_len
         )  # maximum extension of a path in nucleotide
+        ceil_len = (
+            snakemake.params.ceil_len
+        )  # maximum extension of a path in nucleotide
         plen_scaling = (
             snakemake.params.plen_scaling
         )  # float that multiplies the length of the probe for an alternative extension
         # The selected extension is the max of these two thresholds.
+        max_intron_size = snakemake.params.max_intron_size
 
+        extension_limits = ExtLimits(floor_len, ceil_len, plen_scaling)
         max_extensions = snakemake.params.max_extensions
+        max_extensions = max_extensions
 
         # Load the matches
         df = pl.read_csv(table_path, separator="\t", has_header=True)
@@ -720,77 +849,62 @@ def snakemake_call2(snakemake):
         graph.color_edges(final_hits)
 
         # Explore the colored graph:
-        # ToDo: Implement
+        path_extensions = colored_paths_extension(
+            graph, final_hits, max_extensions, max_intron_size, extension_limits
+        )
 
-
-def snakemake_call(snakemake):
-    with open(snakemake.log[0], "w") as outlog:
-        sys.stdout = sys.stderr = outlog
-
-        graph_path = Path(snakemake.input.graph)
-        table_path = Path(snakemake.input.table)
-        out = Path(snakemake.output[0])
-        floor_len = (
-            snakemake.params.floor_len
-        )  # maximum extension of a path in nucleotide
-        plen_scaling = (
-            snakemake.params.plen_scaling
-        )  # float that multiplies the length of the probe for an alternative extension
-        # The selected extension is the max of these two thresholds.
-
-        max_extensions = snakemake.params.max_extensions
-
-        # Try to extend only paths that match with probes
-        pat = re.compile(r"(?<=NODE_)\d+")
-        df = pd.read_csv(table_path, sep="\t")
-        match_paths_plen = {
-            query: tlen
-            for _, (query, tlen) in df.loc[:, ["query", "tlen"]]
-            .drop_duplicates()
-            .groupby(by="query")
-            .max("tlen")
-            .reset_index()
-            .sort_values(
-                by="query",
-                key=lambda names: [int(pat.search(name)[0]) for name in names],
-            )
-            .iterrows()
-        }
-
+        # Make the new paths out of the extensions
+        node_pat = re.compile(r"^NODE_(\d+)_")
         counter = count(1)
-        graph = Assembly_graph(graph_path)
+        newpaths = defaultdict(list)
+        for path, extensions in sorted(
+            path_extensions.items(), key=lambda x: int(node_pat.match(x[0])[1])
+        ):
+            for extension in extensions:
+                name = make_path_name(extension, next(counter), graph)
+                newpaths[path].append(Path_on_graph(name, extension))
 
-        path_extensions = {
-            name: extend_path(
-                graph.paths[name],
-                graph,
-                max_len=max(floor_len, plen * 3 * plen_scaling),
-                max_ext=max_extensions,
-            )
-            for name, plen in match_paths_plen.items()
-        }
-
-        newpaths = {
-            path: [
-                Path_on_graph(
-                    make_path_name(extension, next(counter), graph), extension
-                )
-                for extension in extensions
-            ]
-            for path, extensions in path_extensions.items()
-        }
-
+        # Log the extensions: old_path -> new_path
         for path, exts in newpaths.items():
             for newpath in exts:
                 print(f"{path}\t{newpath.name}")
 
+        # Finally write the new sequences
         seqs_iter = (
             graph.retrieve_path(path) for path in chain.from_iterable(newpaths.values())
         )
         SeqIO.write(seqs_iter, out, "fasta")
 
 
-def main(): ...
+def main():
+    import sys
+
+    if len(sys.argv) != 5:
+        print(
+            "Usage: python gfa_graph.py <graph.gfa> <hits.tsv> <output.fasta> <extensions.log>"
+        )
+        sys.exit(1)
+
+    class Run:
+        def __init__(self, **kwargs):
+            for key, val in kwargs.items():
+                setattr(self, key, val)
+
+    # Mock the snakemake object
+    snakemake = Run(
+        input=Run(graph=sys.argv[1], table=sys.argv[2]),
+        output=[sys.argv[3]],
+        log=[sys.argv[4]],
+        params=Run(
+            floor_len=3000,
+            ceil_len=7000,
+            plen_scaling=3,
+            max_extensions=10,
+            max_intron_size=2000,
+        ),
+    )
+
+    snakemake_call(snakemake)
 
 
 if __name__ == "__main__":

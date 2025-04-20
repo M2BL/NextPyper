@@ -48,16 +48,16 @@ pipeline = lookup("pipeline", within=config)
 trim_qual = lookup("preprocessing/trim_qual", within=pipeline)
 trim_min_len = lookup("preprocessing/min_len", within=pipeline)
 
-# MMseqs2
+# MMseqs2 ## Not used?
 mmseq2_min_seq_id = lookup("multi_probe_clustering/mmseq2_min_seq_id", within=pipeline)
 
 # Spades
 spades_k = lookup("spades/k", within=pipeline)
 
-# MMseqs prefiltering
+# MMseqs prefiltering ## Not used?
 mmseq_prefilt_sens = lookup("mmseqs_prefiltering/sensitivity", within=pipeline)
 
-# Split graph into probes
+# Split graph into probes ## Not used?
 min_probe_cov = lookup(
     "split_graph_by_matching_probe/min_probe_coverage", within=pipeline
 )
@@ -66,9 +66,16 @@ min_probe_cov = lookup(
 floor_len_extension = lookup(
     "scaffolds_extension/exploration/floor_len_extension", within=pipeline
 )
+ceil_len_extension = lookup(
+    "scaffolds_extension/exploration/ceiling_len_extension", within=pipeline
+)
 plen_scaling_factor = lookup(
     "scaffolds_extension/exploration/probe_len_scaling", within=pipeline
 )
+max_intron_size = lookup(
+    "scaffolds_extension/exploration/max_intron_size", within=pipeline
+)
+
 max_extensions = lookup("scaffolds_extension/output/max_extensions", within=pipeline)
 
 # MMseqs matching

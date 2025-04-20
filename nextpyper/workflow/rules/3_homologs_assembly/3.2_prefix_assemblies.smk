@@ -52,8 +52,10 @@ rule extend_paths:
         outdir / "assembled/extension/{sample}.fasta",
     params:
         floor_len=floor_len_extension,
+        ceil_len=ceil_len_extension,
         plen_scaling=plen_scaling_factor,
         max_extensions=max_extensions,
+        max_intron_size=max_intron_size,
     log:
         outdir / "logs/assembled/extension/{sample}.log",
     script:
