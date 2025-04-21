@@ -28,7 +28,7 @@ rule raw_assembly_to_probes_matching:
         fields=mmseq_fields,
         evalue=mmseq_evalue,
         min_orf_len=min_orf_len,
-        sensitivity=mmseq_prefilt_sens,
+        sensitivity=mmseq_sens,
     log:
         outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
     threads: 4
