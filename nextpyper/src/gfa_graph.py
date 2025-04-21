@@ -569,7 +569,12 @@ def dfs_track_paths(
 
         # Explore neighbors
         for neighbor in neighbors:
-            dfs_helper(neighbor, current_path[:], extensions)
+            if neighbor != edge:
+                dfs_helper(neighbor, current_path[:], extensions)
+            # Avoid getting stuck in self loops.
+            else:
+                extensions.add(current_path[:])
+                return
 
     if key is None:
         key = partial(get_path_len, graph=graph)
