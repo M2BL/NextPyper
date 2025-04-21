@@ -56,7 +56,7 @@ rule extend_paths:
         plen_scaling=plen_scaling_factor,
         max_extensions=max_extensions,
         max_intron_size=max_intron_size,
-        probe_pattern=pattern,
+        probe_pattern=lambda wildcards: pattern,
     log:
         outdir / "logs/assembled/extension/{sample}.log",
     script:

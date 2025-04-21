@@ -123,7 +123,13 @@ if multi_probes:
 else:
     cpat = re.compile(pattern)
     all_probes_list = probes_list
-    probes_list = [cpat.search(probe)[1] for probe in all_probes_list]
+    try:
+        probes_list = [cpat.search(probe)[1] for probe in all_probes_list]
+    except TypeError:
+        names = [probe.id for probe in probes if not cpat.search(probe.id)]
+        raise Exception(
+            f"Error: pattern {pattern} does not match all probes:\n{"\n".join(names)}"
+        )
 
 
 # Make useful structures for the inputs
