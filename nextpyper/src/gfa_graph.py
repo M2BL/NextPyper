@@ -662,17 +662,18 @@ def find_components_best_probe(df: pl.DataFrame) -> pl.DataFrame:
         pl.sum("gapopen"),
         pl.first("tlen"),
         pl.first("comp_id"),
+        pl.first("tprobe"),
         pl.col("qstart"),
         pl.col("qend"),
         pl.col("tstart"),
         pl.col("tend"),
     )
 
-    # Collect all the hits of a probe in a given component
-    df3 = df2.group_by(["theader", "comp_id"]).agg(
+    df3 = df2.group_by(["theader"]).agg(
         pl.sum("nident"),
         pl.sum("mismatch"),
         pl.first("tlen"),
+        pl.first("tprobe"),
         pl.concat_list("tstart"),
         pl.concat_list("tend"),
     )
@@ -688,21 +689,22 @@ def find_components_best_probe(df: pl.DataFrame) -> pl.DataFrame:
     # Select the nest probe for each component (the dominant probe), by "alternative coverage"
     # criterion. The alternative coverage is the Non-redundant number of matches found in the probe,
     # over the length of the probe.
+
     best_probes = (
         df4.with_columns(
             alt_cov=pl.col("eff_cov")
             * (pl.col("nident") / (pl.col("nident") + pl.col("mismatch")))
             / pl.col("tlen")
         )
-        .sort(by=["comp_id", "alt_cov"], descending=True)
-        .group_by(["comp_id"])
-        .agg(pl.first("theader"))
+        .sort(by=["tprobe", "alt_cov"], descending=True)
+        .group_by(["tprobe"])
+        .agg(pl.first("theader"), pl.first("alt_cov"))
     )
 
     return (
-        df2.join(best_probes, on="comp_id", suffix="_best")
+        df2.join(best_probes, on="tprobe", suffix="_best")
         .filter(pl.col("theader") == pl.col("theader_best"))
-        .sort(by="comp_id")
+        .sort(by="tprobe")
     )
 
 
@@ -792,8 +794,7 @@ def colored_paths_extension(
         for ext in selected_ext:
             final_comp_ext[path2name[_hash_path(ext)]].append(ext)
 
-        path_extensions[comp] = final_comp_ext
-        # path_extensions.update(final_comp_ext)
+        path_extensions.update(final_comp_ext)
 
     return path_extensions
 
@@ -817,6 +818,7 @@ def snakemake_call(snakemake):
         )  # float that multiplies the length of the probe for an alternative extension
         # The selected extension is the max of these two thresholds.
         max_intron_size = snakemake.params.max_intron_size
+        pat = snakemake.params.probe_pattern
 
         extension_limits = ExtLimits(floor_len, ceil_len, plen_scaling)
         max_extensions = snakemake.params.max_extensions
@@ -842,6 +844,7 @@ def snakemake_call(snakemake):
         pre_comp = df.with_columns(
             cis=pl.col("qend") > pl.col("qstart"),
             comp_id=pl.col("query").replace_strict(path2comp),
+            tprobe=pl.col("theader").str.extract(pat),
         )
 
         # Find which probe is best for each component and color the graph
@@ -901,6 +904,7 @@ def main():
             plen_scaling=3,
             max_extensions=10,
             max_intron_size=2000,
+            probe_pattern=r"(\d+)$",
         ),
     )
 
