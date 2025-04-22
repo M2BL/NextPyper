@@ -73,9 +73,19 @@ class WrongAlphabet(Exception):
     """Exception raised when no assembled contig overlap with the probe"""
 
 
-# =======================================================================================
-#               FUNCTIONS
-# =======================================================================================
+def validate_sequence(
+    seq: Seq, record_name: str, alphabet: Literal["dna", "protein"] = "dna"
+) -> None:
+    """
+    Validate if a biopython Seq object is a dna or protein sequence
+    :param seq:
+    :param alphabet:
+    :return: None, raises WrongAlphabet exception if failed
+    """
+    alphabets = {
+        "dna": re.compile("^[acgtn]*$", re.I),
+        "protein": re.compile("^[acdefghiklmnpqrstvwyx*]*$", re.I),
+    }
 
 
 def get_nuc_coordinates(
