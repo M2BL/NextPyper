@@ -14,16 +14,16 @@ include: Path(workflow.basedir) / "rules" / "common.smk"
 targets = []
 
 
-include: Path(workflow.basedir) / "rules/0_reads_preprocessing/0.1_trimming.smk"
-include: Path(workflow.basedir) / "rules/2_probes_translation/2.1_orfipy.smk"
-include: Path(workflow.basedir) / "rules/3_homologs_assembly/3.1_assembly_spades.smk"
-include: Path(workflow.basedir) / "rules/3_homologs_assembly/3.2_prefix_assemblies.smk"
-include: Path(workflow.basedir) / "rules/3_homologs_assembly/3.3_homolog_probe_matching.smk"
-include: Path(workflow.basedir) / "rules/4_clustering/4.1_merging_and_clustering.smk"
-include: Path(workflow.basedir) / "rules/7_variants_on_graph/7.1_saute_assembly.smk"
-include: Path(workflow.basedir) / "rules/8_homolog_prospection/8.1_homologs_filtering.smk"
-include: Path(workflow.basedir) / "rules/8_homolog_prospection/8.2_allele_collapsing.smk"
-include: Path(workflow.basedir) / "rules/8_homolog_prospection/8.3_region_separation.smk"
+include: Path(workflow.basedir) / "rules/0_preprocessing/0.1_reads.smk"
+include: Path(workflow.basedir) / "rules/0_preprocessing/0.2_probes.smk"
+include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.1_assembly_spades.smk"
+include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.2_seeds_extension.smk"
+include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.3_seeds_filtering.smk"
+include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.4_seeds_clustering.smk"
+include: Path(workflow.basedir) / "rules/2_homologs_assembly/2.1_saute_assembly.smk"
+include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.1_homologs_filtering.smk"
+include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.2_allele_collapsing.smk"
+include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.3_region_separation.smk"
 
 
 targets.append(
