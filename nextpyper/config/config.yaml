@@ -3,7 +3,42 @@ nextpyper:
     args: # Command line args will be (over)written here at runtime
         input:
         output:
-        graph_simplification: false
-        taper_params: 
-        trimal_gt:
+        probe_pattern: (\d{4})$
+        multi_probes:
     # Add customisable config here
+    pipeline:
+        preprocessing:
+            trim_qual: 30
+            min_len: 75
+        probes_translation:
+            translated_prop: 0.95
+            stop_per_1Kbp: 2 
+            min_exon_length: 20
+        multi_probe_clustering:
+            mmseq2_min_seq_id: 0.8
+        spades:
+            k: auto
+        mmseqs_prefiltering:
+            sensitivity: 4
+        scaffolds_extension:
+            exploration:
+                floor_len_extension: 3000
+                ceiling_len_extension: 7000
+                probe_len_scaling: 3
+                max_intron_size: 2000
+            output:
+                max_extensions: 5
+        split_graph_by_matching_probe:
+            min_probe_coverage: 0.1
+        mmseqs_matching:
+            fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
+            evalue: 1.000E-06
+            min_orf_len: 15
+            sensitivity: 7.5
+        homolog_filtering:
+            homolog_scf_min_cov: 0.1
+            homolog_scf_min_idt: 0.6
+        region_separation:
+            min_probe_scaffold_sim: 0.85
+            min_fragment_cov: 0.1
+            min_exonic_length: 10

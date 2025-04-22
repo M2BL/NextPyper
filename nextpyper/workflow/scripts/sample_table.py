@@ -22,8 +22,17 @@ import os
 # =============================================================================
 
 
-def make_table(data_dir: Path, out_table: Path, sep: str = "\t") -> None:
-    """Parse the directory with paired-end reads data"""
+def make_table(
+    data_dir: Path, out_table: Path, extra: str | None = None, sep: str = "\t"
+) -> None:
+    """Parse the directory with paired-end reads data and write a sample table
+    specifying paths for each sample. The sample name is inferred from the common
+    prefix of each pair of reads.
+
+    The output table has 3 columns: sample_name, path_forward_reads, path_reverse_reads.
+    If extra is given, a fourth column will be included for all the samples with extra.
+    """
+
     with out_table.open("w") as table:
         files = sorted(data_dir.iterdir())
 
@@ -42,4 +51,6 @@ def make_table(data_dir: Path, out_table: Path, sep: str = "\t") -> None:
             sample = sample.rstrip("._-")
             sample = sample.replace("-", "_")
 
-            table.write(f"{sample}{sep}{file1.resolve()}{sep}{file2.resolve()}\n")
+            row = f"{sample}{sep}{file1.resolve()}{sep}{file2.resolve()}"
+            row += f"\t{extra}\n" if extra else "\n"
+            table.write(row)

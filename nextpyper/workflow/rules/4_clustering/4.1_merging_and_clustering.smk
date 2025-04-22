@@ -1,40 +1,42 @@
-graph_dir = outdir / Path("assembled/prefixed/component_seqs/")
+def aggregate_sample_per_probe(wildcards):
+    probe_inputs = defaultdict(list)
+    for sample in sample_list:
+        checkpoint_output = checkpoints.homologs_filtering.get(sample=sample).output[0]
+        global_match = glob_wildcards(Path(checkpoint_output) / "{probe}.fasta")
 
+        for probe in global_match.probe:
+            probe_inputs[probe].append(
+                outdir / f"assembled/filtering/filtered_scfs/{sample}/{probe}.fasta"
+            )
 
-targets.append(expand(outdir / "clustering/clusters/{probes}", probes=probes_list))
-# ToDo: Test:
-# What happens if not all the probes are present in at least one sample?
-# This would certainly happen in real life cases.
-
-
-def union_probes(wildcards):
-    glob_match = glob_wildcards(graph_dir / f"{{sample}}/{wildcards.probe}.fasta")
-
-    return expand(
-        graph_dir / f"{{sample}}/{wildcards.probe}.fasta",
-        sample=glob_match.sample,
-    )
+    return probe_inputs[wildcards.probe]
 
 
 rule merge_asms:
     input:
-        direc=outdir / "logs/dones/prefixing.done",
-        probes=union_probes,
+        probe=aggregate_sample_per_probe,
+        chkpt=outdir / "logs/dones/splitting.done",
     output:
         outfile=outdir / "clustering/sample_merged_input/{probe}.fasta",
     shell:
-        "cat {input.probes} > {output}"
+        """
+        for file in {input.probe}; do 
+            cat $file 
+        done > {output}
+        touch {output}
+        """
 
 
-checkpoint clustering:
+rule vsearch_clustering:
     input:
-        probes=outdir / "translated_probes/split_probes/{probe}.fasta",
-        contigs=outdir / "clustering/sample_merged_input/{probe}.fasta",
+        cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
-        directory(outdir / "clustering/clusters/{probe}"),
+        centroids=outdir / "clustering/centroids/{probe}.fasta",
+        msaout=outdir / "clustering/msa/{probe}.fasta",
     log:
-        outdir / "logs/clustering/{probe}.log",
-    conda:
-        "../../envs/clustering.yaml"
-    script:
-        "../../../src/contig_cluster.py"
+        outdir / "logs/clustering/vsearch/{probe}.log",
+    params:
+        extra="--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both",
+    threads: 4
+    wrapper:
+        "v4.3.0/bio/vsearch"

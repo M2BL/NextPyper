@@ -1,44 +1,40 @@
-
 # Update default config with runtime config
 configfile: os.path.join(workflow.basedir, "../", "config", "config.yaml")
 configfile: os.path.join(workflow.basedir, "../", "config", "system_config.yaml")
-config.update(config["nextpyper"]) # convenience if using namespaced config
+
+
+config.update(config["nextpyper"])  # convenience if using namespaced config
 
 
 # Rules files
-include: os.path.join(workflow.basedir, "rules", "common.smk")
-include: os.path.join(workflow.basedir, "rules", "preflight.smk")
+include: Path(workflow.basedir) / "rules" / "common.smk"
+
 
 ## List of outputs
 targets = []
 
 
-include: os.path.join(workflow.basedir, "rules", "0_reads_preprocessing", "0.1_trimming.smk")
-# include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.1_mapping_bwa_mem2.smk")
-# include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.2_read_distribution.smk")
-include: os.path.join(workflow.basedir, "rules", "2_probes_translation", "2.1_transdecoder.smk")
-include: os.path.join(workflow.basedir, "rules", "2_probes_translation", "2.2_probe_profiles.smk")
-include: os.path.join(workflow.basedir, "rules", "1_mapping", "1.3_probe_guided_assembly.smk")
-# include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.1_assembly_spades.smk")
-include: os.path.join(workflow.basedir, "rules", "3_homologs_assembly", "3.2_prefix_assemblies.smk")
-include: os.path.join(workflow.basedir, "rules", "4_clustering", "4.1_merging_and_clustering.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.1_clusters_alignment.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.2_alignment_postprocessing.smk")
-include: os.path.join(workflow.basedir, "rules", "6_HMMs", "6.1_hmm_profile_building.smk")
-include: os.path.join(workflow.basedir, "rules", "7_variants_on_graph", "7.1_saute_assembly.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.3_variants_alignment.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.4_var_alns_postprocessing.smk")
-include: os.path.join(workflow.basedir, "rules", "5_alignment", "5.5_sorting_alignments.smk")
+include: Path(workflow.basedir) / "rules/0_reads_preprocessing/0.1_trimming.smk"
+include: Path(workflow.basedir) / "rules/2_probes_translation/2.1_orfipy.smk"
+include: Path(workflow.basedir) / "rules/3_homologs_assembly/3.1_assembly_spades.smk"
+include: Path(workflow.basedir) / "rules/3_homologs_assembly/3.2_prefix_assemblies.smk"
+include: Path(workflow.basedir) / "rules/3_homologs_assembly/3.3_homolog_probe_matching.smk"
+include: Path(workflow.basedir) / "rules/4_clustering/4.1_merging_and_clustering.smk"
+include: Path(workflow.basedir) / "rules/7_variants_on_graph/7.1_saute_assembly.smk"
+include: Path(workflow.basedir) / "rules/8_homolog_prospection/8.1_homologs_filtering.smk"
+include: Path(workflow.basedir) / "rules/8_homolog_prospection/8.2_allele_collapsing.smk"
+include: Path(workflow.basedir) / "rules/8_homolog_prospection/8.3_region_separation.smk"
+
+
+targets.append(
+    expand(
+        outdir / "homolog_prospection/region_separation/alns/{probes}",
+        probes=probes_list,
+    )
+)
 
 
 # Target rules
-@targetRule
 rule all:
     input:
         targets,
-
-@targetRule
-rule print_targets:
-    run:
-        print("\nTop level rules are: \n", file=sys.stderr)
-        print("* " + "\n* ".join(target_rules) + "\n\n", file=sys.stderr)

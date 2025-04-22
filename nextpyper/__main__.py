@@ -18,7 +18,11 @@ from snaketool_utils.cli_utils import (
 )
 
 sys.path.append(str((Path(__file__).parent / "workflow/scripts").resolve()))
+sys.path.append(str((Path(__file__).parent / "src").resolve()))
+
 from sample_table import make_table
+from multi_seq_probes import check_probes
+from summarize_results import summarize_workflow
 
 
 def snake_base(rel_path):
@@ -150,8 +154,18 @@ Available targets:
 
 # ToDo: Refine this help message
 sample_table_msg = """
-The data directory is expected to have raw paired reads 
-per sample (forward, reverse).
+The data directory is expected to have raw paired reads
+files per each sample (forward, reverse).
+"""
+
+# ToDo: Refine this help message
+validate_probes_msg = """
+
+"""
+
+# ToDo: Refine this help message
+summarize_run_msg = """
+
 """
 
 
@@ -176,25 +190,19 @@ per sample (forward, reverse).
     required=True,
 )
 @click.option(
-    "--graph_simplification",
-    "graph_simplification",
-    help="Whether to simplify assembly graph after first assembly",
-    is_flag=True,
-    default=False,
+    "--multi-probes/--single-probes",
+    "multi_probes",
+    help="Whether the probe set has multiple or a single sequence per probe ",
+    default=True,
     show_default=True,
 )
 @click.option(
-    "--taper_parameters",
-    "taper_params",
-    help="Parameters file to use when running TAPER (-p). See TAPER's docs.",
-    type=click.Path(readable=True, exists=True),
-)
-@click.option(
-    "--trimal_gt",
-    "trimal_gt",
-    help="1 - (fraction of sequences with a gap allowed)in Trimal.",
-    type=float,
-    default=0.2,
+    "--pattern",
+    "probe_pattern",
+    help="Pattern used to group the probes (RegEx)",
+    type=str,
+    default=r"(\d{4})$",
+    show_default=True,
 )
 @common_options
 def run(**kwargs):
@@ -225,11 +233,11 @@ def citation(**kwargs):
 
 
 @click.option(
-    "--input",
-    "input",
-    help="Path to data directory",
-    type=click.Path(readable=True, exists=True),
-    required=True,
+    "--extra",
+    help="extra info to add to all samples",
+    type=str,
+    default="targeted",
+    show_default=True,
 )
 @click.option(
     "--output",
@@ -238,18 +246,108 @@ def citation(**kwargs):
     default="sample.tsv",
     show_default=True,
 )
+@click.option(
+    "--input",
+    "input",
+    help="Path to data directory",
+    type=click.Path(readable=True, exists=True),
+    required=True,
+)
 @click.command(epilog=sample_table_msg)
 def make_sample_table(**kwargs):
     """Generate a sample table given a data directory"""
 
     datadir = Path(kwargs["input"])
     outfile = Path(kwargs["output"])
+    extra = kwargs["extra"]
 
-    make_table(datadir, outfile)
+    make_table(datadir, outfile, extra=extra)
+
+
+@click.option(
+    "--write_hierarchy",
+    "hierarchy",
+    help="Write grouping hierarchy to this file",
+    type=click.Path(writable=True, readable=True),
+    default="",
+    # show_default=True,
+)
+@click.option(
+    "--write_summary",
+    "output",
+    help="Write summary of grouping to this file",
+    type=click.Path(writable=True, readable=True),
+    default="",
+    # show_default=True,
+)
+@click.option(
+    "--pattern",
+    help="Pattern used to group the probes (RegEx)",
+    type=str,
+    default=r"(\d{4})$",
+    show_default=True,
+)
+@click.option(
+    "--probes",
+    "probes",
+    help="Path to probes files",
+    type=click.Path(readable=True, exists=True),
+    required=True,
+)
+@click.command(epilog=validate_probes_msg)
+def validate_probes(**kwargs):
+    """Validate a probes file for running NextPyper"""
+
+    probes_path = Path(kwargs["probes"])
+    pattern = kwargs["pattern"]
+    outsummary = Path(kwargs["output"]) if kwargs["output"] else None
+    outhierarchy = Path(kwargs["hierarchy"]) if kwargs["hierarchy"] else None
+
+    check_probes(probes_path, pattern, outsummary, outhierarchy)
+
+
+@click.option(
+    "--seqs_per_probe",
+    "seqs_per_probe",
+    help="Output sample table",
+    type=click.Path(writable=True, path_type=Path),
+    default=None,
+    show_default=True,
+)
+@click.option(
+    "--output",
+    "output",
+    help="Output sample table",
+    type=click.Path(writable=True, path_type=Path),
+    default="run_stats.csv",
+    show_default=True,
+)
+@click.option(
+    "--rundir",
+    "rundir",
+    help="Path to run directory",
+    type=click.Path(readable=True, exists=True, path_type=Path),
+    required=True,
+)
+@click.command(epilog=summarize_run_msg)
+def summarize_run(**kwargs):
+    """Summarize the results of a NextPyper run"""
+
+    run_directory_path = kwargs["rundir"]
+    out_table_path = kwargs["output"]
+    tab_file = kwargs["seqs_per_probe"]
+
+    df, table = summarize_workflow(run_directory_path)
+    df.to_csv(out_table_path, index=False)
+
+    if tab_file:
+        table.T.to_csv(tab_file, float_format="%.2f")
 
 
 cli.add_command(run)
 cli.add_command(make_sample_table)
+cli.add_command(validate_probes)
+cli.add_command(summarize_run)
 cli.add_command(config)
 cli.add_command(citation)
 

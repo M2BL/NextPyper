@@ -1,7 +1,0 @@
-name: distribute_reads.yaml
-channels:
-    - conda-forge
-    - bioconda
-    - defaults
-dependencies:
-    - pysam=0.22

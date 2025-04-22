@@ -28,7 +28,7 @@ __version__ = "0.1"
 # =======================================================================================
 
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 from functools import reduce, partial
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -39,6 +39,7 @@ from Bio.Seq import Seq
 class Segment(NamedTuple):
     id: str
     seq: Seq
+    tags: dict[str, Any]
 
 
 # add docstring
@@ -52,9 +53,24 @@ def parse_pline(p_line: str) -> SeqPath:
     return SeqPath(name, tuple(path.split(",")))
 
 
+def parse_tags(tag: str) -> tuple[str, Any]:
+    id, type, value = tag.split(":")
+    match type:
+        case "f":
+            value = float(value)
+        case "i":
+            value = int(value)
+        case "Z" | "H":
+            ...
+        case _:
+            raise ValueError(f"Found tag of {type=}")
+
+    return id, value
+
+
 def parse_sline(s_line: str) -> Segment:
-    _, name, seq, *_ = s_line.split()
-    return Segment(name, Seq(seq))
+    _, name, seq, *tags = s_line.split()
+    return Segment(name, Seq(seq), dict(map(parse_tags, tags)))
 
 
 # add docstring
@@ -89,39 +105,71 @@ def get_path_sequence(
     )
 
 
-# change name to path_to_fasta
-# are you sure 'gfa' should be a Path object and not a string? It would be better to create the Path object in the function
-# to avoid issues in SnakeMake.
-def paths2fasta(gfa: Path, out_fasta: Path) -> None:
-    """Given a gfa file, write sequences encoded in its P lines
-    to the given outfile path in fasta format."""
-
+def parse_graph_lines(
+    graph_lines: list[str], K: int | None = None
+) -> tuple[list[str], list[str], int]:
     s_lines = []
     p_lines = []
-    K = None
-    assert gfa.exists(), f"Graph file {gfa} not found"
-    with gfa.open() as file:
-        for line in file:
-            match line[0]:
-                case "S":
-                    s_lines.append(line)
-                case "L":
-                    if not K:
-                        K = int(line.split()[5].rstrip("M"))
-                case "P":
-                    p_lines.append(line)
-                case _:
-                    continue
+
+    for line in graph_lines:
+        match line[0]:
+            case "S":
+                s_lines.append(line)
+            case "L":
+                if not K:
+                    K = int(line.split()[5].rstrip("M"))
+            case "P":
+                p_lines.append(line)
+            case _:
+                continue
+
+    return s_lines, p_lines, K
+
+
+def paths_to_recs(
+    graph_lines: list[str], suffix_KC=False, K: int | None = None
+) -> list[SeqRecord]:
+    """Given a list with gfa lines, parse and generate Sequences encoded in its
+    paths (P lines) and return them as SeqRecord objects.
+
+    If suffix_KC is true, compute and include in the sequence name the Kmer count
+    for the encoded sequence according to the KC values of the edges that compose it.
+    """
+
+    def path_depth(path_segs: list[Segment], K: int) -> float:
+
+        tot_kc = sum(seg.tags.get("KC", 0) for seg in path_segs)
+        len_path = sum(len(seg.seq) for seg in path_segs)
+
+        return tot_kc / (len_path - (len(path_segs)) * K)
+
+    s_lines, p_lines, newK = parse_graph_lines(graph_lines)
+    if K is None:
+        K = newK
 
     segments = {seg.id: seg for line in s_lines if (seg := parse_sline(line))}
     paths = [parse_pline(line) for line in p_lines]
-    reqs_gen = (
+
+    if suffix_KC:
+        get_depth = (
+            lambda path: f"_DP{path_depth([segments[p[:-1]] for p in path.path], K):.2f}"
+        )
+
+    return [
         SeqRecord(
             seq=get_path_sequence(path, segments, K),
-            id=path.name,
+            id=f"{path.name}{get_depth(path) if suffix_KC else ''}",
             name="",
             description="",
         )
         for path in paths
-    )
-    SeqIO.write(reqs_gen, out_fasta, "fasta")
+    ]
+
+
+def paths_to_fasta(gfa: Path, out_fasta: Path) -> None:
+    """Given a gfa file, write sequences encoded in its P lines
+    to the given outfile path in fasta format."""
+
+    assert gfa.exists(), f"Graph file {gfa} not found"
+    with gfa.open() as file:
+        SeqIO.write(paths_to_recs(file), out_fasta, "fasta")

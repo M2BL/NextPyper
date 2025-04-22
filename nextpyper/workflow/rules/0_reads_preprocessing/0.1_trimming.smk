@@ -1,9 +1,3 @@
-targets.append(
-    expand(outdir / "trimmed/{samples}_R{dir}.fastq", samples=sample_list, dir=[1, 2])
-)
-targets.append(expand(outdir / "report/trimmed/{samples}.json", samples=sample_list))
-
-
 # The input function map the sample at hand to its input files (specified in the samples table):
 def get_raw_input_fastq_r1(wildcards):
     return sample_dict[wildcards.sample]["path_forward"]
@@ -18,20 +12,24 @@ rule fastp_pe:
         in1=get_raw_input_fastq_r1,
         in2=get_raw_input_fastq_r2,
     output:
-        trim1=outdir / "trimmed/{sample}_R1.fastq",
-        trim2=outdir / "trimmed/{sample}_R2.fastq",
-        html=outdir / "report/trimmed/{sample}.html",
-        json=outdir / "report/trimmed/{sample}.json",
+        trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
+        trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
+        html=outdir / "logs/preprocessing/fastp/{sample}.html",
+        json=outdir / "logs/preprocessing/fastp/{sample}.json",
     log:
-        outdir / "logs/fastp/{sample}.log",
+        outdir / "logs/preprocessing/fastp/{sample}.log",
     params:
-        extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_right",
+        trim_qual=trim_qual,
+        trim_min_len=trim_min_len,
+        extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_tail",
     threads: 4
     conda:
         "../../envs/preprocessing.yaml"
     shell:
         "(fastp --thread {threads} "
         "{params.extra} "
+        "--cut_mean_quality {params.trim_qual} "
+        "--length_required {params.trim_min_len} "
         "--in1 {input.in1} --in2 {input.in2} "
         "--out1 {output.trim1} --out2 {output.trim2} "
         "--html {output.html} "

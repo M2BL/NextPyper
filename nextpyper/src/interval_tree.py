@@ -91,7 +91,6 @@ class Node:
 
 
 class Interval:
-
     """
     Data structure use in the interval search tree. It relies on the interval data
     structure found at:
@@ -116,6 +115,12 @@ class Interval:
             )
         self.lo = lo
         self.hi = hi
+
+    def overlaps(self, other: "Interval") -> bool:
+        """Find if another interval overlaps with this interval."""
+        if self.hi > other.lo:
+            return True
+        return False
 
     @classmethod
     def from_tuple(cls, tuple_lo_hi: tuple[Number]) -> "Interval":
@@ -448,6 +453,30 @@ class IntervalST:
             nodes.extend([node.left, node.right])
         return sorted(result, key=lambda x: x[1])
 
+    def tree_traversal_bsf_with_values(self) -> list[tuple[Interval]]:
+        """
+        Use Breadth-first search to retrieve all nodes from an interval tree.
+        For each node we get a tuple.
+
+        Returns
+        -------
+        list[tuple]
+            Each tuple contains the interval as an Interval object and the list
+            of values associated with the node.
+
+        """
+        result = []
+        nodes = [self.root]
+        while nodes:
+            node = nodes[0]
+            nodes = nodes[1:]
+            if node is None:
+                continue
+            result.append(node)
+            nodes.extend([node.left, node.right])
+        print(result)
+        return sorted(result, key=lambda x: x.interval[0])
+
     def height(self) -> int:
         """
         Height of the Search Tree
@@ -487,8 +516,10 @@ if __name__ == "__main__":
     # print(ST.searchIntersect(Interval(6, 7)))
     # print(ST.searchIntersect(Interval(4, 7)))
     print("all intersections", ST.get_all_intersections())
+    print(ST.tree_traversal_bsf())
     # print(ST.tree_traversal_bsf())
     # print("search:", [x.value for x in ST.searchContains(Interval(7, 10))])
 
     # print("result value is ", ST.get(Interval(1, 6)))
     # print("search:", [x.value for x in ST.search(Interval(20, 21))])
+    print(ST.tree_traversal_bsf_with_values())

@@ -32,6 +32,8 @@ from itertools import chain, groupby
 from pathlib import Path
 from typing import Self
 from union_find import UnionFind
+from gfa2fasta import paths_to_recs
+from Bio import SeqIO
 
 
 @dataclass
@@ -39,6 +41,7 @@ class BGC_candidate:
     """
     Data structure for the parsing of the 'hmm_statistics.txt' file.
     """
+
     name: str
     hmms: list[str] = field(default_factory=list)
     coordinates: list[tuple[int, int]] = field(default_factory=list)
@@ -79,6 +82,13 @@ class BGC_candidate:
         self.max_domain_length = dominant_hmm[1]
         self.dominant_hmm = dominant_hmm[0]
         return self
+
+    def get_dominant_hmm_length(self) -> int:
+        return sum(
+            length
+            for length, hmm in zip(self.lengths, self.hmms)
+            if hmm == self.dominant_hmm
+        )
 
     def get_max_length(self) -> int:
         return self.max_domain_length
@@ -158,12 +168,11 @@ def components_from_gfa(gfa_file: str) -> list[set[str]]:
     return components
 
 
-def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, str]:
+def matched_edges_from_hmm(hmm_stat_file: str) -> dict[str, str]:
     """
     From a 'hmm_statistics.txt' file generated from spades with the --custom-hmms flag, retrieve the edges that
     have matched a hmm profile.
     :param hmm_stat_file:
-    :param min_domain_len: minimum number of matched aa by the hmm profile over the whole length of a contig.
     :return: a dict with edge id as key and hmm id as value.
     """
     with Path(hmm_stat_file).open() as file:
@@ -244,18 +253,22 @@ def matched_edges_from_hmm(hmm_stat_file: str, min_domain_len=20) -> dict[str, s
 
 
 def filter_components_hmm(
-    gfa_file, hmm_stat_file, min_domain_len=20
+    gfa_file: Path,
+    hmm_stat_file: Path,
+    probe_lens: dict[str, int],
+    min_domain_cov: float = 0.2,
 ) -> list[Component]:
     """
     Filter components from a gfa file based on a hmm profile file.
     :param gfa_file:
     :param hmm_stat_file:
-    :param min_domain_len: minimum matching length of the HMM profile on the scaffold in aa.
+    :param probe_lens: dictionary with the length, in nucleotides, of each probe for coverage computation.
+    :param min_domain_cov: minimum matching coverage of the scaffold in the HMM profile as a proportion [0-1].
     :return: a list of components with path that match at least one probe over 'min_domain_len- amino acids.
     """
     all_components = []
     components = components_from_gfa(gfa_file)
-    matched_edges = matched_edges_from_hmm(hmm_stat_file, min_domain_len)
+    matched_edges = matched_edges_from_hmm(hmm_stat_file)
 
     for component in components:
         bgc_matches = []
@@ -263,7 +276,12 @@ def filter_components_hmm(
             if (bgc_list := matched_edges.get(edge)) is not None:
                 #  filter by probe matching length
                 bgc_matches.extend(
-                    [bgc for bgc in bgc_list if bgc.get_max_length() > min_domain_len]
+                    [
+                        bgc
+                        for bgc in bgc_list
+                        if bgc.get_dominant_hmm_length() / probe_lens[bgc.dominant_hmm]
+                        >= min_domain_cov
+                    ]
                 )
 
         if bgc_matches:
@@ -271,14 +289,19 @@ def filter_components_hmm(
             dominant_hmm = max(set(hmm_matches), key=hmm_matches.count)
             subgraphs = list(set([bgc.get_subgraph() for bgc in bgc_matches]))
             paths = list(set(chain(*[bgc.get_paths() for bgc in bgc_matches])))
-            all_components.append(
-                Component(dominant_hmm, component, subgraphs, paths)
-            )
+            all_components.append(Component(dominant_hmm, component, subgraphs, paths))
 
     return all_components
 
 
-def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -> None:
+def split_into_hmms(
+    gfa_path: Path,
+    components: list[Component],
+    outdir: Path,
+    prefix: str = "",
+    write_graphs: bool = True,
+    write_seqs: bool = False,
+) -> None:
     """Given an assembly graph and a list of components, look for the components in the graph
     group them by hmm and write them together in the output directory specified. The structure
     of the output directory is: <outdir>/<hmm>.gfa.
@@ -286,6 +309,9 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
     :param gfa_path: path to assembly graph to split.
     :param components: list of components to find in the graph.
     :param outdir: path where to write the split components.
+    :param prefix: prefix to add to the path/sequence names.
+    :param write_graphs: Whether to write a gfa for each component found.
+    :param write_seqs: Whether to write a fasta per component with its corresponding sequences.
     :return:
     """
 
@@ -306,6 +332,7 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
     # Make a dictionary that will hold the lines to write for each component
     comp_lines = defaultdict(list)
     nodes = [None]
+    K = None
 
     with gfa_path.open() as file:
         for line in file:
@@ -315,6 +342,8 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
                 case "S":
                     nodes = line.split()[1:2]
                 case "L":
+                    if not K:
+                        K = int(line.split()[5].rstrip("M"))
                     nodes = list(linked_nodes(line.split()))
                 case "P":
                     nodes = [node.rstrip("-+") for node in line.split()[2].split(",")]
@@ -346,22 +375,29 @@ def split_into_hmms(gfa_path: Path, components: list[Component], outdir: Path) -
                 if any(p[:-1] not in comp.edges for p in path.split(",")):
                     continue
 
-                path_name = f"{name}_p{i}"
+                path_name = f"{prefix}{name}_p{i}"
                 p_line = "\t".join(["P", path_name, path, "*"]) + "\n"
                 comp_lines[name].append(p_line)
 
         # Now write the multiple files for the found components.
         get_hmm = lambda x: x[0][: x[0].rfind("_")]
         score_line = lambda line: 0 if line[0] == "S" else 1 if line[0] == "L" else 2
-
         outdir.mkdir(exist_ok=True, parents=True)
+
         for hmm, group in groupby(sorted(comp_lines.items(), key=get_hmm), key=get_hmm):
             _, lines = zip(*group)
-            with (outdir / f"{hmm}.gfa").open("w") as out_comp:
-                out_comp.write(header)
-                out_comp.write(
-                    "".join(sorted(chain.from_iterable(lines), key=score_line))
-                )
+            subgraph = sorted(chain.from_iterable(lines), key=score_line)
+
+            # Write graphs (.gfa)
+            if write_graphs:
+                with (outdir / f"{hmm}.gfa").open("w") as file:
+                    file.write(header)
+                    file.write("".join(subgraph))
+
+            # Write sequences (.fasta)
+            if write_seqs:
+                file = outdir / f"{hmm}.fasta"
+                SeqIO.write(paths_to_recs(subgraph, suffix_KC=True, K=K), file, "fasta")
 
 
 def main(): ...

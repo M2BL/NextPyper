@@ -249,6 +249,9 @@ class OverlappingSeqs:
 
 @dataclass
 class OverlapDetect(ProbeCds):
+    """
+    Use miniprot to sort overlapping sequences
+    """
     probe_fasta: str
     contigs_fasta: str
     treads: int = field(default=8)

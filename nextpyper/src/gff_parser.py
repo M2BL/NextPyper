@@ -14,6 +14,7 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 from dataclasses import dataclass, field, fields
+from io import StringIO
 from pathlib import Path
 from typing import Final, Optional, Self, TypedDict, Literal, Any
 import os
@@ -77,7 +78,7 @@ class Fragment:
     strand: Literal[-1, 1]
     frame: Literal[0, 1, 2]
     identity: float
-    correspondence: str = field(default_factory=dict, init=False)
+    correspondence: dict[int,int] = field(default_factory=dict, init=False)
 
     def get_correspondence(self) -> dict[int, int]:
         """
@@ -128,8 +129,8 @@ class Cds:
     -global_identity: aa identity from miniprot over all exons (fragments).
     """
 
-    miniprot_output: str = field(repr=False)
-    data: int = field(default_factory=dict, init=False, repr=False)
+    miniprot_output: StringIO = field(repr=False)
+    data: dict[str, list] = field(default_factory=dict, init=False, repr=False)
     fragments: list[Fragment] = field(default_factory=list, init=False, repr=False)
     mRNA_start: int = field(init=False)
     mRNA_end: int = field(init=False)
@@ -144,7 +145,8 @@ class Cds:
 
     def __repr__(self):
         if self.fragments:
-            return f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=}, strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()})"
+            return (f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=},"
+                    f"strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()}, global_score={self.get_global_score()})")
         else:
             return f"Cds()"
 
@@ -154,9 +156,9 @@ class Cds:
         if list(self.data.keys()):
             self._find_correspondences()
             # Ensure that all variables have been set
-            for field in fields(self):
-                if field.name not in vars(self):
-                    raise AttributeError(f"Field {field.name} has no attribute")
+            for elmt in fields(self):
+                if elmt.name not in vars(self):
+                    raise AttributeError(f"Field {elmt.name} has no attribute")
             assert (
                 len(self.target_nucleotides)
                 == len(self.target_AAs)
@@ -251,7 +253,7 @@ class Cds:
                     query_start,
                     # query_end - 1,
                     query_end,
-                    item["score"],
+                    int(item["score"]),
                     item["strand"],
                     item["frame"],
                     float(item["Identity"]),
@@ -280,13 +282,13 @@ class Cds:
                 break
             target_AA = self.target_AAs[idx]
             query_AA = self.query_AAs[idx]
+            if query_AA in AAs:
+                query_AA_idx += 1
             if target_nuc == "-":
                 idx += 1
                 continue
             if target_AA in AAs and query_AA in AAs:
                 probe_nucl_cor[query_AA_idx] = nuc_idx
-            if query_AA in AAs:
-                query_AA_idx += 1
             idx += 1
             nuc_idx += 1 * fragment.strand
             if query_AA_idx > frg_limit:
@@ -308,6 +310,10 @@ class Cds:
 
     def is_empty(self):
         return not bool(self.data)
+
+    def get_global_score(self) -> int:
+        """Compute the alignment score as the sum of the fragment scores."""
+        return sum([fragment.score for fragment in self.fragments])
 
 
 
