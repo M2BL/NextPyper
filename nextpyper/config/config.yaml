@@ -18,8 +18,6 @@ nextpyper:
             mmseq2_min_seq_id: 0.8
         spades:
             k: auto
-        mmseqs_prefiltering:
-            sensitivity: 4
         scaffolds_extension:
             exploration:
                 floor_len_extension: 3000
@@ -28,8 +26,6 @@ nextpyper:
                 max_intron_size: 2000
             output:
                 max_extensions: 5
-        split_graph_by_matching_probe:
-            min_probe_coverage: 0.1
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
             evalue: 1.000E-06

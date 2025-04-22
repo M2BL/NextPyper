@@ -48,35 +48,16 @@ pipeline = lookup("pipeline", within=config)
 trim_qual = lookup("preprocessing/trim_qual", within=pipeline)
 trim_min_len = lookup("preprocessing/min_len", within=pipeline)
 
-# MMseqs2 ## Not used?
-mmseq2_min_seq_id = lookup("multi_probe_clustering/mmseq2_min_seq_id", within=pipeline)
-
 # Spades
 spades_k = lookup("spades/k", within=pipeline)
 
-# MMseqs prefiltering ## Not used?
-mmseq_prefilt_sens = lookup("mmseqs_prefiltering/sensitivity", within=pipeline)
-
-# Split graph into probes ## Not used?
-min_probe_cov = lookup(
-    "split_graph_by_matching_probe/min_probe_coverage", within=pipeline
-)
-
 # Scaffold extension
-floor_len_extension = lookup(
-    "scaffolds_extension/exploration/floor_len_extension", within=pipeline
-)
-ceil_len_extension = lookup(
-    "scaffolds_extension/exploration/ceiling_len_extension", within=pipeline
-)
-plen_scaling_factor = lookup(
-    "scaffolds_extension/exploration/probe_len_scaling", within=pipeline
-)
-max_intron_size = lookup(
-    "scaffolds_extension/exploration/max_intron_size", within=pipeline
-)
-
-max_extensions = lookup("scaffolds_extension/output/max_extensions", within=pipeline)
+scf_ext = lookup("scaffolds_extension", within=pipeline)
+floor_len_extension = lookup("exploration/floor_len_extension", within=scf_ext)
+ceil_len_extension = lookup("exploration/ceiling_len_extension", within=scf_ext)
+plen_scaling_factor = lookup("exploration/probe_len_scaling", within=scf_ext)
+max_intron_size = lookup("exploration/max_intron_size", within=scf_ext)
+max_extensions = lookup("output/max_extensions", within=scf_ext)
 
 # MMseqs matching
 mmseq_fields = lookup("mmseqs_matching/fields", within=pipeline)
@@ -89,11 +70,10 @@ homolog_scf_min_cov = lookup("homolog_filtering/homolog_scf_min_cov", within=pip
 homolog_scf_min_idt = lookup("homolog_filtering/homolog_scf_min_idt", within=pipeline)
 
 # Region separation
-min_probe_scaffold_sim = lookup(
-    "region_separation/min_probe_scaffold_sim", within=pipeline
-)
-min_fragment_cov = lookup("region_separation/min_fragment_cov", within=pipeline)
-min_exonic_length = lookup("region_separation/min_exonic_length", within=pipeline)
+reg_sep = lookup("region_separation", within=pipeline)
+min_probe_scaffold_sim = lookup("min_probe_scaffold_sim", within=reg_sep)
+min_fragment_cov = lookup("min_fragment_cov", within=reg_sep)
+min_exonic_length = lookup("min_exonic_length", within=reg_sep)
 
 # Validate Sample table
 cols = ["sample", "path_forward", "path_reverse", "type"]
@@ -108,6 +88,7 @@ probes_list = list(probes_size.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
 validate(PROBES, schema=(SCHEMES_DIR / "probes.yaml").resolve())
 
+# Check grouping of the probe set
 # Multi-seq probe set
 if multi_probes:
     try:
