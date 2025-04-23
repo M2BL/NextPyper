@@ -1,0 +1,940 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AnalysisUIOptions">
+    <option name="ANALYZE_INJECTED_CODE" value="false" />
+    <option name="SCOPE_TYPE" value="3" />
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="93b89ca7-6639-4ee6-8833-a71ce74f1afc" name="Changes" comment="cleaning miniprot.py">
+      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/gene_3_all.fasta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/gene_8631_node3.fasta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/gene_8631_node3.gff" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/probe_3_aa.fasta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/probe_8631_aa.fasta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/test_8631_node3_rc.gff" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/src/union_find.py" beforeDir="false" afterPath="$PROJECT_DIR$/nextpyper/src/union_find.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jupyter Notebook" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="coloring" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/nextpyper/src/miniprot.py" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="2kyZX5kjOZpiauUSitnJJ12JYbz" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.alignment.executor": "Run",
+    "Python.diversity.executor": "Run",
+    "Python.exon_discovery.executor": "Run",
+    "Python.exon_intron.executor": "Run",
+    "Python.exon_intron_faulty.executor": "Run",
+    "Python.gff_parser.executor": "Run",
+    "Python.interval_tree.executor": "Run",
+    "Python.miniprot.executor": "Run",
+    "Python.mmseqs.executor": "Run",
+    "Python.outgroup_cluster.executor": "Run",
+    "Python.paralogs.executor": "Run",
+    "Python.run_orfipy.executor": "Run",
+    "Python.scaffold_cluster.executor": "Run",
+    "Python.test.executor": "Run",
+    "Python.union_find.executor": "Run",
+    "Python.vsearch.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "cleaning",
+    "last_opened_file_path": "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/src",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "run.code.analysis.last.selected.profile": "pProject Default",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/nextpyper/src" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.diversity">
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="diversity" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/diversity.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="exon_discovery" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/exon_discovery.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="exon_intron" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/exon_intron.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="miniprot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/miniprot.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="miniprot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/miniprot.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="run_orfipy" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.12 (nextpiper)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/run_orfipy.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="run_orfipy" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.12 (nextpiper)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/run_orfipy.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.run_orfipy" />
+      <item itemvalue="Python.diversity" />
+      <item itemvalue="Python.exon_discovery" />
+      <item itemvalue="Python.exon_intron" />
+      <item itemvalue="Python.miniprot" />
+      <item itemvalue="Python.test" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.diversity" />
+        <item itemvalue="Python.miniprot" />
+        <item itemvalue="Python.exon_discovery" />
+        <item itemvalue="Python.exon_intron" />
+        <item itemvalue="Python.test" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-PY-243.26053.29" />
+        <option value="bundled-python-sdk-b1dbf8ef85a6-4df51de95216-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.26053.29" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="93b89ca7-6639-4ee6-8833-a71ce74f1afc" name="Changes" comment="" />
+      <created>1724257812935</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1724257812935</updated>
+      <workItem from="1724257814182" duration="235000" />
+      <workItem from="1724258059117" duration="733000" />
+      <workItem from="1724310417982" duration="38000" />
+      <workItem from="1724335581198" duration="13749000" />
+      <workItem from="1724749144112" duration="2291000" />
+      <workItem from="1724755863315" duration="56358000" />
+      <workItem from="1725273558014" duration="21009000" />
+      <workItem from="1725609629898" duration="18640000" />
+      <workItem from="1725957798844" duration="49822000" />
+      <workItem from="1726491497161" duration="103720000" />
+      <workItem from="1727294270777" duration="2006000" />
+      <workItem from="1727696888369" duration="6115000" />
+      <workItem from="1727785707768" duration="51000" />
+      <workItem from="1727858761021" duration="2476000" />
+      <workItem from="1728381069335" duration="46482000" />
+      <workItem from="1728898412830" duration="4480000" />
+      <workItem from="1728902905558" duration="1511000" />
+      <workItem from="1728904424928" duration="8451000" />
+      <workItem from="1728917256779" duration="7771000" />
+      <workItem from="1728933580800" duration="26958000" />
+      <workItem from="1729008891596" duration="21000" />
+      <workItem from="1729239378433" duration="20858000" />
+      <workItem from="1729529202217" duration="54067000" />
+      <workItem from="1729868382443" duration="8000" />
+      <workItem from="1730280215943" duration="1663000" />
+      <workItem from="1730735900529" duration="3068000" />
+      <workItem from="1731503305457" duration="191000" />
+      <workItem from="1731503681358" duration="33000" />
+      <workItem from="1732029636634" duration="810000" />
+      <workItem from="1733157385793" duration="1614000" />
+      <workItem from="1733161587332" duration="7901000" />
+      <workItem from="1733252545288" duration="10126000" />
+      <workItem from="1733753800310" duration="600000" />
+      <workItem from="1733757169292" duration="10000" />
+      <workItem from="1733768554441" duration="103064000" />
+      <workItem from="1736173361315" duration="1242000" />
+      <workItem from="1736176267590" duration="3204000" />
+      <workItem from="1736183471439" duration="70970000" />
+      <workItem from="1736762921355" duration="2971000" />
+      <workItem from="1736766651620" duration="10296000" />
+      <workItem from="1736787038118" duration="46000" />
+      <workItem from="1736859266556" duration="79012000" />
+      <workItem from="1737180598769" duration="4882000" />
+      <workItem from="1737378810285" duration="8000" />
+      <workItem from="1737383612920" duration="30677000" />
+      <workItem from="1738000270741" duration="3056000" />
+      <workItem from="1738084664554" duration="745000" />
+      <workItem from="1738140720124" duration="243000" />
+      <workItem from="1738751128759" duration="540000" />
+      <workItem from="1738944168453" duration="2627000" />
+      <workItem from="1738946900137" duration="25000" />
+      <workItem from="1739288093132" duration="11267000" />
+      <workItem from="1739373405752" duration="5000" />
+      <workItem from="1739460816874" duration="3817000" />
+      <workItem from="1739787840498" duration="707000" />
+      <workItem from="1739788582530" duration="7394000" />
+      <workItem from="1739905910361" duration="14154000" />
+      <workItem from="1740254237625" duration="3953000" />
+      <workItem from="1741699898006" duration="615000" />
+      <workItem from="1741816223785" duration="13392000" />
+      <workItem from="1744204507433" duration="10420000" />
+      <workItem from="1744381977154" duration="6004000" />
+      <workItem from="1744623114119" duration="62171000" />
+      <workItem from="1745313525425" duration="33773000" />
+      <workItem from="1745418308818" duration="359000" />
+      <workItem from="1745418678118" duration="2119000" />
+    </task>
+    <task id="LOCAL-00003" summary="vsearch consensus functions in paralogs.py">
+      <option name="closed" value="true" />
+      <created>1724770177493</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1724770177493</updated>
+    </task>
+    <task id="LOCAL-00004" summary="fixing bug in matched_edges_from_hmm">
+      <option name="closed" value="true" />
+      <created>1724778540139</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1724778540139</updated>
+    </task>
+    <task id="LOCAL-00005" summary="fixing types iin BGC_candidate">
+      <option name="closed" value="true" />
+      <created>1724780993161</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1724780993161</updated>
+    </task>
+    <task id="LOCAL-00006" summary="modify filter_components_hmm() in order to exclude paths where the probe only matches a few AAs.">
+      <option name="closed" value="true" />
+      <created>1724838777059</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1724838777059</updated>
+    </task>
+    <task id="LOCAL-00007" summary="fixing return object bug in class Alignment_fragment, _get_nuc_coordinates(), should return [None, None] when no correspondence between two scaffolds is found, returned None">
+      <option name="closed" value="true" />
+      <created>1724861697541</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1724861697541</updated>
+    </task>
+    <task id="LOCAL-00008" summary="functions to handle vsearch consensuses from the output of SPAdes and SAUTE">
+      <option name="closed" value="true" />
+      <created>1725286403062</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1725286403062</updated>
+    </task>
+    <task id="LOCAL-00009" summary="correct bug in get_vsearch_kmer_consensus() that terminate the pile search without processing the last element of the pile.">
+      <option name="closed" value="true" />
+      <created>1725543696227</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1725543696227</updated>
+    </task>
+    <task id="LOCAL-00010" summary="small cosmetic changes">
+      <option name="closed" value="true" />
+      <created>1725635350213</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1725635350214</updated>
+    </task>
+    <task id="LOCAL-00011" summary="small cosmetic changes">
+      <option name="closed" value="true" />
+      <created>1725898807982</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1725898807982</updated>
+    </task>
+    <task id="LOCAL-00012" summary="create mmseqs cluster parser for creating consensus sequences from probe amino acid sequences.">
+      <option name="closed" value="true" />
+      <created>1725980742751</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1725980742751</updated>
+    </task>
+    <task id="LOCAL-00013" summary="type annotation fixes">
+      <option name="closed" value="true" />
+      <created>1726053983580</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1726053983580</updated>
+    </task>
+    <task id="LOCAL-00014" summary="type annotation fixes">
+      <option name="closed" value="true" />
+      <created>1726053996780</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1726053996780</updated>
+    </task>
+    <task id="LOCAL-00015" summary="fixes bug in gff_parser that returned from nucleotides-protein coordinates&#10;adds a function in miniprot.py that finds the best matching probe per gene">
+      <option name="closed" value="true" />
+      <created>1726244004403</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1726244004403</updated>
+    </task>
+    <task id="LOCAL-00016" summary="fixes bug in gff_parser that returned from nucleotides-protein coordinates&#10;adds a function in miniprot.py that finds the best matching probe per gene">
+      <option name="closed" value="true" />
+      <created>1726582690099</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1726582690099</updated>
+    </task>
+    <task id="LOCAL-00017" summary="minor changes">
+      <option name="closed" value="true" />
+      <created>1726582710193</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1726582710193</updated>
+    </task>
+    <task id="LOCAL-00018" summary="classes for filtering scaffolds after SAUTE assembly and before vsearch clustering.&#10;classes for separating non-overlapping sequences after vsearch clustering.">
+      <option name="closed" value="true" />
+      <created>1726589638257</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1726589638257</updated>
+    </task>
+    <task id="LOCAL-00019" summary="miniprot.py is updated with a method that allows to save the sequence of the best overall aligning probe to all the scaffolds from all samples for a given gene">
+      <option name="closed" value="true" />
+      <created>1726666399472</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1726666399472</updated>
+    </task>
+    <task id="LOCAL-00020" summary="clean print statements">
+      <option name="closed" value="true" />
+      <created>1726666528889</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1726666528889</updated>
+    </task>
+    <task id="LOCAL-00021" summary=" merge_intervals modification, do not merge interval that have a single nucleotide overlap">
+      <option name="closed" value="true" />
+      <created>1728480200513</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1728480200513</updated>
+    </task>
+    <task id="LOCAL-00022" summary="new algorithm for translating the sequences based upon orfipy">
+      <option name="closed" value="true" />
+      <created>1729002621897</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1729002621897</updated>
+    </task>
+    <task id="LOCAL-00023" summary="new algorithm for translating the sequences based upon orfipy">
+      <option name="closed" value="true" />
+      <created>1729002636870</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1729002636870</updated>
+    </task>
+    <task id="LOCAL-00024" summary="new algorithm for translating the sequences based upon orfipy">
+      <option name="closed" value="true" />
+      <created>1729002680539</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1729002680539</updated>
+    </task>
+    <task id="LOCAL-00025" summary="new algorithm for translating the sequences based upon orfipy">
+      <option name="closed" value="true" />
+      <created>1734351945908</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1734351945908</updated>
+    </task>
+    <task id="LOCAL-00026" summary="change in Cds repr string&#10;modifications in the ranking procedure of probes. Probes that do not match a scaffold get penalized">
+      <option name="closed" value="true" />
+      <created>1734439182085</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1734439182085</updated>
+    </task>
+    <task id="LOCAL-00027" summary="modify find_common_exon() by adding a graph search for the longest continuous path of exons">
+      <option name="closed" value="true" />
+      <created>1734457463398</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1734457463398</updated>
+    </task>
+    <task id="LOCAL-00028" summary="The implementation of directed graph for finding the longest sequence of non-overlapping exons failed in the case of non-adjacent exons. It was changed to an adaptation of the transdecoder parser script.">
+      <option name="closed" value="true" />
+      <created>1734517839655</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1734517839655</updated>
+    </task>
+    <task id="LOCAL-00029" summary="Cosmetic changes.">
+      <option name="closed" value="true" />
+      <created>1734518009569</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1734518009569</updated>
+    </task>
+    <task id="LOCAL-00030" summary="save exon, intron msa">
+      <option name="closed" value="true" />
+      <created>1736183662210</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1736183662210</updated>
+    </task>
+    <task id="LOCAL-00031" summary="save exon, intron msa">
+      <option name="closed" value="true" />
+      <created>1736242734507</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1736242734507</updated>
+    </task>
+    <task id="LOCAL-00032" summary="documentation change">
+      <option name="closed" value="true" />
+      <created>1736244968249</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1736244968249</updated>
+    </task>
+    <task id="LOCAL-00033" summary="in the saved alignment, for each sequence, the exon boundaries are modified in order to match the coordinates on the probe of the most common exon boundaries">
+      <option name="closed" value="true" />
+      <created>1736249227121</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1736249227121</updated>
+    </task>
+    <task id="LOCAL-00034" summary="refactoring the exon search algorithm">
+      <option name="closed" value="true" />
+      <created>1736444325634</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1736444325634</updated>
+    </task>
+    <task id="LOCAL-00035" summary="refactoring the exon search algorithm, adding dataclass doc">
+      <option name="closed" value="true" />
+      <created>1736775834970</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1736775834970</updated>
+    </task>
+    <task id="LOCAL-00036" summary="paralogy search updates to work with the new exon discovery algorithm">
+      <option name="closed" value="true" />
+      <created>1736784996451</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1736784996451</updated>
+    </task>
+    <task id="LOCAL-00037" summary="cleaning">
+      <option name="closed" value="true" />
+      <created>1736787062639</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1736787062639</updated>
+    </task>
+    <task id="LOCAL-00038" summary="a working version of the exon identification pipeline">
+      <option name="closed" value="true" />
+      <created>1737056559551</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1737056559551</updated>
+    </task>
+    <task id="LOCAL-00039" summary="debugging">
+      <option name="closed" value="true" />
+      <created>1737119570882</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1737119570882</updated>
+    </task>
+    <task id="LOCAL-00040" summary="a working version of miniprot.py that do not infer individual exon boundaries">
+      <option name="closed" value="true" />
+      <created>1737485005368</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1737485005368</updated>
+    </task>
+    <task id="LOCAL-00041" summary="Adding docstring to the module">
+      <option name="closed" value="true" />
+      <created>1738085385369</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1738085385369</updated>
+    </task>
+    <task id="LOCAL-00042" summary="ignore sequences that have the wrong orientation instead of exiting">
+      <option name="closed" value="true" />
+      <created>1738140941277</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1738140941277</updated>
+    </task>
+    <task id="LOCAL-00043" summary="fixed error in save_best_probe that produced a key error when no best probe was recovered">
+      <option name="closed" value="true" />
+      <created>1738946169917</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1738946169917</updated>
+    </task>
+    <task id="LOCAL-00044" summary="fixed error in save_best_probe that produced a key error when no best probe was recovered">
+      <option name="closed" value="true" />
+      <created>1739289451140</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1739289451140</updated>
+    </task>
+    <task id="LOCAL-00045" summary="starting to fix the DFS">
+      <option name="closed" value="true" />
+      <created>1739289702778</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1739289702778</updated>
+    </task>
+    <task id="LOCAL-00046" summary="continuing the fix to the DFS">
+      <option name="closed" value="true" />
+      <created>1739294816047</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1739294816047</updated>
+    </task>
+    <task id="LOCAL-00047" summary="adding a new type of sequence type called 'genotig' that trims scaffolds to the probe boundaries">
+      <option name="closed" value="true" />
+      <created>1739800639339</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1739800639339</updated>
+    </task>
+    <task id="LOCAL-00048" summary="coloring with queue">
+      <option name="closed" value="true" />
+      <created>1744708901658</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1744708901658</updated>
+    </task>
+    <task id="LOCAL-00049" summary="functions to sample as much edge diversity out of colored paths">
+      <option name="closed" value="true" />
+      <created>1744724610889</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1744724610889</updated>
+    </task>
+    <task id="LOCAL-00050" summary="functions to sample as much edge diversity out of colored paths">
+      <option name="closed" value="true" />
+      <created>1744724677048</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1744724677048</updated>
+    </task>
+    <task id="LOCAL-00051" summary="cleaning miniprot.py">
+      <option name="closed" value="true" />
+      <created>1745419307196</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1745419307196</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ID_ORDER">
+      <list>
+        <option value="Default.Root" />
+        <option value="Default.Author" />
+        <option value="Default.Date" />
+        <option value="Default.Subject" />
+        <option value="GitHub.CommitStatus" />
+        <option value="Space.CommitStatus" />
+      </list>
+    </option>
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="OPEN_GENERIC_TABS">
+      <map>
+        <entry key="d4449149-82a7-4ce8-abb9-563bbbec4146" value="TOOL_WINDOW" />
+        <entry key="83caa7a9-fdcb-4764-b11c-4f689f338532" value="TOOL_WINDOW" />
+      </map>
+    </option>
+    <option name="TAB_STATES">
+      <map>
+        <entry key="83caa7a9-fdcb-4764-b11c-4f689f338532">
+          <value>
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="true" />
+                </map>
+              </option>
+              <option name="FILTERS">
+                <map>
+                  <entry key="range">
+                    <value>
+                      <list>
+                        <option value="00cc2d40b9720319f654d6134f6d34218ed3da9f..0ab46a1ffea7105a0d8726e411495ea62aef7f4a" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+        <entry key="d4449149-82a7-4ce8-abb9-563bbbec4146">
+          <value>
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="true" />
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value=" merge_intervals modification, do not merge interval that have a single nucleotide overlap" />
+    <MESSAGE value="new algorithm for translating the sequences based upon orfipy" />
+    <MESSAGE value="change in Cds repr string&#10;modifications in the ranking procedure of probes. Probes that do not match a scaffold get penalized" />
+    <MESSAGE value="modify find_common_exon() by adding a graph search for the longest continuous path of exons" />
+    <MESSAGE value="The implementation of directed graph for finding the longest sequence of non-overlapping exons failed in the case of non-adjacent exons. It was changed to an adaptation of the transdecoder parser script." />
+    <MESSAGE value="Cosmetic changes." />
+    <MESSAGE value="save exon, intron msa" />
+    <MESSAGE value="documentation change" />
+    <MESSAGE value="in the saved alignment, for each sequence, the exon boundaries are modified in order to match the coordinates on the probe of the most common exon boundaries" />
+    <MESSAGE value="refactoring the exon search algorithm" />
+    <MESSAGE value="refactoring the exon search algorithm, adding dataclass doc" />
+    <MESSAGE value="paralogy search updates to work with the new exon discovery algorithm" />
+    <MESSAGE value="cleaning" />
+    <MESSAGE value="a working version of the exon identification pipeline" />
+    <MESSAGE value="debugging" />
+    <MESSAGE value="a working version of miniprot.py that do not infer individual exon boundaries" />
+    <MESSAGE value="Adding docstring to the module" />
+    <MESSAGE value="ignore sequences that have the wrong orientation instead of exiting" />
+    <MESSAGE value="fixed error in save_best_probe that produced a key error when no best probe was recovered" />
+    <MESSAGE value="starting to fix the DFS" />
+    <MESSAGE value="continuing the fix to the DFS" />
+    <MESSAGE value="adding a new type of sequence type called 'genotig' that trims scaffolds to the probe boundaries" />
+    <MESSAGE value="coloring with queue" />
+    <MESSAGE value="functions to sample as much edge diversity out of colored paths" />
+    <MESSAGE value="cleaning miniprot.py" />
+    <option name="LAST_COMMIT_MESSAGE" value="cleaning miniprot.py" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/Nextpyper$scaffold_cluster.coverage" NAME="scaffold_cluster Coverage Results" MODIFIED="1725030959688" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$test.coverage" NAME="test Coverage Results" MODIFIED="1736419935445" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$interval_tree.coverage" NAME="interval_tree Coverage Results" MODIFIED="1736259546446" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$vsearch.coverage" NAME="vsearch Coverage Results" MODIFIED="1726675323821" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$exon_discovery.coverage" NAME="exon_discovery Coverage Results" MODIFIED="1737055308170" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$outgroup_cluster.coverage" NAME="outgroup_cluster Coverage Results" MODIFIED="1727091022792" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$alignment.coverage" NAME="alignment Coverage Results" MODIFIED="1726846099731" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$gff_parser.coverage" NAME="gff_parser Coverage Results" MODIFIED="1726241399734" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$union_find.coverage" NAME="union_find Coverage Results" MODIFIED="1736273623437" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$run_orfipy.coverage" NAME="run_orfipy Coverage Results" MODIFIED="1729001853306" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$miniprot.coverage" NAME="miniprot Coverage Results" MODIFIED="1741820952779" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$diversity.coverage" NAME="diversity Coverage Results" MODIFIED="1744722196326" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$exon_intron.coverage" NAME="exon_intron Coverage Results" MODIFIED="1736766788917" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$mmseqs.coverage" NAME="mmseqs Coverage Results" MODIFIED="1725964553001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$paralogs.coverage" NAME="paralogs Coverage Results" MODIFIED="1733923206465" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$exon_intron_faulty.coverage" NAME="exon_intron_faulty Coverage Results" MODIFIED="1736343664425" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+  </component>
+</project>
