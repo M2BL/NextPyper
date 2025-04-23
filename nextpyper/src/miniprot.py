@@ -142,7 +142,7 @@ def merge_intervals(arr: list["OverlappingSeqs"]) -> list["OverlappingSeqs"]:
             arr[index].combine(arr[i].seq_names)
             index_to_del.append(i)
         else:
-            index = index + 1
+            index += 1
             arr[index] = arr[i]
     return [arr[index] for index in range(len(arr)) if index not in index_to_del]
 
@@ -885,59 +885,7 @@ def snakemake_call(snakemake):
 
 
 def main():
-    # probe_dir = Path(
-    #     '/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_probes')
-    # scaffolds_dir = Path(
-    #     '/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_scfs')
-    # out_dir = Path(
-    #     '/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/output_scfs')
-    # probe_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes"
-    # )
-    # probe_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_probes"
-    # )
-    #
-    # scaffolds_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs"
-    # )
-    #
-    # scaffolds_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/bug_instances/scaffolds"
-    # )
-    # scaffolds_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/region_separation/input_scfs"
-    # )
-    # out_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/homolog_prospection/test"
-    # )
-    # out_dir = Path(
-    #     "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/bug_instances/out_dir"
-    # )
-    # parameters = [8, 0.85, 0.1, 10, 0.7, "TIUZ_probe4471"]
-    #
-    # parameters = [8, 0.85, 0.1, 10, 0.7, "HLJG_probe5551"]
-    # parameters = [8, 0.85, 0.1, 10, 0.7]
-    #
-    # problematic = ["5865.fasta"]
-    # for scfs in scaffolds_dir.glob("*.fasta"):
-    #     if scfs.name in problematic:
-    #         continue
-    #     # if not scfs.name == "5865.fasta":
-    #     #     continue
-    #     # if not scfs.name == "6221.fasta":
-    #     #     continue
-    #     # # probes_name = f"probes_{scfs.name.split('_')[1]}"
-    #     # probes = probe_dir / probes_name
-    #     probes = probe_dir / scfs.name
-    #     matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
-    #     print(f"{scfs=},  {probes=}")
-    #     olc = OverlappingCds(str(probes), str(scfs), matrix, *parameters)
-    #     print("overlapping:", olc)
-    #     # matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
-    #     # olc.paralogy_search(matrix)
-    #     # print("saving")
-    #     olc.save_records(out_dir, 10)
+
 
     params = {
         "min_probe_scaffold_sim": 0.85,
