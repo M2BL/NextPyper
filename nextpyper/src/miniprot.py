@@ -65,7 +65,8 @@ from exon_intron import Exon
 
 Region = namedtuple("Region", ["start", "end"])
 
-MAX_EXPANSION_INTERVAL = 10
+MAX_EXPANSION_INTERVAL = 10 # on scaffold size of flanking region on each side of the probe hits,
+                            # used to find the common region that matches a given probe accross multiple scaffolds.
 
 
 # =======================================================================================
