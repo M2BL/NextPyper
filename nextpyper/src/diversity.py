@@ -23,8 +23,10 @@ from typing import Callable, Optional, TYPE_CHECKING
 import kmedoids as km
 import numpy as np
 
+from graph_utils import OrientedEdge
+
 if TYPE_CHECKING:
-    from gfa_graph import OrientedEdge, Assembly_graph
+    from gfa_graph import Assembly_graph
 
 # =============================================================================
 #                FUNCTIONS

@@ -24,7 +24,8 @@ from pathlib import Path
 from typing import Self
 
 from gfa_graph import Path_on_graph
-from graph_alns_parser import OrientedEdge
+from graph_utils import OrientedEdge
+
 # =============================================================================
 #                CLASSES
 # =============================================================================
