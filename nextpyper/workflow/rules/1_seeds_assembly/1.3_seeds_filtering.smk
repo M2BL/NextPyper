@@ -44,8 +44,8 @@ checkpoint homologs_filtering:
     log:
         outdir / "logs/assembled/filtering/scfs_filtering/{sample}.log",
     params:
-        min_cov=homolog_scf_min_cov,
-        min_idt=homolog_scf_min_idt,
+        min_cov=seeds_scf_min_cov,
+        min_idt=seeds_scf_min_idt,
         separate_probes=lambda wildcards: True,
         qpat=lambda wildcards: False,
         tpat=lambda wildcards: pattern,
