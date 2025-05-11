@@ -24,6 +24,9 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import sys
 
+from intervaltree import IntervalTree
+from graph_utils import build_probe_trees, filt_probe_hits
+
 
 # =======================================================================================
 #               CONSTANTS
@@ -59,23 +62,41 @@ def compute_hits(
     """Parse the alignments and determine the sequences that satisfy the min_cov
     and min_idt thresholds.
 
-    If qpat is None the sequences are not filtered by matching query and target probes.
+    If qpat is given, a pattern is expected to extract the probe version from the
+    query name. If qpat is None, a best probe version is determined from the hits
+    and picked. This probe information will be used to filter hits different to
+    that probe.
+
+    The remaining sequences (queries) are filtered to comply with the minimum
+    coverage and identity to the best they match.
     """
 
+    def _real_cov(tstart: list[int], tend: list[int]) -> int:
+        tree = IntervalTree.from_tuples(zip(tstart, tend))
+        tree.merge_overlaps(strict=False)
+        return sum(inter.length() for inter in tree)
+
     df.replace_column(8, df["theader"].str.split(" ").list.first())
+
+    # If query comes with probe information, filter to keep only matches of that probe.
     if qpat:
         pre_df = df.with_columns(
             qprobe=pl.col("query").str.extract(qpat, 2),
             tprobe=pl.col("theader").str.extract(tpat, 1),
             cis=pl.col("qend") > pl.col("qstart"),
         ).filter(pl.col("qprobe") == pl.col("tprobe"))
+
+    # Otherwise Determine the best probe.
     else:
         pre_df = df.with_columns(
             tprobe=pl.col("theader").str.extract(tpat, 1),
             cis=pl.col("qend") > pl.col("qstart"),
         )
 
-    final_df = (
+        probe_trees = build_probe_trees(pre_df)
+        pre_df = filt_probe_hits(pre_df, probe_trees)
+
+    gdf = (
         pre_df.group_by(["query", "theader", "cis"])
         .agg(
             pl.sum("nident"),
@@ -83,18 +104,30 @@ def compute_hits(
             pl.sum("gapopen"),
             pl.first("tlen"),
             pl.first("tprobe"),
+            pl.col("tstart"),
+            pl.col("tend"),
         )
         .with_columns(
-            cov=(pl.col("nident") + pl.col("mismatch")) / pl.col("tlen"),
-            idt=pl.col("nident")
-            / (pl.col("nident") + pl.col("mismatch") + pl.col("gapopen")),
+            adj_cov=(
+                pl.struct(["tstart", "tend"]).map_elements(
+                    lambda x: _real_cov(**x), return_dtype=pl.Int64
+                )
+            )
         )
-        .filter((pl.col("cov") > min_cov) & (pl.col("idt") > min_idt))
-        .group_by("query")
-        .agg(pl.all().sort_by("idt").last())
     )
 
-    return final_df
+    final_df = (
+        gdf.with_columns(
+            cov=pl.col("adj_cov") / pl.col("tlen"),
+            idt=pl.col("nident") / (pl.col("nident") + pl.col("mismatch")),
+        )
+        .with_columns(eff_cov=(pl.col("cov") * pl.col("idt")))
+        .filter((pl.col("cov") > min_cov) & (pl.col("idt") > min_idt))
+        .group_by("query")
+        .agg(pl.all().sort_by("eff_cov", descending=True).first())
+    )
+
+    return final_df.drop(["tstart", "tend"])
 
 
 def filt_records(recs: list[SeqRecord], filt_ids: dict[str, bool]) -> list[SeqRecord]:
@@ -177,21 +210,26 @@ def snakemake_call(snakemake):
         match_mmseqs_recs(recs, table, out, min_cov, min_idt, qpat, tpat, sep_probes)
 
 
-def main(): ...
+def main():
 
+    if len(sys.argv) != 4:
+        print(
+            "Usage: python homolog_filtering.py <scfs.fasta> <hits.tsv> <output.fasta>"
+        )
+        sys.exit(1)
 
-# min_idt = 0.1
-# min_cov = 0.1
-# sep_probes = False
+    min_idt = 0.6
+    min_cov = 0.0
+    sep_probes = False
 
-# recs = Path(sys.argv[1])
-# table = Path(sys.argv[2])
-# out = Path(sys.argv[3])
+    recs = Path(sys.argv[1])
+    table = Path(sys.argv[2])
+    out = Path(sys.argv[3])
 
-# qpat = SAUTE_PAT
-# tpat = r"(\d+)$"
+    qpat = None
+    tpat = r"(\d+)$"
 
-# match_mmseqs_recs(recs, table, out, min_cov, min_idt, qpat, tpat, sep_probes)
+    match_mmseqs_recs(recs, table, out, min_cov, min_idt, qpat, tpat, sep_probes)
 
 
 if __name__ == "__main__":

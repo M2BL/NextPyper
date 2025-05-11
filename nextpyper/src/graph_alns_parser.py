@@ -7,7 +7,7 @@
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
 #       All rights reserved.
-""" ## ToDo: Change module docstring
+"""## ToDo: Change module docstring
 Functions and classes for parsing the gpa files.
 
 of assembly graphs produced by SPAdes with the --custom-hmms flag.
@@ -27,13 +27,13 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import namedtuple
+
 from dataclasses import dataclass, field
 from operator import itemgetter
 from itertools import groupby
 from pathlib import Path
 
-OrientedEdge = namedtuple("OrientedEdge", ("id", "orientation"))
+from graph_utils import OrientedEdge
 
 
 @dataclass
@@ -106,9 +106,10 @@ def parse_gpa(
     # def _parse_alns[C](file_path: Path, constructor: C) -> list[C]:
 
     # Second proposal:
-    def _parse_alns[
-        C: (GraphAln, Read)
-    ](file_path: Path, constructor: type[C]) -> list[C]:
+    def _parse_alns[C: (
+        GraphAln,
+        Read,
+    )](file_path: Path, constructor: type[C]) -> list[C]:
 
         # def _parse_alns(
         #         file_path: Path, constructor: GraphAln | Read

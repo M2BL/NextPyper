@@ -28,10 +28,12 @@ nextpyper:
                 max_extensions: 5
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
-            evalue: 1.000E-06
+            evalue: 1.000E-9
             min_orf_len: 15
             sensitivity: 7.5
         homolog_filtering:
+            seeds_scf_min_cov: 0.0
+            seeds_scf_min_idt: 0.6
             homolog_scf_min_cov: 0.1
             homolog_scf_min_idt: 0.6
         region_separation:

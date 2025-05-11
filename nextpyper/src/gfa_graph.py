@@ -18,9 +18,10 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 from collections import defaultdict
-from operator import attrgetter
+from fractions import Fraction
+from operator import attrgetter, itemgetter, add
 from dataclasses import dataclass, field
-from itertools import chain, count, repeat, starmap, groupby
+from itertools import chain, count, repeat, groupby
 from pathlib import Path
 from typing import Callable, Iterator, Self, Literal, Optional, NamedTuple
 from functools import partial
@@ -33,7 +34,16 @@ from Bio import SeqIO
 from Bio.Align import PairwiseAligner
 import polars as pl
 from intervaltree import IntervalTree, Interval
+from more_itertools import split_at
 
+from graph_utils import (
+    OrientedEdge,
+    ColorInfo,
+    filt_probe_hits,
+    probe_cov,
+    effective_cov,
+    build_probe_trees,
+)
 from graph_alns_parser import Read
 from union_find import UnionFind
 from diversity import select_k_paths
@@ -43,19 +53,6 @@ from diversity import select_k_paths
 #                CLASSES
 # =============================================================================
 LinkSupport = dict[tuple[str], int]
-
-
-class OrientedEdge(NamedTuple):
-    id: str
-    orientation: Literal["+", "-"]
-    jump: bool = False
-
-    @classmethod
-    def from_seg(cls, seg) -> "OrientedEdge":
-        if match := re.match(r",|;", seg):
-            return cls(seg[1:-1], seg[-1], match[0] == ";")
-        else:
-            return cls(seg[:-1], seg[-1])
 
 
 @dataclass(slots=True)
@@ -79,12 +76,6 @@ class Path_on_graph:
 
     def get_parameters(self):
         return self.name, self.edges, self.start, self.end, self.length
-
-
-class ColorInfo(NamedTuple):
-    probe: str
-    tlen: int
-    cis: bool
 
 
 class ExtLimits(NamedTuple):
@@ -117,12 +108,12 @@ class Edge:
     """
 
     id: str
-    raw_seq: str
+    raw_seq: str = field(repr=False)
     coverage: float
     seq: Seq = field(init=False)
     matching_exons: dict[str, int] = field(
-        init=False, default_factory=list
-    )  # id, length and identity of matching contigs
+        init=False, default_factory=lambda: defaultdict(list)
+    )  # name (key), interval (value) and extra info of the matching probe
 
     def __post_init__(self):
         self.seq = Seq(self.raw_seq)
@@ -131,7 +122,14 @@ class Edge:
         return len(self.seq)
 
     def has_match(self) -> bool:
-        return bool(self.matching_exons)
+        return self.matching_exons and any(self.matching_exons.values())
+
+    def get_colors(self) -> list[str]:
+        return (
+            [probe for probe, inter in self.matching_exons.items() if inter]
+            if self.has_match()
+            else list()
+        )
 
     def get_seq(self) -> Seq:
         return self.seq
@@ -274,22 +272,31 @@ class Assembly_graph:
         }
 
     @staticmethod
-    def _ovlp_extension(seq1: Seq, seq2: Seq, gap: int = 10) -> Seq:
+    def _ovlp_extension(
+        seq1: Seq, seq2: Seq, gap: int = 10, size_only: bool = False
+    ) -> Seq | int:
         """Use pairwise alignment to detect if seq1 and seq2 overlap. If they do
         Use the alignment coordinates to merge them. Otherwise, scaffold them
-        with a gap of the given size."""
+        with a gap of the given size.
+
+        If size_only is True, instead of scaffolding the given sequences, return
+        the size of the overlap or the size of the gap they produce."""
 
         aligner = PairwiseAligner(scoring="megablast", mode="local")
         alns = aligner.align(seq1, seq2)
 
         # Proceed as no overlap between the sequences. Add a gap of 10 N
         if alns.score < 30:
-            return seq1 + Seq("N" * gap) + seq2
+            return -1 * gap if size_only else seq1 + Seq("N" * gap) + seq2
 
         # Overlap detected. Use alignment coordinates to merge the sequences
         else:
-            end1, start2 = alns[0].coordinates[:, -1]
-            return seq1[:end1] + seq2[start2:]
+            coords = alns[0].coordinates
+            if size_only:
+                return coords[0, -1] - coords[0, 0]
+            else:
+                end1, start2 = coords[:, -1]
+                return seq1[:end1] + seq2[start2:]
 
     def _retrieve_path(
         self,
@@ -356,33 +363,63 @@ class Assembly_graph:
         """Given a path name, return a list of intervals specifying which edge that part of the
         sequence comes from."""
 
-        edges = self.paths[path].edges
+        def _get_ovlp_size(
+            edge1: OrientedEdge, edge2: OrientedEdge, gap: int = 10
+        ) -> int:
+            """Determine the size of the overlp between the given edges.
+            If not overlap is found, return the gap size"""
+
+            seq1 = self.edge_dict[edge1.id].seq
+            seq2 = self.edge_dict[edge2.id].seq
+            return self._ovlp_extension(seq1, seq2, gap, size_only=True)
+
+        edges: list[OrientedEdge] = self.paths[path].edges
         edge, *edges = edges
         length = len(self.edge_dict[edge.id])
         start, end = 0, length
         intervals = [Interval(start, end, edge.id)]
 
         while edges:
+            ovlp = _get_ovlp_size(edge, edges[0]) if edges[0].jump else self.K
             edge, *edges = edges
-            start += length - self.K
+            start += length - ovlp
             length = len(self.edge_dict[edge.id])
-            end += length - self.K
+            end += length - ovlp
             intervals.append(Interval(start, end, edge.id))
 
         return intervals
 
-    def color_edges(self, hits: pl.DataFrame) -> Self:
+    def color_edges(self, hits: pl.DataFrame, min_idt: float = 0.7) -> Self:
         """Use a table of probe hits to color the edges of the graph, populating the attribute
         'matching exons' of each edge with the interval they match of the best probe of
         the graph's component they belong.
+
+        If the identity of a hit is below min_idt, the hit is skipped and the htting edges
+        are not colored.
         """
 
-        # We group by component to start to operate in the graph
-        comp_df = hits.group_by(["comp_id"]).agg(
-            pl.first("theader"),
+        KEEP_COLS = (
+            "query",
+            "theader",
+            "cis",
+            "tlen",
+            "qstart",
+            "qend",
+            "tstart",
+            "tend",
+            "nident",
+            "mismatch",
+        )
+
+        # ToDo: Should we also degroup this and keep only smaller more granular
+        # hits? How would that afect the coloring? Compare results
+        df = hits.group_by(["query", "theader", "cis"]).agg(
+            pl.sum("nident"),
+            pl.sum("mismatch"),
+            pl.sum("gapopen"),
             pl.first("tlen"),
-            pl.col("query"),
-            pl.col("cis"),
+            pl.first("comp_id"),
+            pl.first("tprobe"),
             pl.col("qstart"),
             pl.col("qend"),
             pl.col("tstart"),
@@ -390,40 +427,44 @@ class Assembly_graph:
         )
 
         for (
-            comp_id,
+            path,
             probe,
+            direc,
             tlen,
-            paths,
-            ciss,
-            mqstarts,
-            mqends,
-            mtstarts,
-            mtends,
-        ) in comp_df.iter_rows():
+            qstarts,
+            qends,
+            tstarts,
+            tends,
+            matches,
+            mismatches,
+        ) in df[KEEP_COLS].iter_rows():
+            # Skip hits that have a low identity
+            colorinfo = ColorInfo(probe, tlen, direc, matches, mismatches)
+            if colorinfo.idt < min_idt:
+                continue
 
-            for path, direc, tstarts, tends, qstarts, qends in zip(
-                paths, ciss, mtstarts, mtends, mqstarts, mqends
-            ):
-                if not direc:
-                    qstarts, qends = qends, qstarts
+            # If the hits are not in the same strand, swap starts and ends accordingly
+            if not direc:
+                qstarts, qends = qends, qstarts
 
-                colorinfo = ColorInfo(probe, tlen, direc)
-                path_intervals = self._get_path_intervals(path)
-                qinter = sorted(map(Interval, qstarts, qends))
-                mod_tstarts = (tstart - 1 for tstart in tstarts)
-                tinter = sorted(map(Interval, mod_tstarts, tends, repeat(colorinfo)))
+            path_intervals = self._get_path_intervals(path)
+            qinter = sorted(map(Interval, qstarts, qends))
+            mod_tstarts = (tstart - 1 for tstart in tstarts)
+            tinter = sorted(map(Interval, mod_tstarts, tends, repeat(colorinfo)))
 
-                for qint, tint in zip(qinter, tinter):
-                    for pint in path_intervals:
-                        if qint.overlaps(pint):
-                            edge_id = pint.data
-                            self.edge_dict[edge_id].matching_exons.append(tint)
+            for qint, tint in zip(qinter, tinter):
+                for pint in path_intervals:
+                    if qint.overlaps(pint):
+                        edge_id = pint.data
+                        self.edge_dict[edge_id].matching_exons[probe].append(tint)
 
+        # Simplify (merge) overlapping intervals of the same color.
         for edge in self.edge_dict.values():
-            if edge.matching_exons:
-                tree = IntervalTree(edge.matching_exons)
-                tree.merge_overlaps(data_reducer=lambda x, y: x)
-                edge.matching_exons = sorted(tree)
+            if edge.has_match():
+                for probe, intervals in edge.matching_exons.items():
+                    tree = IntervalTree(intervals)
+                    tree.merge_overlaps(data_reducer=add, strict=False)
+                    edge.matching_exons[probe] = sorted(tree)
 
 
 @dataclass(slots=True)
@@ -482,6 +523,7 @@ class OptimalExtension:
 def dfs_track_paths(
     graph: Assembly_graph,
     start: OrientedEdge,
+    probe: Optional[str] = None,
     max_len: int = 5000,
     max_extensions: int = 10,
     max_intron_size: Optional[int] = 2000,
@@ -489,8 +531,7 @@ def dfs_track_paths(
     key: Optional[Callable[[list[OrientedEdge]], int]] = None,
 ):
     """
-    Given a starting node (from a path), compute and return compatible extensions by
-    following the given graph.
+    Given a starting node (from a path), compute and return compatible with the given graph.
 
     The number of returned extensions is limited to the "best" n, where n is controlled
     by  _max_extensions_. The definition of "Best" can be customised by providing any
@@ -516,23 +557,19 @@ def dfs_track_paths(
             len(path) - 1
         )
 
-    def exons_gap(path: list[OrientedEdge], graph: Assembly_graph) -> int:
+    def exons_gap(path: list[OrientedEdge], probe: str, graph: Assembly_graph) -> int:
         "Determine the maximum gap (in nucleotides) between colored edges in a path"
         if len(path) == 1:
             return 0
 
-        gap = 0
-        gaps = []
-        for oedge in path:
-            if not (edge := graph.edge_dict[oedge.id]).matching_exons:
-                gap += len(edge) - graph.K
+        def local_gap(edge: Edge, probe: str) -> int:
+            if edge.has_match() and any(edge.matching_exons[probe]):
+                return 0
             else:
-                gaps.append(gap)
-                gap = 0
-        else:
-            gaps.append(gap)
+                return len(edge)
 
-        return max(gaps)
+        gaps = (local_gap(graph.edge_dict[edge.id], probe) for edge in path)
+        return max(map(sum, split_at(gaps, lambda gap: gap == 0)))
 
     def dfs_helper(
         edge: OrientedEdge,
@@ -558,9 +595,22 @@ def dfs_track_paths(
             extensions.add(current_path[:])
             return
 
-        if max_intron_size and exons_gap(current_path, graph) > max_intron_size:
-            extensions.add(current_path[:])
-            return
+        # Colored graph exploration
+        if probe:
+            # No-mix color policy (abort a path if changing color)
+            if (
+                edge_colors := set(graph.edge_dict[edge.id].get_colors())
+            ) and probe not in edge_colors:
+                extensions.add(current_path[:-1])
+                return
+
+            # Gap size is bigger than the limit
+            if (
+                max_intron_size
+                and exons_gap(current_path, probe, graph) > max_intron_size
+            ):
+                extensions.add(current_path[:])
+                return
 
         # Reached a dead-end
         if not (neighbors := graph.graph[edge]):
@@ -571,7 +621,7 @@ def dfs_track_paths(
         for neighbor in neighbors:
             if neighbor != edge:
                 dfs_helper(neighbor, current_path[:], extensions)
-            # Avoid getting stuck in self loops.
+            # Avoid getting stuck in self loops. Only works on self loops of size 1
             else:
                 extensions.add(current_path[:])
                 return
@@ -587,20 +637,6 @@ def dfs_track_paths(
     return extensions
 
 
-def probe_cov(path: list[OrientedEdge], graph: Assembly_graph) -> float:
-    tree = IntervalTree(
-        chain.from_iterable(graph.edge_dict[edge.id].matching_exons for edge in path)
-    )
-    if tree.is_empty():
-        return 0.0
-
-    tree.merge_overlaps(data_reducer=lambda x, _: x)
-    cov_bases = sum(interval.length() for interval in tree)
-    tlen = next(iter(tree)).data.tlen
-
-    return cov_bases / tlen
-
-
 def extend_path(
     path: Path_on_graph,
     graph: Assembly_graph,
@@ -608,15 +644,48 @@ def extend_path(
     max_ext: int = 10,
     max_intron_size: int = 2000,
     key: Optional[Callable[[list[OrientedEdge]], int]] = None,
+    allow_gray: bool = False,
 ) -> list[OrientedEdge]:
-    """Given an assembly graph and a path, extend the given path following the graph topology
-    using a Depth First Search.
+    """Given an assembly graph and a path, extend the path following the graph topology
+    using a Depth First Search. Up to max_ext extensions of the given path are returned.
+
+
+    By default, the extension is guided by the color of the path. If the path is colored by
+    more than one probe, the probe with the highest effective coverage (matches) is chosen.
+    If the path is gray (colorless) and allow_gray is True, colorless extension follows.
+    Otherwise a ValueError is performed.
+
+    To avoid long recursions, an extension bigger than max_len stops the exploration of that
+    extension. Path extensions are limited to max_len,
 
     Return a list with all the extended paths, represented as list of oriented edges.
-    """
+    """  # ToDo: Update docstring
+
+    edges = [graph.edge_dict[edge.id] for edge in path.edges]
+    probes = {probe for edge in edges for probe in edge.get_colors()}
+
+    match len(probes):
+        case 0:
+            probe = None
+        case 1:
+            probe = probes.pop()
+        case _:
+            probe_idts = {}
+            for probe in probes:
+                tree = IntervalTree(
+                    inter for edge in edges for inter in edge.matching_exons[probe]
+                )
+                probe_idts[probe] = effective_cov(tree, colored_intervals=True)
+
+            probe = max(probe_idts.items(), key=itemgetter(1))[0]
+
+    if not allow_gray and probe is None:
+        raise ValueError(f"All edges in path {path.name} are colorless. Exiting.")
 
     *edges, tail = path.edges
-    extensions = dfs_track_paths(graph, tail, max_len, max_ext, max_intron_size, key)
+    extensions = dfs_track_paths(
+        graph, tail, probe, max_len, max_ext, max_intron_size, key=key
+    )
     return [edges + ext for ext in extensions]
 
 
@@ -639,78 +708,46 @@ def make_path_name(path: list[OrientedEdge], idx: int, graph: Assembly_graph):
     return f"EDGE_{idx}_length_{length}_cov_{cov:.3f}"
 
 
-def effective_cov(starts: list[int], ends: list[int]) -> int:
-    """
-    Compute the effective coverage of a set of matches (intervals), by
-    merging the intervals they define with their starts and ends.
-
-    Return the total amount of bases covered [int].
-    """
-
-    gen_iter = zip(chain.from_iterable(starts), chain.from_iterable(ends))
-    tree = IntervalTree.from_tuples(gen_iter)
-    tree.merge_overlaps()
-    return sum(inter.length() for inter in tree) + 1
-
-
-def find_components_best_probe(df: pl.DataFrame) -> pl.DataFrame:
+def find_components_best_probe(df: pl.DataFrame, min_idt: float = 0.7) -> pl.DataFrame:
     """From a table of probe hits to the paths of a graph, compute which probe hits
     best each of the components on the graph and add this information to the table.
 
     Return simplified table with only the hits of the best probe per component.
     """
 
-    # Collect all the hits of the same probe on the same path
-    df2 = df.group_by(["query", "theader", "cis"]).agg(
-        pl.sum("nident"),
-        pl.sum("mismatch"),
-        pl.sum("gapopen"),
-        pl.first("tlen"),
-        pl.first("comp_id"),
-        pl.first("tprobe"),
-        pl.col("qstart"),
-        pl.col("qend"),
-        pl.col("tstart"),
-        pl.col("tend"),
-    )
+    def is_main_hit(
+        hit: Interval, probe_tree: IntervalTree, margin: float = 0.98
+    ) -> bool:
+        """Given a hit and a probe_tree, determine if the hit identity is within a margin
+        of the best hits in the probe_tree."""
 
-    df3 = df2.group_by(["theader"]).agg(
-        pl.sum("nident"),
-        pl.sum("mismatch"),
-        pl.first("tlen"),
-        pl.first("tprobe"),
-        pl.concat_list("tstart"),
-        pl.concat_list("tend"),
-    )
+        ovlps = probe_tree.overlap(hit.begin, hit.end)
+        if len(ovlps) == 0:
+            return False
 
-    # Compute the "effective coverage" on the probe by hits on the same components
-    df4 = df3.with_columns(
-        eff_cov=pl.Series(
-            values=starmap(effective_cov, df3[["tstart", "tend"]].iter_rows()),
-            dtype=pl.Int64,
-        )
-    )
+        homolog_hit = max(ovlps, key=lambda inter: hit.overlap_size(inter))
 
-    # Select the nest probe for each component (the dominant probe), by "alternative coverage"
-    # criterion. The alternative coverage is the Non-redundant number of matches found in the probe,
-    # over the length of the probe.
+        return hit.data >= homolog_hit.data * margin
 
-    best_probes = (
-        df4.with_columns(
-            alt_cov=pl.col("eff_cov")
-            * (pl.col("nident") / (pl.col("nident") + pl.col("mismatch")))
-            / pl.col("tlen")
-        )
-        .sort(by=["tprobe", "alt_cov"], descending=True)
-        .group_by(["tprobe"])
-        .agg(pl.first("theader"), pl.first("alt_cov"))
-    )
+    # Compute the hits coverage of the probes and which are the best hits in
+    # each subregion
+    TREE_COLS = ["theader", "tstart", "tend", "nident", "mismatch"]
+    probe_hits = df.sort("theader").select(TREE_COLS)
 
-    return (
-        df2.join(best_probes, on="tprobe", suffix="_best")
-        .filter(pl.col("theader") == pl.col("theader_best"))
-        .sort(by="tprobe")
-    )
+    probe_trees = build_probe_trees(df, min_idt)
+
+    # Filter the hits that are not compatible (low-identity) with the best hits on each probe
+    mask = [
+        is_main_hit(Interval(start - 1, end, Fraction(n, n + m)), probe_trees[probe])
+        for probe, start, end, n, m in probe_hits.iter_rows()
+    ]
+    clean_hits = df.sort(by="theader").filter(mask)
+
+    # This is a multiprobe set, so pick the best probe version:
+    if (clean_hits["theader"] != clean_hits["tprobe"]).any():
+        clean_hits = filt_probe_hits(clean_hits, probe_trees)
+
+    return clean_hits.sort(by="theader")
 
 
 def colored_paths_extension(
@@ -726,9 +763,8 @@ def colored_paths_extension(
 
     Make Appropiate docstring."""
 
-    ## ToDo: Think about the K parameter
-
     def _get_max_len(tlen: int, extension_limits: ExtLimits) -> int:
+        "Compute the maximum extension length allowed given the extension limits."
         floor_len, ceil_len, plen_scaling = extension_limits
         return min(max(floor_len, tlen * 3 * plen_scaling), ceil_len)
 
@@ -736,6 +772,9 @@ def colored_paths_extension(
         return hash(tuple(sorted(edge.id for edge in path)))
 
     def is_contained(ext: list[OrientedEdge], ext_sets: tuple[set[str]]) -> bool:
+        """Given an extension (path), determine if it is contained within another one,
+        by comparing with a collection of sets representing the alternative paths."""
+
         qext = set(map(attrgetter("id"), ext))
         return any(qext.issubset(edge_set) for edge_set in ext_sets if qext != edge_set)
 
@@ -743,14 +782,21 @@ def colored_paths_extension(
     comp_pcov = partial(probe_cov, graph=graph)
     get_path_length = partial(get_seq_atts, graph=graph)
 
-    path_extensions = {}
+    # Drop path duplicates (e.g. due to multiple colors) and take the longest tlen for the exploration
+    hits_iter = (
+        hits.sort(["query", "tlen"], descending=True)
+        .group_by("query")
+        .agg(pl.first("tlen"), pl.first("comp_id"), pl.first("theader"))
+        .select(["query", "tlen", "comp_id", "theader"])
+        .sort(["comp_id", "theader", "query"])
+        .iter_rows()
+    )
 
-    for comp, queries in groupby(
-        hits["query", "tlen", "comp_id"].iter_rows(), key=lambda x: x[2]
-    ):
+    path_extensions = {}
+    for (comp, probe), queries in groupby(hits_iter, key=itemgetter(2, 3)):
         # Compute extensions for all paths
         comp_ext = {}
-        for name, tlen, _ in queries:
+        for name, tlen, _, _ in queries:
             comp_ext[name] = extend_path(
                 graph.paths[name],
                 graph,
@@ -760,10 +806,19 @@ def colored_paths_extension(
                 max_intron_size=max_intron_size,
             )
 
+        # Remove duplicated paths
+        signs = set()
+        filt_paths = defaultdict(list)
+        for name, paths in comp_ext.items():
+            for path in paths:
+                if (sign := _hash_path(path)) not in signs:
+                    signs.add(sign)
+                    filt_paths[name].append(path)
+
         # Some extensions would be contained by others, we need to get rid of those
         ext_sets = tuple(
             set(map(attrgetter("id"), ext))
-            for ext in chain.from_iterable(comp_ext.values())
+            for ext in chain.from_iterable(filt_paths.values())
         )
 
         filt_comp_ext = defaultdict(list)
@@ -772,18 +827,9 @@ def colored_paths_extension(
                 if not is_contained(ext, ext_sets):
                     filt_comp_ext[name].append(ext)
 
-        # Remove duplicated paths
-        signs = set()
-        filt_paths = []
-        for path in chain.from_iterable(filt_comp_ext.values()):
-            if (sign := _hash_path(path)) not in signs:
-                signs.add(sign)
-                filt_paths.append(path)
-
-        # Now use Kmedioids to select K
-        ## ToDo: How to select K? It should consider component size, ploidy?
+        # Now use Kmedioids to select K extensions
         selected_ext = select_k_paths(
-            filt_paths,
+            list(chain.from_iterable(filt_comp_ext.values())),
             max_extensions,
             graph,
             key=lambda path: (comp_pcov(path), get_path_length(path)),
@@ -827,7 +873,6 @@ def snakemake_call(snakemake):
 
         extension_limits = ExtLimits(floor_len, ceil_len, plen_scaling)
         max_extensions = snakemake.params.max_extensions
-        max_extensions = max_extensions
 
         # Load the matches
         df = pl.read_csv(table_path, separator="\t", has_header=True)
@@ -907,7 +952,7 @@ def main():
             floor_len=3000,
             ceil_len=7000,
             plen_scaling=3,
-            max_extensions=10,
+            max_extensions=5,
             max_intron_size=2000,
             probe_pattern=r"(\d+)$",
         ),
