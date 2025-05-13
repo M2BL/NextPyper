@@ -619,9 +619,9 @@ def dfs_track_paths(
 
         # Explore neighbors
         for neighbor in neighbors:
-            if neighbor != edge:
+            if neighbor.id not in [edge.id for edge in current_path]:
                 dfs_helper(neighbor, current_path[:], extensions)
-            # Avoid getting stuck in self loops. Only works on self loops of size 1
+            # Avoid getting stuck in loops and reversing your steps.
             else:
                 extensions.add(current_path[:])
                 return
@@ -797,14 +797,18 @@ def colored_paths_extension(
         # Compute extensions for all paths
         comp_ext = {}
         for name, tlen, _, _ in queries:
-            comp_ext[name] = extend_path(
-                graph.paths[name],
-                graph,
-                key=comp_pcov,
-                max_len=get_max_len(tlen),
-                max_ext=max_extensions,
-                max_intron_size=max_intron_size,
-            )
+            try:
+                comp_ext[name] = extend_path(
+                    graph.paths[name],
+                    graph,
+                    key=comp_pcov,
+                    max_len=get_max_len(tlen),
+                    max_ext=max_extensions,
+                    max_intron_size=max_intron_size,
+                )
+            except RecursionError as err:
+                err.add_note(f"While extending: path={name}, probe={probe} ({tlen=})")
+                raise
 
         # Remove duplicated paths
         signs = set()
