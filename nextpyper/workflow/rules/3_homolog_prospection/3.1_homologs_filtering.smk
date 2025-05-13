@@ -24,50 +24,36 @@ rule gather_matching_probes:
         """
 
 
-rule make_mmseqs_probe_db:
+use rule make_mmseqs_probes_db as make_mmseqs_matching_probes_db with:
     input:
         outdir / "homolog_prospection/matching_probes.fasta",
     output:
-        outdir / "homolog_prospection/candidates_filtering/dbs/probes/matching_probes",
+        outdir / "homolog_prospection/homologs_filtering/dbs/probes/matching_probes",
     log:
-        outdir / "logs/homolog_prospection/candidates_filtering/make_probes_db.log",
-    conda:
-        "../../envs/mmseqs2.yaml"
-    shell:
-        "mmseqs createdb --dbtype 1 {input} {output} > {log} 2>&1"
+        outdir / "logs/homolog_prospection/homologs_filtering/make_probes_db.log",
 
 
-use rule make_mmseqs_homologs_sample_dbs as make_mmseqs_sample_dbs with:
-    input:
-        outdir / "saute/target_assembly/{sample}/target_vars.fasta",
-    output:
-        outdir / "homolog_prospection/candidates_filtering/dbs/samples/{sample}",
-    log:
-        outdir
-        / "logs/homolog_prospection/candidates_filtering/make_sample_db/{sample}.log",
-
-
-use rule homologs_to_probes_matching as candidates_to_probes_matching with:
+use rule seeds_to_probes_matching as homologs_to_probes_matching with:
     input:
         probes=outdir
-        / "homolog_prospection/candidates_filtering/dbs/probes/matching_probes",
-        query=outdir / "homolog_prospection/candidates_filtering/dbs/samples/{sample}",
+        / "homolog_prospection/homologs_filtering/dbs/probes/matching_probes",
+        query=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
     output:
-        outdir / "homolog_prospection/candidates_filtering/matching_tables/{sample}.tsv",
+        outdir / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
     log:
-        outdir / "logs/homolog_prospection/candidates_filtering/mmseqs/{sample}.log",
+        outdir / "logs/homolog_prospection/homologs_filtering/mmseqs/{sample}.log",
 
 
-use rule homologs_filtering as candidates_filtering with:
+use rule seeds_filtering as homologs_filtering with:
     input:
         scfs=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
         table=outdir
-        / "homolog_prospection/candidates_filtering/matching_tables/{sample}.tsv",
+        / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
     output:
-        outdir / "homolog_prospection/candidates_filtering/filtered_scfs/{sample}.fasta",
+        outdir / "homolog_prospection/homologs_filtering/filtered_scfs/{sample}.fasta",
     log:
         outdir
-        / "logs/homolog_prospection/candidates_filtering/scfs_filtering/{sample}.log",
+        / "logs/homolog_prospection/homologs_filtering/scfs_filtering/{sample}.log",
     params:
         min_cov=homolog_scf_min_cov,
         min_idt=homolog_scf_min_idt,

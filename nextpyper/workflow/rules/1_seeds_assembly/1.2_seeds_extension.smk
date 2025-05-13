@@ -1,20 +1,20 @@
-rule make_mmseqs_raw_assembly_dbs:
+rule make_mmseqs_probes_db:
     input:
-        outdir / "assembled/scaffolds/{sample}.fasta",
+        outdir / "translated_probes/longest_cds.fasta",
     output:
-        outdir / "assembled/filtering/dbs/raw_assembly/{sample}",
+        outdir / "assembled/filtering/dbs/probes/probes",
     log:
-        outdir / "logs/assembled/filtering/make_raw_assembly_db/{sample}.log",
+        outdir / "logs/assembled/filtering/dbs/probes.log",
     conda:
         "../../envs/mmseqs2.yaml"
     shell:
-        "mmseqs createdb --dbtype 2 {input} {output} > {log} 2>&1"
+        "mmseqs createdb --dbtype 1 {input} {output} > {log} 2>&1 "
 
 
 rule raw_assembly_to_probes_matching:
     input:
         probes=outdir / "assembled/filtering/dbs/probes/probes",
-        query=outdir / "assembled/filtering/dbs/raw_assembly/{sample}",
+        query=outdir / "assembled/scaffolds/{sample}.fasta",
     output:
         outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
     params:
@@ -30,10 +30,8 @@ rule raw_assembly_to_probes_matching:
     shell:
         """
         mkdir -p temp_{wildcards.sample}
-        mmseqs search {input.query} {input.probes} {wildcards.sample}_results temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --remove-tmp-files -a > {log} 2>&1
-        mmseqs convertalis {input.query} {input.probes} {wildcards.sample}_results {output} --format-mode 4 --format-output {params.fields} --threads {threads} >> {log} 2>&1
+        mmseqs easy-search {input.query} {input.probes} {output} temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --format-mode 4 --format-output {params.fields} --remove-tmp-files -a > {log} 2>&1
         rm -r temp_{wildcards.sample}
-        rm {wildcards.sample}_results.*
         """
 
 

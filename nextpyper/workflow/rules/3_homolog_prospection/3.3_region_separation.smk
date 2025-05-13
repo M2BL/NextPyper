@@ -13,7 +13,7 @@ def rename_rec(rec: SeqRecord, sample: str) -> SeqRecord:
 checkpoint per_probe_scaffold_grouping:
     input:
         expand(
-            outdir / "homolog_prospection/allele_collapsing/vsearch/{sample}.fasta",
+            outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
             sample=sample_list,
         ),
     output:
@@ -50,7 +50,7 @@ checkpoint split_matching_probes:
         probes=outdir / "homolog_prospection/matching_probes.fasta",
         tables=expand(
             outdir
-            / "logs/homolog_prospection/candidates_filtering/scfs_filtering/{samples}.log",
+            / "logs/homolog_prospection/homologs_filtering/scfs_filtering/{samples}.log",
             samples=sample_list,
         ),
     output:
