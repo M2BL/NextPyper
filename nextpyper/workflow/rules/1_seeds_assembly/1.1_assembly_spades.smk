@@ -21,7 +21,6 @@ rule spades_assembly:
     output:
         out_dir=directory(outdir / "assembled/spades/{sample}"),
         graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
-        contigs=outdir / "assembled/spades/{sample}/scaffolds.fasta",
     params:
         mode=lambda wildcards: (
             "--rna" if sample_dict[wildcards.sample]["type"] == "rna" else "--meta"
@@ -35,3 +34,12 @@ rule spades_assembly:
         "../../envs/assembly_spades.yaml"
     shell:
         "spades.py -t {threads} {params.mode} {params.params} -k {params.k} -1 {input.in1} -2 {input.in2} -o {output.out_dir} > {log} 2>&1"
+
+
+rule make_assembly_scaffolds:
+    input:
+        outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
+    output:
+        outdir / "assembled/scaffolds/{sample}.fasta",
+    script:
+        "../../../src/gfa2fasta.py"

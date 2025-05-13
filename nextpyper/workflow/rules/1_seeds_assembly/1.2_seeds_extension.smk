@@ -1,13 +1,6 @@
 rule make_mmseqs_raw_assembly_dbs:
     input:
-        branch(
-            lookup(dpath="{sample}/type", within=sample_dict),
-            cases={
-                "rna": outdir / "assembled/spades/{sample}/transcripts.fasta",
-                "targeted": outdir / "assembled/spades/{sample}/scaffolds.fasta",
-                "": outdir / "assembled/spades/{sample}/scaffolds.fasta",
-            },
-        ),
+        outdir / "assembled/scaffolds/{sample}.fasta",
     output:
         outdir / "assembled/filtering/dbs/raw_assembly/{sample}",
     log:
