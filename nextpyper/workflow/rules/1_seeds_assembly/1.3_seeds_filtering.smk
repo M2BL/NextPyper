@@ -35,7 +35,7 @@ checkpoint seeds_filtering:
 def aggregate_split(wildcards):
     direcs = []
     for sample in sample_list:
-        checkpoint_output = checkpoints.homologs_filtering.get(sample=sample).output[0]
+        checkpoint_output = checkpoints.seeds_filtering.get(sample=sample).output[0]
         direcs.append(checkpoint_output)
     return direcs
 

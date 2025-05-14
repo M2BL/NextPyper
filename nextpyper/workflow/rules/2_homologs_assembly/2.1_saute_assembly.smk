@@ -8,7 +8,7 @@ rule merge_consensus_probes:
 
 
 def aggregate_split(wildcards):
-    chkpt_out = checkpoints.homologs_filtering.get(sample=wildcards.sample).output[0]
+    chkpt_out = checkpoints.seeds_filtering.get(sample=wildcards.sample).output[0]
     return collect(
         outdir
         / f"assembled/filtering/filtered_scfs/{wildcards.sample}/{{probe}}.fasta",

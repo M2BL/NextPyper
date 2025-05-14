@@ -1,7 +1,7 @@
 def aggregate_sample_per_probe(wildcards):
     probe_inputs = defaultdict(list)
     for sample in sample_list:
-        checkpoint_output = checkpoints.homologs_filtering.get(sample=sample).output[0]
+        checkpoint_output = checkpoints.seeds_filtering.get(sample=sample).output[0]
         global_match = glob_wildcards(Path(checkpoint_output) / "{probe}.fasta")
 
         for probe in global_match.probe:
