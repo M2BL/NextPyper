@@ -905,21 +905,28 @@ def snakemake_call(snakemake):
         final_hits = find_components_best_probe(pre_comp)
         graph.color_edges(final_hits)
 
-        # Explore the colored graph:
-        path_extensions = colored_paths_extension(
-            graph, final_hits, max_extensions, max_intron_size, extension_limits
-        )
-
-        # Make the new paths out of the extensions
-        node_pat = re.compile(r"^NODE_(\d+)_")
-        counter = count(1)
+        # If there are no connections in the graph, there is nothing to extend.
         newpaths = defaultdict(list)
-        for path, extensions in sorted(
-            path_extensions.items(), key=lambda x: int(node_pat.match(x[0])[1])
-        ):
-            for extension in extensions:
-                name = make_path_name(extension, next(counter), graph)
-                newpaths[path].append(Path_on_graph(name, extension))
+        if not hasattr(graph, "K"):
+            for name, path in graph.paths.items():
+                path.name = path.name.replace("NODE", "EDGE")
+                newpaths[name].append(path)
+
+        # Explore the colored graph:
+        else:
+            path_extensions = colored_paths_extension(
+                graph, final_hits, max_extensions, max_intron_size, extension_limits
+            )
+
+            # Make the new paths out of the extensions
+            node_pat = re.compile(r"^NODE_(\d+)_")
+            counter = count(1)
+            for path, extensions in sorted(
+                path_extensions.items(), key=lambda x: int(node_pat.match(x[0])[1])
+            ):
+                for extension in extensions:
+                    name = make_path_name(extension, next(counter), graph)
+                    newpaths[path].append(Path_on_graph(name, extension))
 
         # Log the extensions: old_path -> new_path
         for path, exts in newpaths.items():
