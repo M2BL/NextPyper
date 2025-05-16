@@ -54,3 +54,15 @@ rule saute_assembly:
         "--gfa {output.graph} "
         "--all_variants {output.all_vars} "
         "--selected_variants {output.target_vars}) > {log} 2>&1 "
+
+
+rule fix_homologs_header:
+    input:
+        outdir / "saute/target_assembly/{sample}/target_vars.fasta",
+    output:
+        outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
+    params:
+        pattern=SAUTE_PRE_FIX_PAT,
+        sample=lambda wildcards: wildcards.sample,
+    script:
+        "../../../src/fix_headers.py"

@@ -1,10 +1,3 @@
-def gather_tables(wildcards):
-    return expand(
-        outdir / "assembled/filtering/matching_tables/{samples}.tsv",
-        samples=sample_list,
-    )
-
-
 rule gather_matching_probes:
     input:
         probes=outdir / "translated_probes/longest_cds.fasta",
@@ -37,7 +30,7 @@ use rule seeds_to_probes_matching as homologs_to_probes_matching with:
     input:
         probes=outdir
         / "homolog_prospection/homologs_filtering/dbs/probes/matching_probes",
-        query=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
+        query=outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
     output:
         outdir / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
     log:
@@ -46,7 +39,7 @@ use rule seeds_to_probes_matching as homologs_to_probes_matching with:
 
 use rule seeds_filtering as homologs_filtering with:
     input:
-        scfs=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
+        scfs=outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
         table=outdir
         / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
     output:
@@ -58,5 +51,5 @@ use rule seeds_filtering as homologs_filtering with:
         min_cov=homolog_scf_min_cov,
         min_idt=homolog_scf_min_idt,
         separate_probes=lambda wildcards: False,
-        qpat=lambda wildcards: r"^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+):[^ ]+$",
+        qpat=lambda wildcards: SAUTE_POST_FIX_PAT,
         tpat=lambda wildcards: pattern,

@@ -72,6 +72,10 @@ seeds_scf_min_idt = lookup("seeds_scf_min_idt", within=mmseqs_filt)
 homolog_scf_min_cov = lookup("homolog_scf_min_cov", within=mmseqs_filt)
 homolog_scf_min_idt = lookup("homolog_scf_min_idt", within=mmseqs_filt)
 
+# Saute
+SAUTE_PRE_FIX_PAT = r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
+SAUTE_POST_FIX_PAT = r"^(?P<sample1>.*?)\|.*?-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
+
 # Region separation
 reg_sep = lookup("region_separation", within=pipeline)
 min_probe_scaffold_sim = lookup("min_probe_scaffold_sim", within=reg_sep)
