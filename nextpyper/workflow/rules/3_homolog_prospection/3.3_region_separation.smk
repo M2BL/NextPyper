@@ -1,15 +1,3 @@
-POS_ALLELE_PATTERN = re.compile(
-    r"^(?P<sample>.*?)\|(?P<seed>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+):[^ ]+$",
-    re.VERBOSE,
-)
-
-
-def rename_rec(rec: SeqRecord, sample: str) -> SeqRecord:
-    new_name = f"{sample}|{rec.id.removeprefix("Contig_")}"
-    rec.id = rec.name = rec.description = new_name
-    return rec
-
-
 checkpoint per_probe_scaffold_grouping:
     input:
         expand(
@@ -23,26 +11,11 @@ checkpoint per_probe_scaffold_grouping:
         ),
     log:
         outdir / "logs/homolog_prospection/region_separation/scfs_grouping.log",
-    run:
-        with open(log[0], "w") as outlog:
-            sys.stdout = sys.stderr = outlog
-            scfs = {Path(file).stem: list(SeqIO.parse(file, "fasta")) for file in input}
-            renamed_scfs = {
-                sample: [rename_rec(rec, sample) for rec in recs]
-                for sample, recs in scfs.items()
-            }
-            all_recs = list(chain.from_iterable(renamed_scfs.values()))
-            grouped_scfs = group_probes(
-                all_recs, POS_ALLELE_PATTERN, match_group="probe"
-            )
-
-            outfolder = Path(output[0]).parent
-            outfolder.mkdir(exist_ok=True)
-            for probe, recs in grouped_scfs.items():
-                SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
-
-            for probe in probes_list:
-                (outfolder / f"{probe}.fasta").touch(exist_ok=True)
+    params:
+        pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
+        probes=probes_list,
+    script:
+        "../../../src/multi_seq_probes.py"
 
 
 checkpoint split_matching_probes:

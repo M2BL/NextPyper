@@ -146,3 +146,30 @@ def check_probes(
             probe: [rec.id for rec in recs] for probe, recs in probes_dict.items()
         }
         write_hierarchy(probes_hier, out_hierarchy)
+
+
+# Main execution for rule "per_probe_scaffold_grouping" in workflow
+def snakemake_call(snakemake):
+    with open(snakemake.log[0], "w") as outlog:
+        sys.stdout = sys.stderr = outlog
+
+        inputs = snakemake.input
+        outfolder = Path(snakemake.output[0]).parent
+        pattern = snakemake.params.pattern
+        probes_list = snakemake.params.probes
+        pat = re.compile(pattern, re.VERBOSE)
+
+        all_recs = [rec for file in inputs for rec in SeqIO.parse(file, "fasta")]
+        grouped_scfs = group_probes(all_recs, pat, match_group="probe")
+
+        outfolder.mkdir(exist_ok=True)
+        for probe, recs in grouped_scfs.items():
+            SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
+
+        for probe in probes_list:
+            (outfolder / f"{probe}.fasta").touch(exist_ok=True)
+
+
+if __name__ == "__main__":
+    if "snakemake" in globals():
+        snakemake_call(snakemake)
