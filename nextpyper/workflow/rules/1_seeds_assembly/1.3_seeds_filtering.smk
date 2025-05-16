@@ -40,7 +40,7 @@ def aggregate_split(wildcards):
     return direcs
 
 
-checkpoint done_assembly:
+checkpoint done_seeds:
     input:
         aggregate_split,
     output:

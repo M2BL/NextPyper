@@ -12,7 +12,7 @@ def aggregate_sample_per_probe(wildcards):
     return probe_inputs[wildcards.probe]
 
 
-rule merge_asms:
+rule merge_samples_seeds:
     input:
         probe=aggregate_sample_per_probe,
         chkpt=outdir / "logs/dones/splitting.done",

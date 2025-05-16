@@ -54,7 +54,7 @@ rule extend_paths:
         "../../../src/gfa_graph.py"
 
 
-rule prefix_and_filter_scfs_by_cov:
+rule prefix_seeds:
     input:
         outdir / "assembled/extension/{sample}.fasta",
     output:
@@ -62,9 +62,4 @@ rule prefix_and_filter_scfs_by_cov:
     conda:
         "../../envs/preprocessing.yaml"
     shell:
-        """bioawk -c fastx '{{split($name, parts, "_"); 
-        printf ">{wildcards.sample}-"; 
-        for(i=1; i<=length(parts)-2; i++) 
-        {{printf "%s%s", (i>1?"_":""), parts[i]}}; 
-        print "\\n"$seq }}' {input} > {output}
-        """
+        """bioawk -c fastx '{{printf ">{wildcards.sample}-%s",$name; print "\\n"$seq}}' {input} > {output}"""
