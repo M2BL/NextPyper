@@ -462,9 +462,10 @@ class Assembly_graph:
         for edge in self.edge_dict.values():
             if edge.has_match():
                 for probe, intervals in edge.matching_exons.items():
-                    tree = IntervalTree(intervals)
-                    tree.merge_overlaps(data_reducer=add, strict=False)
-                    edge.matching_exons[probe] = sorted(tree)
+                    if len(intervals) > 1:
+                        tree = IntervalTree(intervals)
+                        tree.merge_overlaps(data_reducer=add, strict=False)
+                        edge.matching_exons[probe] = sorted(tree)
 
 
 @dataclass(slots=True)
@@ -708,26 +709,45 @@ def make_path_name(path: list[OrientedEdge], idx: int, graph: Assembly_graph):
     return f"EDGE_{idx}_length_{length}_cov_{cov:.3f}"
 
 
-def find_components_best_probe(df: pl.DataFrame, min_idt: float = 0.7) -> pl.DataFrame:
+def find_best_probe_hits(
+    df: pl.DataFrame, min_idt: float = 0.7, div_mod: float = 0.1
+) -> pl.DataFrame:
     """From a table of probe hits to the paths of a graph, compute which probe hits
-    best each of the components on the graph and add this information to the table.
+    are the best or compatible with the best.
 
-    Return simplified table with only the hits of the best probe per component.
+    To determine the best hits of each probe, the probe hits are stacked in the
+    probe coordinates, and overlapping hits are split, defining local subregions.
+    The, the best hit (the one with the highest similarity to the probe) is selected
+    for each sub region.
+
+    All probe hits are reevaluated and kept if its identity is higher than the identity
+    threshold set by the best hit of the subregion they belong to. The identity threshold
+    is a function of the divergence (1 - idt) of the best hit, which makes it more relaxed
+    for lower identity values and stricter for higher identities. It is computed as:
+
+        margin = best_hit_idt * sqrt(divergence) * div_mod
+        idt_threshold = best_hit_idt - margin
+
+    Hits with lower identity than min_idt are always filtered.
+
+    Return simplified table with only the best (or compatible) hits.
     """
 
     def is_main_hit(
-        hit: Interval, probe_tree: IntervalTree, margin: float = 0.98
+        hit: Interval, probe_tree: IntervalTree, div_mod: float = 0.98
     ) -> bool:
-        """Given a hit and a probe_tree, determine if the hit identity is within a margin
-        of the best hits in the probe_tree."""
+        """Given a hit and a probe_tree, determine if the hit identity is within the accepted
+        identity threshold of the best homologous hit in the probe_tree.
+        """
 
         ovlps = probe_tree.overlap(hit.begin, hit.end)
         if len(ovlps) == 0:
             return False
 
         homolog_hit = max(ovlps, key=lambda inter: hit.overlap_size(inter))
+        idt_threshold = homolog_hit.data * (1 - (1 - homolog_hit.data) ** 2 * div_mod)
 
-        return hit.data >= homolog_hit.data * margin
+        return hit.data >= idt_threshold
 
     # Compute the hits coverage of the probes and which are the best hits in
     # each subregion
@@ -738,7 +758,8 @@ def find_components_best_probe(df: pl.DataFrame, min_idt: float = 0.7) -> pl.Dat
 
     # Filter the hits that are not compatible (low-identity) with the best hits on each probe
     mask = [
-        is_main_hit(Interval(start - 1, end, Fraction(n, n + m)), probe_trees[probe])
+        (idt := Fraction(n, n + m)) >= min_idt
+        and is_main_hit(Interval(start - 1, end, idt), probe_trees[probe], div_mod)
         for probe, start, end, n, m in probe_hits.iter_rows()
     ]
     clean_hits = df.sort(by="theader").filter(mask)
@@ -902,7 +923,7 @@ def snakemake_call(snakemake):
         )
 
         # Find which probe is best for each component and color the graph
-        final_hits = find_components_best_probe(pre_comp)
+        final_hits = find_best_probe_hits(pre_comp)
         graph.color_edges(final_hits)
 
         # If there are no connections in the graph, there is nothing to extend.

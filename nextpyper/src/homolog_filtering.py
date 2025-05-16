@@ -49,6 +49,7 @@ def orient_scf(rec: SeqRecord, trans: bool) -> SeqRecord:
 def tag_probe(rec: SeqRecord, probe) -> SeqRecord:
     idx = rec.id.index("-")
     rec.id = f"{rec.id[:idx+1]}{probe}_{rec.id[idx+1:]}"
+    rec.name = rec.description = ""
     return rec
 
 
