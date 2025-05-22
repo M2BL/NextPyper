@@ -42,14 +42,17 @@ __version__ = "0.1"
 # =======================================================================================
 
 from dataclasses import dataclass, field
-from itertools import groupby
-from functools import reduce
+from itertools import chain, groupby
+from functools import partial, reduce
 from pathlib import Path
 import json
 import re
 import sys
+from typing import Literal
 
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+import polars as pl
 import pandas as pd
 import numpy as np
 
@@ -182,6 +185,44 @@ def _condense_counts(mul_counts: list[dict[str, int]]) -> dict[str, int]:
     }
 
 
+def compute_Nx(lens: np.ndarray[np.int64], x: float) -> int:
+    """Compute the length of the sequence that separates the assembly
+    between x and (1-x) parts."""
+
+    fraction = x / 100.0 if x > 1.0 else x
+    idx = np.where(lens.cumsum() >= lens.sum() * fraction)[0][0]
+
+    return int(lens[idx])
+
+
+def contiguity_stats(
+    recs: list[SeqRecord],
+    Nx: tuple[int] = (25, 50, 75, 90),
+    cutoffs: tuple[int] = (500, 750, 1000, 1500, 2000, 3000),
+) -> dict[str, int]:
+    "Compute basic contiguity stats of a given assembly/ set of sequences"
+
+    lens = np.fromiter(sorted(map(len, recs)), np.int64)
+    lens.sort()
+
+    stats = {
+        "num_seqs": lens.size,
+        "sum": int(lens.sum()),
+        "min": int(lens.min()),
+        "max": int(lens.max()),
+        "mean": round(float(lens.mean()), 2),
+        "median": int(np.median(lens)),
+    }
+
+    # Add Nx stats.
+    stats |= {f"N{n}": compute_Nx(lens, n) for n in Nx}
+
+    # Add cutoff counts.
+    stats |= {f"n:{size}": np.where(lens > size)[0].size for size in cutoffs}
+
+    return stats
+
+
 def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     """Given the root path of a NextPyper output, collect and summarize the results of the run.
     Returns a dataframe with a row per sample and multiple statistics.
@@ -218,22 +259,22 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     }
 
     ## Get Preprocessing stats:
-    if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
-        clean_stats = {
-            sample: _get_cleaned_reads(sample, results_dir, CLEANING_PATTERN)
-            for sample in samples
-        }
+    # if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
+    #     clean_stats = {
+    #         sample: _get_cleaned_reads(sample, results_dir, CLEANING_PATTERN)
+    #         for sample in samples
+    #     }
 
-    if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
-        stats["cleaned_reads"] = {
-            sample: cleaned for sample, (trimmed, cleaned) in clean_stats.items()
-        }
+    # if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
+    #     stats["cleaned_reads"] = {
+    #         sample: cleaned for sample, (trimmed, cleaned) in clean_stats.items()
+    #     }
 
-    if (results_dir / "logs/preprocessing/bbduk_probe_matching").exists():
-        stats["probe_matching_reads"] = {
-            sample: _get_matched_reads(sample, results_dir, MATCHING_PATTERN)[1]
-            for sample in samples
-        }
+    # if (results_dir / "logs/preprocessing/bbduk_probe_matching").exists():
+    #     stats["probe_matching_reads"] = {
+    #         sample: _get_matched_reads(sample, results_dir, MATCHING_PATTERN)[1]
+    #         for sample in samples
+    #     }
 
     ## Get matched probes
     stats["probes_in_assembly"] = {
@@ -242,11 +283,12 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
 
     ## Get lens in aa
     probe_lens = {
-        file.stem: _get_len_probes(file)
+        file.stem: len(SeqIO.read(file, "fasta"))
         for file in sorted(
-            (results_dir / "homolog_prospection/region_separation/input_probes").glob(
-                "*.fasta"
-            )
+            (
+                results_dir
+                / "homolog_prospection/region_separation/separation_output/probes"
+            ).glob("*.fasta")
         )
     }
 
@@ -270,6 +312,106 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
         stats[f"probes_at_{level}pct"] = (norm_table > level / 100).sum(axis=1)
 
     return stats.reset_index().rename({"index": "samples"}, axis=1), norm_table
+
+
+def summarize_assemblies(
+    asm_dir: Path,
+    out_table: Path,
+    dir_struct: Literal["flat", "nested", "spreaded"] = "flat",
+    name: str | None = None,
+    sep: str = ",",
+):
+    """Parse the samples (sequences) of the given assembly directory, compute
+    contiguity statistics and report them in a table in the specified path.
+
+    There are 3 directory structures supported, according to how the sequences
+    of each sample are structured in the assembly directory:
+
+    Flat:
+        asm_dir/
+        ├── sample1.fasta
+        ├── sample2.fasta
+        ├── ...
+        ├── ...
+        └── sampleN.fasta
+
+    Nested:
+        asm_dir/
+        ├── sample1/
+        │   └── NAME.fasta
+        ├── sample2/
+        │   └── NAME.fasta
+        ├── ...
+        └── sampleN/
+            └── NAME.fasta
+
+    Spreaded:
+        asm_dir/
+        ├── sample1/
+        │   ├── file1.fasta
+        │   ├── file2.fasta
+        │   ├── ...
+        │   └── fileN.fasta
+        ├── sample2/
+        │   ├── file1.fasta
+        │   ├── file2.fasta
+        │   ├── ...
+        │   └── fileN.fasta
+        └── sampleN
+            ├── file1.fasta
+            ├── file2.fasta
+            ├── ...
+            └── fileN.fasta
+
+    The default is to assume a flat directiry structure. If the dir_struct is
+    "nested" the common name of the file with the sequences is expected
+    as an argument. Name is ignored in any other scenario.
+    """
+
+    # ${asm_dir}/assembled/filtering/filtered_scfs/H1_A1/*.fasta  ## Spread
+    # ${asm_dir}/saute/target_assembly/H1_A1/fixed_vars.fasta  ## nested
+    # ${asm_dir}/homolog_prospection/homologs_filtering/filtered_scfs/H1_A1.fasta ## flat
+    # ${asm_dir}/homolog_prospection/allele_collapsing/H1_A1.fasta ## flat
+
+    match dir_struct:
+        case "flat":
+            sample_recs = {
+                path.stem: list(SeqIO.parse(path, "fasta"))
+                for path in sorted(asm_dir.iterdir())
+            }
+        case "nested":
+            if name is None:
+                raise ValueError(
+                    f"The name of the assembly has to be provided when {dir_struct=}"
+                )
+            sample_recs = {
+                path.parent.stem: list(SeqIO.parse(path, "fasta"))
+                for path in sorted(asm_dir.rglob(name))
+            }
+        case "spreaded":
+            sample_recs = {
+                sample_path.stem: [
+                    rec
+                    for file in sample_path.iterdir()
+                    for rec in SeqIO.parse(file, "fasta")
+                ]
+                for sample_path in sorted(asm_dir.iterdir())
+            }
+        case _:
+            raise ValueError(
+                f"file {dir_struct=} not supported. Use option flat, saute or spread."
+            )
+
+    sample_stats = {
+        sample: contiguity_stats(recs) for sample, recs in sample_recs.items()
+    }
+
+    with out_table.open("w") as out:
+        header = f"sample{sep}{sep.join(next(iter(sample_stats.values())))}\n"
+        out.write(header)
+
+        for sample, stats in sample_stats.items():
+            out.write(f"{sample}{sep}{sep.join(map(str, stats.values()))}\n")
 
 
 def snakemake_call(snakemake):
