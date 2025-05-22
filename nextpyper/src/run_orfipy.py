@@ -102,7 +102,7 @@ def find_cds(
     min_exon_length: int = 20,
 ) -> None:
     """
-    Controle function to run orfipan and use the identified orf to find the longest translated region.
+    Controle function to run orfipy and use the identified orf to find the longest translated region.
     Parameters
     ----------
     input_fasta
