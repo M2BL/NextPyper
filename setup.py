@@ -58,8 +58,6 @@ setup(
         "biopython>=1.83",
         "numpy>=1.26",
         "scikit-learn>=1.5",
-        "pyhmmer>=0.10",
-        "pyabpoa>=1.5.3",
         "polars>=1.9",
         "intervaltree>=3.1",
         "kmedoids>=0.5.3.1",
