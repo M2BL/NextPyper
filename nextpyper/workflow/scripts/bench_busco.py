@@ -24,7 +24,6 @@ def build_target_trees(
     coverage of all the hits, while keeping only the best hit in each region. Hits
     with similarity below min_idt are ignored.
     Returns a dict mapping target names to IntervalTrees."""
-    print("building target trees...")
     TREE_COLS = [
         "query",
         "target",
@@ -54,9 +53,23 @@ def build_target_trees(
 
 @dataclass
 class LongestPath:
+    """
+    Result of the get_longest_path recursion
+    """
     path:int
 
-def get_longest_path(itree:IntervalTree, min_overlap_length_int) -> int:
+def get_longest_path(itree:IntervalTree, min_overlap_length_int:int) -> int:
+    """
+    Perform a dfs on the interval in order to find the combination that yields the longest path
+    Parameters
+    ----------
+    itree
+    min_overlap_length_int: max overlap in nucleotides allowed between two fragments to fuse the paths
+
+    Returns the length of the longest path
+    -------
+
+    """
     longest_path = LongestPath(0)
     all_intervals = sorted(list(itree.all_intervals), key=lambda i: i.begin)
 
@@ -125,16 +138,7 @@ def find_busco_category(itree: IntervalTree, min_length_percent:float, max_overl
     return 3
 
 
-class testHit(NamedTuple):
-    qlen: int
-
-
 def main():
-    # itree = IntervalTree(
-    #         [Interval(0, 5, testHit(5)),Interval(6, 10, testHit(4)), Interval(11, 20, testHit(9))])
-    #
-    # print(get_longest_path(itree))
-    # return 0
     table_path = Path("data/test_bench/test_out_Hexa_E_1.tsv")
     table_path = Path('/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/test_data/busco_bench/test_out_Hexa_E_1.tsv')
     min_tcov = 0.25
