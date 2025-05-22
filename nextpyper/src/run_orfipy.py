@@ -77,7 +77,7 @@ def select_best_cds(
     # perform the path search on each strand separately
     if partial_plus:
         sorted_partial_plus = sorted(partial_plus, key=lambda o: o.start)
-        iter_graph_plus = ItervalGraph(
+        iter_graph_plus = IntervalGraph(
             sorted_partial_plus, seq_length, max_stops, sensitivity
         )
         optima = iter_graph_plus.get_best_path()
@@ -86,7 +86,7 @@ def select_best_cds(
     if partial_minus:
         sorted_partial_minus = sorted(partial_minus, key=lambda o: o.start)
         # use the best length from the '+' strand
-        iter_graph_minus = ItervalGraph(
+        iter_graph_minus = IntervalGraph(
             sorted_partial_minus, seq_length, max_stops, sensitivity, best_length
         )
         if (optimum := iter_graph_minus.get_best_path()) is not None:
@@ -221,7 +221,7 @@ class Node:
 
 
 @dataclass
-class ItervalGraph:
+class IntervalGraph:
     """
     Data structure that create a graph of non overlapping intervals (nodes).
     Intervals are ordered by starting position. Starting with each target interval, we iterate over the rest

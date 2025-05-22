@@ -650,17 +650,25 @@ def extend_path(
     """Given an assembly graph and a path, extend the path following the graph topology
     using a Depth First Search. Up to max_ext extensions of the given path are returned.
 
-
     By default, the extension is guided by the color of the path. If the path is colored by
     more than one probe, the probe with the highest effective coverage (matches) is chosen.
     If the path is gray (colorless) and allow_gray is True, colorless extension follows.
     Otherwise a ValueError is performed.
 
     To avoid long recursions, an extension bigger than max_len stops the exploration of that
-    extension. Path extensions are limited to max_len,
+    extension. Path extensions are limited to max_len.
+
+    Color guided extension is further limited by max_intron_size, which is the maximum gap
+    allowed between colored edges. If an extension would introduce a gap bigger than this
+    value, the extension is terminated.
+
+    Since a path can have multiple possible extensions and these are limited to max_ext,
+    The extensions are scored using the key funtion and onyl the best are kept. The key
+    function should receive a path and return a score. By the default, the length of the
+    path is used (longer paths are better).
 
     Return a list with all the extended paths, represented as list of oriented edges.
-    """  # ToDo: Update docstring
+    """
 
     edges = [graph.edge_dict[edge.id] for edge in path.edges]
     probes = {probe for edge in edges for probe in edge.get_colors()}
@@ -779,10 +787,18 @@ def colored_paths_extension(
     extension_len_limits: ExtLimits = ExtLimits(3000, 7000, 3.0),
 ):
     """
-    Given a graph colored by probe hits
+    Given a graph colored by probe hits, and a set of best probe hits, proceed to
+    extend all the paths that keep at least one probe hit.
 
+    Extensions are done per probe and component, using probe coverage as key function.
+    For each combination, locally generated extensions are filtered first to remove
+    duplicates and contained paths. Then, only the best max_extensions are kept,
+    which are selected using kmedioids on the jaccard distance of the edges of the paths
+    (to select a more diverse set of extensions).
 
-    Make Appropiate docstring."""
+    Return a dictionary with the names of the original paths as keys and the list of
+    possible extensions as values.
+    """
 
     def _get_max_len(tlen: int, extension_limits: ExtLimits) -> int:
         "Compute the maximum extension length allowed given the extension limits."

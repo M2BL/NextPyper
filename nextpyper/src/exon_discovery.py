@@ -10,14 +10,13 @@
 """
 Function and classes for defining the best
 """
-import sys
 from collections import deque
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from itertools import chain, product
-from typing import Optional, Self, NamedTuple
+from typing import Self
 from intervaltree import Interval, IntervalTree
 
-from exon_intron import ItervalGraph, Exon
+from exon_intron import IntervalGraph, Exon
 
 # =======================================================================================
 #               FUNCTIONS
@@ -79,7 +78,7 @@ def find_longest_exon_stretch(
 ) -> list["Exon"]:
     """
     Arrange the putative exons to find the longest exon stretch.
-    The search if done with and ItervalGraph structure.
+    The search if done with and IntervalGraph structure.
     -expansion_interval: number of AAs to substract from the start of the exon, to decide if it overlaps with the end.
     """
     possible_exons = []
@@ -93,7 +92,7 @@ def find_longest_exon_stretch(
         ]
         for combination in valid_combinations:
             possible_exons.append(Exon(*combination))
-    IG = ItervalGraph(possible_exons)
+    IG = IntervalGraph(possible_exons)
     return IG.get_best_path().path
 
 
@@ -293,108 +292,3 @@ if __name__ == "__main__":
     input_intervals = [Interval(*x) for x in inputs]
     disco = DiscoverExons(input_intervals)
     print("putative exons", disco.exons)
-    # inputs_start = [
-    #     (38, 42, [("x", 40)]),
-    #     (38, 42, [("a", 40)]),
-    #     (48, 55, [("b", 51)]),
-    #     (58, 62, [("c", 60)]),
-    #     (69, 73, [("a", 71)]),
-    #     (105, 110, [("b", 107)]),
-    #     (109, 115, [("c", 111)]),
-    #     (140, 150, [("a", 143)]),
-    #     (148, 152, [("b", 150)]),
-    #     (188, 192, [("d", 190)]),
-    #     (40, 44, [("X", 42)]),
-    # ]
-    # inputs_end = [
-    #     (68, 72, [("x", 70)]),
-    #     (68, 72, [("a", 70)]),
-    #     (68, 72, [("b", 70)]),
-    #     (78, 82, [("c", 80)]),
-    #     (108, 112, [("a", 110)]),
-    #     (138, 144, [("b", 142)]),
-    #     (138, 144, [("c", 142)]),
-    #     (176, 180, [("a", 178)]),
-    #     (168, 172, [("b", 170)]),
-    #     (190, 200, [("d", 195)]),
-    #     (188, 192, [("X", 190)]),
-    # ]
-    # t_start = IntervalTree.from_tuples(inputs_start)
-    # used_centers = []
-    # for item in inputs_start:
-    #     center = item[2][0][1]
-    #     if center in used_centers:
-    #         continue
-    #     centered_intervals = sorted(t_start[center])
-    #     new_interval = fuse_intervals(centered_intervals)
-    #     del t_start[center]
-    #     t_start.add(new_interval)
-    #     used_centers.extend(x[1] for x in new_interval.data)
-    # t_end = IntervalTree.from_tuples(inputs_end)
-    # used_centers = []
-    # for item in inputs_end:
-    #     center = item[2][0][1]
-    #     if center in used_centers:
-    #         continue
-    #     centered_intervals = sorted(t_end[center])
-    #     new_interval = fuse_intervals(centered_intervals)
-    #     del t_end[center]
-    #     t_end.add(new_interval)
-    #     used_centers.extend(x[1] for x in new_interval.data)
-    # print(t_start)
-    # print(t_end)
-    # intervals_start = sorted(t_start, key=lambda i: i.begin)
-    # intervals_end = sorted(t_end, key=lambda i: i.end)
-    # all_intervals = []
-    # all_intervals.extend((interval, "start") for interval in intervals_start)
-    # all_intervals.extend((interval, "stop") for interval in intervals_end)
-    # sorted_intervals = sorted(all_intervals, key=lambda x: x[0].begin)
-    # print("sorted intervals", sorted_intervals)
-    # exon_intervals = []
-    # start = sorted_intervals[0]
-    # start_interval = start[0]
-    # current_color = start[1]
-    # stop_interval = None
-    # queue = deque(sorted_intervals[1:])
-    # while queue:
-    #     print(f"{start_interval=}, {stop_interval=}, {current_color=}")
-    #     elt = queue.popleft()
-    #     elt_interval = elt[0]
-    #     elt_color = elt[1]
-    #     print(f"new elm {elt}")
-    #     if current_color == "start":
-    #         if elt_color == "start":
-    #             if len(elt_interval.data) > len(start_interval.data):
-    #                 start_interval = elt_interval
-    #         elif elt_color == "stop":
-    #             current_color = "stop"
-    #             stop_interval = elt_interval
-    #             # End of list
-    #             if len(elt) == 0:
-    #                 start = min([x[1] for x in start_interval.data])
-    #                 stop = max([x[1] for x in stop_interval.data])
-    #                 new_data = [x[0] for x in stop_interval.data]
-    #                 print("appending")
-    #                 exon_intervals.append(PutativeExon(start, stop, new_data))
-    #
-    #     elif current_color == "stop":
-    #         if elt_color == "start":
-    #             start = min([x[1] for x in start_interval.data])
-    #             stop = max([x[1] for x in stop_interval.data])
-    #             new_data = [x[0] for x in stop_interval.data]
-    #             print("appending")
-    #             exon_intervals.append(PutativeExon(start, stop, new_data))
-    #             start_interval = elt_interval
-    #             current_color = "start"
-    #             stop_interval = None
-    #         elif elt_color == "stop":
-    #             # switch to this new stop if there are more sequences that support this stop
-    #             # or if there are the same number but contain at least one common sequence withthe start.
-    #             if len(elt_interval.data) > len(stop_interval.data):
-    #                 end_interval = elt_interval
-    #             elif len(elt_interval.data) == len(stop_interval.data):
-    #                 if {d[0] for d in elt_interval.data} & {
-    #                     d[0] for d in stop_interval.data
-    #                 }:
-    #                     end_interval = elt_interval
-    # print("final", exon_intervals)
