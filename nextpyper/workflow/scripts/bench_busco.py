@@ -1,3 +1,4 @@
+from collections import Counter
 from dataclasses import dataclass
 from itertools import groupby
 from operator import itemgetter
@@ -281,41 +282,48 @@ def parse_args():
         action="store_true",
         help="Include borderline chimeric cases as chimeras (see vsearch documentation)",
     )
+    parser.add_argument(
+        "--batch",
+        action="store_true",
+        help="Process a batch of samples. Inputs (hits, chimeras, targets) are expected to be folders containing files with the same names.",
+    )
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
-    hits_file = args.hits
-    chimera_file = args.chimeras
-    targets_file = args.targets
-    output_file = args.output
+    hits_path = args.hits
+    chimera_path = args.chimeras
+    targets_path = args.targets
+    output_path = args.output
 
     min_tcov = args.min_tcov
     min_tot_cov = args.min_tot_cov
     min_idt = args.min_idt
     include_borderline = args.include_borderline
+    batch = args.batch
 
-    if not hits_file.exists() or not chimera_file.exists() or not targets_file.exists():
+    if not hits_path.exists() or not chimera_path.exists() or not targets_path.exists():
         print("One or more input files do not exist.")
         sys.exit(1)
-    if (
-        not hits_file.is_file()
-        or not chimera_file.is_file()
-        or not targets_file.is_file()
-    ):
-        print("One or more input paths are not files.")
-        sys.exit(1)
-    if not output_file.parent.exists():
-        output_file.parent.mkdir(parents=True)
 
-    df = pl.read_csv(hits_file, separator="\t", has_header=True)
-    chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
-    targets = [rec.id for rec in SeqIO.parse(targets_file, "fasta")]
+    # Single sample processing
+    if not batch:
+        if (
+            not hits_path.is_file()
+            or not chimera_path.is_file()
+            or not targets_path.is_file()
+        ):
+            print("One or more input paths are not files.")
+            sys.exit(1)
+        if not output_path.parent.exists():
+            output_path.parent.mkdir(parents=True)
 
-    with open(output_file, "w") as out_file:
-        out_file.write("target\tcategory\n")
+        df = pl.read_csv(hits_path, separator="\t", has_header=True)
+        chimera_df = pl.read_csv(chimera_path, separator="\t", has_header=False)
+        targets = [rec.id for rec in SeqIO.parse(targets_path, "fasta")]
         categories = categorize_sample(
             df,
             chimera_df,
@@ -325,8 +333,49 @@ def main():
             min_idt=min_idt,
             include_borderline=include_borderline,
         )
-        for target, category in categories.items():
-            out_file.write(f"{target}\t{category}\n")
+
+        with open(output_path, "w") as out_file:
+            out_file.write("target\tcategory\n")
+            for target, category in categories.items():
+                out_file.write(f"{target}\t{category}\n")
+
+    # Batch processing (unified table)
+    else:
+        if (
+            not hits_path.is_dir()
+            or not chimera_path.is_dir()
+            or not targets_path.is_dir()
+        ):
+            print("One or more input paths are not directories.")
+            sys.exit(1)
+
+        with open(output_path, "w") as out_file:
+            for targets_file in sorted(targets_path.glob("*.fasta")):
+                sample_name = targets_file.stem
+                hits_file = hits_path / f"{sample_name}.tsv"
+                chimera_file = chimera_path / f"{sample_name}.tsv"
+
+                if not hits_file.exists() or not chimera_file.exists():
+                    print(f"Missing files for sample {sample_name}. Skipping.")
+                    continue
+
+                df = pl.read_csv(hits_file, separator="\t", has_header=True)
+                chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
+                targets = [rec.id for rec in SeqIO.parse(targets_file, "fasta")]
+                categories = categorize_sample(
+                    df,
+                    chimera_df,
+                    targets,
+                    min_hit_tcov=min_tcov,
+                    min_length_cov=min_tot_cov,
+                    min_idt=min_idt,
+                    include_borderline=include_borderline,
+                )
+
+                # Summarize categories and write to output
+                category_counts = Counter(categories.values())
+                categories = "\t".join(str(category_counts.get(i, 0)) for i in range(6))
+                out_file.write(f"{sample_name}\t{categories}\n")
 
 
 if __name__ == "__main__":
