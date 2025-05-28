@@ -95,8 +95,7 @@ def get_longest_path(itree: IntervalTree, min_overlap_length_int: int) -> int:
             if (
                 overlap := current_fragment.overlap_size(next_fragment)
             ) <= min_overlap_length_int:
-                current_length += next_fragment.data.tcov - overlap
-                # ToDo: Check if it is working as expected (hint: tcov here is suspicious)
+                current_length += next_fragment.length() - overlap
 
             next_fragment_idx = remaining_fragments.index(next_fragment)
             dfs_util(
@@ -112,7 +111,7 @@ def get_longest_path(itree: IntervalTree, min_overlap_length_int: int) -> int:
             start_frg,
             all_intervals.copy()[start_frg_idx + 1 :],
             longest_path,
-            start_frg.data.tcov,
+            start_frg.length(),
         )
 
     return longest_path.path
@@ -137,6 +136,7 @@ def find_busco_category(
     -------
 
     """
+    itree = itree.copy()  # avoid modifying the original tree
     if itree.is_empty():
         return 3
 
