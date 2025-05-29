@@ -323,7 +323,7 @@ def main():
 
         df = pl.read_csv(hits_path, separator="\t", has_header=True)
         chimera_df = pl.read_csv(chimera_path, separator="\t", has_header=False)
-        targets = [rec.id for rec in SeqIO.parse(targets_path, "fasta")]
+        targets = list(SeqIO.to_dict(SeqIO.parse(targets_path, "fasta")))
         categories = categorize_sample(
             df,
             chimera_df,
