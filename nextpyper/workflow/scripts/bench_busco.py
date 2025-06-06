@@ -11,6 +11,8 @@ from intervaltree import Interval, IntervalTree
 import polars as pl
 from Bio import SeqIO
 
+#Add docstring explaining the classification of simulated target sequences into categories.
+
 
 class QueryHit(NamedTuple):
     query: str
