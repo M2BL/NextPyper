@@ -82,6 +82,7 @@ def parse_hybpiper(results_path: Path, parsed_dir: Path):
         for rec in recs:
             sample = rec.id.split(".")[0]
             rec.id = rec.name = f"{rec.id}|{sctg_path.stem}"
+            rec.seq = rec.seq.uppper().replace("N", "")
             sample_recs[sample].append(rec)
 
     for sample, recs in sample_recs.items():
