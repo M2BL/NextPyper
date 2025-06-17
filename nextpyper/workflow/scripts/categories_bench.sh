@@ -9,9 +9,9 @@ IFS=$'\n\t'
 ## Keeping hits with at least 25% coverage
 
 ## REQUIREMENTS:
-## MMseqs2, Vsearch, GNU parallel, python>=3.10 (with Biopython, polars and intervaltree) 
+## Magicblast, Vsearch, GNU parallel, python>=3.10 (with Biopython, polars and intervaltree) 
 ## should be available in the PATH. bench_busco.py should be in the same directory as this script.
-## The script will create a MMseqs2 database for the targets if it does not exist.
+## The script will create a blast database for the targets if it does not exist.
 
 ## POSITIONAL COMMAND LINE ARGUMENTS:
 ## 1. Targets directory - gold standard targets in a single folder. 
@@ -29,39 +29,29 @@ max_threads=$4
 jobs=$((max_threads / 4))
 
 
-function mmseqs_create_db {
+function blast_create_db {
     local targets=$1
     local db_name=$2
-    mmseqs createdb --dbtype 2 "${targets}" "${db_name}"
+    makeblastdb -dbtype nucl -parse_seqids -in "${targets}" -out "${db_name}"
 }
 
-function mmseqs_match {
+function magicblast_match {
     ## POSITIONAL COMMAND LINE ARGUMENTS:
-    ## 1. Targets db - targets as MMseqs2 database. 
+    ## 1. Targets db - targets as a blast database. 
     ## 2. Path to assembled sequences (query) - in fasta format.
     ## 3. Path to write the output table
     ## 4. Threads to use
-
-    std="query,target,fident,alnlen,mismatch,gapopen,qstart,qend,qlen,qcov,tstart,tend,tlen,tcov,evalue,bits"
-
+    
     local targets=$1
     local asm=$2
     local out_table=$3
     local threads=$4
-    local name=$(basename "$asm" .tsv)
 
-    mkdir -p temp_"${name}"
-    mmseqs easy-search "${asm}" "${targets}" "${out_table}" temp_"${name}" \
-        --threads "${threads}" \
-        -a \
-        -s 7.5 \
-        -e 1e-10 \
-        -c 0.25 --cov-mode 1 \
-        --search-type 3 \
-        --format-mode 4 \
-        --remove-tmp-files \
-        --format-output "${std}" 
-    rm -r temp_"${name}"
+    magicblast -splice F -outfmt "tabular" \
+        -num_threads "${threads}" \
+        -query "${asm}" \
+        -db "${targets}" \
+        -out "${out_table}" 
 }
 
 function vsearch_chimera {
@@ -75,29 +65,30 @@ function vsearch_chimera {
 }
 
 
-export -f mmseqs_create_db
-export -f mmseqs_match
+export -f blast_create_db
+export -f magicblast_match
 export -f vsearch_chimera
 
-mkdir -p "${tables_dir}/mmseqs"
+mkdir -p "${tables_dir}/matches"
 mkdir -p "${tables_dir}/vsearch"
 
-# Check if we have to create the mmseqs2 database for the targets
+# Check if we have to create the blast databases for the targets
 orig_targets_dir="${targets_dir}"
-array=($(find ${targets_dir} -mindepth 1 -maxdepth 1 -type f -name "*.source"))
+array=($(find ${targets_dir} -mindepth 1 -maxdepth 1 -type f -name "*.ndb"))
 if [ "${#array[@]}" -eq 0 ]; then
     # We need to created the mmeseqs2 dbs
     mkdir -p "${targets_dir}_dbs"
 
-    array=($(find ${targets_dir}_dbs -mindepth 1 -maxdepth 1 -type f -name "*.source"))
+    array=($(find ${targets_dir}_dbs -mindepth 1 -maxdepth 1 -type f -name "*.ndb"))
     if [ "${#array[@]}" -eq 0 ]; then
         # The dbs really do not exist
-        parallel "mmseqs_create_db {} {//}_dbs/{/.}" ::: "${targets_dir}"/*.fasta 
+        # parallel "mmseqs_create_db {} {//}_dbs/{/.}" ::: "${targets_dir}"/*.fasta
+        parallel "blast_create_db {} {//}_dbs/{/.}" ::: "${targets_dir}"/*.fasta
     fi
 
     targets_dir="${targets_dir}_dbs"
 fi
 
-parallel --jobs "${jobs}" mmseqs_match "${targets_dir}/{/.} {} ${tables_dir}/mmseqs/{/.}.tsv 4" ::: "${queries_dir}"/*.fasta
+parallel --jobs "${jobs}" magicblast_match "${targets_dir}/{/.} {} ${tables_dir}/matches/{/.}.tsv 4" ::: "${queries_dir}"/*.fasta
 parallel --jobs "${jobs}" vsearch_chimera {} "${orig_targets_dir}/{/} ${tables_dir}/vsearch/{/.}.tsv 4" ::: "${queries_dir}"/*.fasta
-python "$(dirname $0)/bench_busco.py" --batch "${tables_dir}/mmseqs" "${tables_dir}/vsearch" "${orig_targets_dir}" "${tables_dir}/categories.tsv"
+python "$(dirname $0)/bench_busco.py" --batch "${tables_dir}/matches" "${tables_dir}/vsearch" "${orig_targets_dir}" "${tables_dir}/categories.tsv"

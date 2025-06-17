@@ -1,3 +1,34 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#
+#    Copyright (C) 2024
+#    Simón Villanueva CORRALES: simon.corrales@ibot.cas.cz
+#    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
+#
+#       All rights reserved.
+
+# ToDo: Add docstring explaining the classification of simulated target sequences into categories.
+"""
+Category codes are defined as:
+
+0: Complete single copy
+1: Complete and duplicated
+2: Fragmented (single or multiple copies all fragmented)
+3: Missing
+4: Recovered chimera (The query is chimeric but still meets acceptance criteria)
+5: Failed chimera (The query is chimeric and does not meet acceptance criteria)
+
+An additional pseudo-category is computed as:
+6: Noise sequences (count of all the query sequences that were not matched to any targets)
+
+"""
+
+# =======================================================================================
+#               IMPORTS
+# =======================================================================================
+
+
 from collections import Counter
 from dataclasses import dataclass
 from itertools import groupby
@@ -11,7 +42,39 @@ from intervaltree import Interval, IntervalTree
 import polars as pl
 from Bio import SeqIO
 
-# Add docstring explaining the classification of simulated target sequences into categories.
+# =======================================================================================
+#               CONSTANTS
+# =======================================================================================
+
+# Columns parsed from magicblast output table
+MAGIC_COLS = {
+    "# Fields: query acc.": "query",
+    "reference acc.": "target",
+    "% identity": "fident",
+    "query start": "qstart",
+    "query end": "qend",
+    "reference start": "tstart",
+    "reference end": "tend",
+    "score": "score",
+    "query length": "qlen",
+}
+
+# Columns used for building the target trees
+TREE_COLS = [
+    "query",
+    "target",
+    "tstart",
+    "tend",
+    "fident",
+    "qlen",
+    "qcov",
+    "tlen",
+    "tcov",
+]
+
+# =======================================================================================
+#               CLASSES
+# =======================================================================================
 
 
 class QueryHit(NamedTuple):
@@ -23,6 +86,18 @@ class QueryHit(NamedTuple):
     tcov: float
 
 
+@dataclass
+class LongestPath:
+    """Result of the get_longest_path recursion"""
+
+    path: int
+
+
+# =======================================================================================
+#               CLASSES
+# =======================================================================================
+
+
 def build_target_trees(
     df: pl.DataFrame, min_idt: float = 0.7
 ) -> dict[str, IntervalTree]:
@@ -30,17 +105,7 @@ def build_target_trees(
     coverage of all the hits, while keeping only the best hit in each region. Hits
     with similarity below min_idt are ignored.
     Returns a dict mapping target names to IntervalTrees."""
-    TREE_COLS = [
-        "query",
-        "target",
-        "tstart",
-        "tend",
-        "fident",
-        "qlen",
-        "qcov",
-        "tlen",
-        "tcov",
-    ]
+
     target_hits = df.sort("target").select(TREE_COLS)
 
     target_trees = {}
@@ -56,15 +121,6 @@ def build_target_trees(
         )
 
     return target_trees
-
-
-@dataclass
-class LongestPath:
-    """
-    Result of the get_longest_path recursion
-    """
-
-    path: int
 
 
 def get_longest_path(itree: IntervalTree, min_overlap_length_int: int) -> int:
@@ -199,9 +255,27 @@ def categorize_sample(
     -------
     """
 
+    # Get the length of the targets
+    target_lens = pl.DataFrame(
+        [(target, len(rec)) for target, rec in targets.items()],
+        {"target": str, "tlen": int},
+        orient="row",
+    )
+
+    # Add tlen, tcov and qcov to the hits table
+    predf = (
+        hits.select(MAGIC_COLS)
+        .rename(MAGIC_COLS)
+        .join(target_lens, on="target")
+        .with_columns(
+            tcov=(pl.col("tend") - pl.col("tstart")).abs() / pl.col("tlen"),
+            qcov=(pl.col("qend") - pl.col("qstart")).abs() / pl.col("qlen"),
+        )
+    )
+
     df2 = (
-        hits.filter(pl.col("tcov") >= min_hit_tcov)
-        .sort(["query", "bits"], descending=True)
+        predf.filter(pl.col("tcov") >= min_hit_tcov)
+        .sort(["query", "score"], descending=True)
         .group_by("query")
         .agg(pl.all().first())
     )
@@ -323,9 +397,15 @@ def main():
         if not output_path.parent.exists():
             output_path.parent.mkdir(parents=True)
 
-        df = pl.read_csv(hits_path, separator="\t", has_header=True)
+        df = pl.read_csv(
+            hits_path,
+            separator="\t",
+            has_header=True,
+            skip_rows=2,
+            infer_schema_length=1000,
+        )
         chimera_df = pl.read_csv(chimera_path, separator="\t", has_header=False)
-        targets = list(SeqIO.to_dict(SeqIO.parse(targets_path, "fasta")))
+        targets = SeqIO.to_dict(SeqIO.parse(targets_path, "fasta"))
         categories = categorize_sample(
             df,
             chimera_df,
@@ -361,9 +441,15 @@ def main():
                     print(f"Missing files for sample {sample_name}. Skipping.")
                     continue
 
-                df = pl.read_csv(hits_file, separator="\t", has_header=True)
+                df = pl.read_csv(
+                    hits_file,
+                    separator="\t",
+                    has_header=True,
+                    skip_rows=2,
+                    infer_schema_length=1000,
+                )
                 chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
-                targets = [rec.id for rec in SeqIO.parse(targets_file, "fasta")]
+                targets = SeqIO.to_dict(SeqIO.parse(targets_file, "fasta"))
                 categories = categorize_sample(
                     df,
                     chimera_df,
@@ -376,13 +462,13 @@ def main():
 
                 # Summarize categories and write to output
                 category_counts = Counter(categories.values())
+
                 # Add a last "pseudo-category" with the counts of extra sequences
                 # that do not hit any target (noise)
-                category_counts[6] = len(
-                    chimera_df.rename({"column_2": "query"}).join(
-                        df, on="query", how="anti"
-                    )
-                )
+                category_counts[6] = chimera_df.join(
+                    df, left_on="column_2", right_on=tuple(MAGIC_COLS)[0], how="anti"
+                ).shape[0]
+
                 categories = "\t".join(str(category_counts.get(i, 0)) for i in range(7))
                 out_file.write(f"{sample_name}\t{categories}\n")
 
