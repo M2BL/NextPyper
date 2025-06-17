@@ -65,8 +65,10 @@ from exon_intron import Exon
 
 Region = namedtuple("Region", ["start", "end"])
 
-MAX_EXPANSION_INTERVAL = 10 # on scaffold size of flanking region on each side of the probe hits,
-                            # used to find the common region that matches a given probe accross multiple scaffolds.
+MAX_EXPANSION_INTERVAL = (
+    10  # on scaffold size of flanking region on each side of the probe hits,
+)
+# used to find the common region that matches a given probe accross multiple scaffolds.
 
 
 # =======================================================================================
@@ -887,28 +889,40 @@ def snakemake_call(snakemake):
 
 def main():
 
+    if len(sys.argv) != 6:
+        print(
+            "Usage: python miniprot.py <probes.fasta> <scfs.fasta> <matrix.csv> <outdir> <miniprot.log>"
+        )
+        sys.exit(1)
 
-    params = {
-        "min_probe_scaffold_sim": 0.85,
-        "min_fragment_cov": 0.1,
-        "min_exonic_length": 10,
-        "min_global_identity": 0.6,
-    }
+    class Run:
+        def __init__(self, **kwargs):
+            setattr(self, "_dict", kwargs)
+            for key, val in kwargs.items():
+                setattr(self, key, val)
 
-    scf = "/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_scfs/5899.fasta"
-    probe = "/home/yjkbertrand/Documents/projects/nextpiper/debug/NextPyper_hieracium/Merged_run/First_rna_targeted/results_full2/aster_kew_rna/homolog_prospection/region_separation/input_probes/5899.fasta"
-    # olc = OverlappingCds(str(probes), str(scfs), *parameters)
-    # matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
-    # olc.paralogy_search(matrix)
-    # scf = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/temp/scfs_At4g32140.fasta"
-    # probe = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/temp/probe_At4g32140.fasta"
-    matrix = "/home/yjkbertrand/Documents/projects/nextpiper/test_data/test_paralogy_2/blosum62.csv"
-    parameters = [8, 0.85, 0.1, 10, 0.7, "AJFN_5899"]
-    olc = OverlappingCds(str(probe), str(scf), matrix, *parameters)
-    out_dir = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/debug/centroids_noHMM2/bug_instances/out_dir"
+        def keys(self):
+            return self._dict.keys()
+
+        def __getitem__(self, key):
+            return self._dict[key]
+
+    # Mock the snakemake object
+    snakemake = Run(
+        input=Run(probes=sys.argv[1], scfs=sys.argv[2]),
+        output=[sys.argv[4]],
+        log=[sys.argv[5]],
+        threads=1,
+        params=Run(
+            substitution_matrix=sys.argv[3],
+            min_probe_scaffold_sim=0.85,
+            min_fragment_cov=0.1,
+            min_exonic_length=10,
+            min_global_identity=0.6,
+        ),
     )
-    olc.save_records(out_dir, 10)
+
+    snakemake_call(snakemake)
 
 
 if __name__ == "__main__":
