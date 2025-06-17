@@ -11,7 +11,7 @@ from intervaltree import Interval, IntervalTree
 import polars as pl
 from Bio import SeqIO
 
-#Add docstring explaining the classification of simulated target sequences into categories.
+# Add docstring explaining the classification of simulated target sequences into categories.
 
 
 class QueryHit(NamedTuple):
@@ -376,7 +376,14 @@ def main():
 
                 # Summarize categories and write to output
                 category_counts = Counter(categories.values())
-                categories = "\t".join(str(category_counts.get(i, 0)) for i in range(6))
+                # Add a last "pseudo-category" with the counts of extra sequences
+                # that do not hit any target (noise)
+                category_counts[6] = len(
+                    chimera_df.rename({"column_2": "query"}).join(
+                        df, on="query", how="anti"
+                    )
+                )
+                categories = "\t".join(str(category_counts.get(i, 0)) for i in range(7))
                 out_file.write(f"{sample_name}\t{categories}\n")
 
 
