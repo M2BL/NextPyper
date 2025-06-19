@@ -41,6 +41,7 @@ __version__ = "0.1"
 #               IMPORTS
 # =======================================================================================
 
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from itertools import groupby
 from functools import reduce
@@ -48,8 +49,11 @@ from pathlib import Path
 import json
 import re
 import sys
+from typing import Literal
 
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+import polars as pl
 import pandas as pd
 import numpy as np
 
@@ -64,6 +68,8 @@ CLEANING_PATTERN = r"(Input|Result):\s+(\d+)"
 SCF_PATTERN = re.compile(
     r"^(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>.+?)_(?P<seed>\d+?)", re.VERBOSE
 )
+PROBE_EXT = re.compile(r"-(.*)(?=_EDGE)")
+
 
 # =======================================================================================
 #               CLASSES
@@ -97,14 +103,34 @@ class AlnTable:
         return self.mat / (np.array(list(self.probe_lens.values())) * 3)
 
 
+@dataclass
+class AsmLoc:
+    stage: str
+    path: Path
+    struct: Literal["flat", "nested", "spreaded", "miniprot"] = "flat"
+    file_name: str | None = None
+
+
+ASM_PATHS = {
+    "seeds": AsmLoc("seeds", Path("assembled/filtering/filtered_scfs"), "spreaded"),
+    "assembly": AsmLoc(
+        "assembly", Path("saute/target_assembly"), "nested", "fixed_vars.fasta"
+    ),
+    "homologs": AsmLoc(
+        "homologs", Path("homolog_prospection/homologs_filtering/filtered_scfs"), "flat"
+    ),
+    "alleles": AsmLoc("alleles", "homolog_prospection/allele_collapsing", "flat"),
+    "separation": AsmLoc(
+        "separation",
+        Path("homolog_prospection/region_separation/separation_output/scfs"),
+        "miniprot",
+    ),
+}
+
+
 # =======================================================================================
 #               FUNCTIONS
 # =======================================================================================
-
-
-def _get_raw_reads(sample: str, rootdir: Path) -> int:
-    with (rootdir / f"logs/preprocessing/fastp/{sample}.json").open() as file:
-        return json.load(file)["summary"]["before_filtering"]["total_reads"]
 
 
 def _get_raw_and_trimmed_reads(sample: str, rootdir: Path) -> int:
@@ -113,16 +139,6 @@ def _get_raw_and_trimmed_reads(sample: str, rootdir: Path) -> int:
         raw_reads = report["summary"]["before_filtering"]["total_reads"]
         trimmed_reads = report["summary"]["after_filtering"]["total_reads"]
         return raw_reads, trimmed_reads
-
-
-def _get_cleaned_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
-    """Extract from bbduk logs the number of input and output reads. Depending on the
-    pattern, the output would be tha matching (contaminants) or non matching (clean reads).
-    """
-
-    read_ext = re.compile(pat)
-    with (rootdir / f"logs/preprocessing/bbduk_cleaning/{sample}.log").open() as file:
-        return tuple(int(match[2]) for line in file if (match := read_ext.match(line)))
 
 
 def _get_matched_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
@@ -135,20 +151,6 @@ def _get_matched_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
         rootdir / f"logs/preprocessing/bbduk_probe_matching/{sample}.log"
     ).open() as file:
         return tuple(int(match[2]) for line in file if (match := read_ext.match(line)))
-
-
-def _get_matched_probes(sample: str, rootdir: Path) -> int:
-    """Return the number of probes found for a given sample after spades
-    assembly and graph splitting."""
-
-    return len(
-        {
-            file.stem.rsplit("_", 1)[0]
-            for file in (rootdir / f"assembled/filtering/filtered_scfs/{sample}").glob(
-                "*.fasta"
-            )
-        }
-    )
 
 
 def _get_len_probes(file: Path) -> int:
@@ -182,6 +184,49 @@ def _condense_counts(mul_counts: list[dict[str, int]]) -> dict[str, int]:
     }
 
 
+def compute_Nx(lens: np.ndarray[np.int64], x: float) -> int:
+    """Compute the length of the sequence that separates the assembly
+    between x and (1-x) parts."""
+
+    fraction = x / 100.0 if x > 1.0 else x
+    idx = np.where(lens.cumsum() >= lens.sum() * fraction)[0][0]
+
+    return int(lens[idx])
+
+
+def contiguity_stats(
+    recs: list[SeqRecord],
+    Nx: tuple[int] = (25, 50, 75, 90),
+    cutoffs: tuple[int] = (500, 750, 1000, 1500, 2000, 3000),
+) -> dict[str, int]:
+    "Compute basic contiguity stats of a given assembly/ set of sequences"
+
+    lens = np.fromiter(sorted(map(len, recs)), np.int64)
+    lens.sort()
+
+    stats = {
+        "num_seqs": lens.size,
+        "sum": int(lens.sum()),
+        "min": int(lens.min()),
+        "max": int(lens.max()),
+        "mean": round(float(lens.mean()), 2),
+        "median": int(np.median(lens)),
+    }
+
+    # Add Nx stats.
+    stats |= {f"N{n}": compute_Nx(lens, n) for n in Nx}
+
+    # Add cutoff counts.
+    stats |= {f"n:{size}": np.where(lens >= size)[0].size for size in cutoffs}
+
+    return stats
+
+
+def get_probe(rec: SeqRecord, pat: re.Pattern) -> str:
+    """Extract the probe identifier from a SeqRecord id."""
+    return pat.search(rec.id).group(1)
+
+
 def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     """Given the root path of a NextPyper output, collect and summarize the results of the run.
     Returns a dataframe with a row per sample and multiple statistics.
@@ -207,7 +252,6 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     stats = pd.DataFrame(index=samples)
 
     ## Get the raw reads
-
     trimmed_stats = {
         sample: _get_raw_and_trimmed_reads(sample, results_dir) for sample in samples
     }
@@ -217,59 +261,194 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
         sample: trim for sample, (raw, trim) in trimmed_stats.items()
     }
 
-    ## Get Preprocessing stats:
-    if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
-        clean_stats = {
-            sample: _get_cleaned_reads(sample, results_dir, CLEANING_PATTERN)
-            for sample in samples
-        }
-
-    if (results_dir / "logs/preprocessing/bbduk_cleaning").exists():
-        stats["cleaned_reads"] = {
-            sample: cleaned for sample, (trimmed, cleaned) in clean_stats.items()
-        }
-
-    if (results_dir / "logs/preprocessing/bbduk_probe_matching").exists():
-        stats["probe_matching_reads"] = {
-            sample: _get_matched_reads(sample, results_dir, MATCHING_PATTERN)[1]
-            for sample in samples
-        }
-
-    ## Get matched probes
-    stats["probes_in_assembly"] = {
-        sample: _get_matched_probes(sample, results_dir) for sample in samples
+    ## ToDo: revisit to extract probes from the assemblies
+    stage_stats = {
+        stage: summarize_assemblies(results_dir / loc.path, loc.struct, loc.file_name)
+        for stage, loc in ASM_PATHS.items()
     }
 
-    ## Get lens in aa
+    for stage, sample_stats in stage_stats.items():
+        # if stage != "alleles":
+        stats[f"probes_in_{stage}"] = {
+            sample: sample_stats["probes"]
+            for sample, sample_stats in sample_stats.items()
+        }
+    for stage, sample_stats in stage_stats.items():
+        stats[f"median_seqs_per_probe_in_{stage}"] = {
+            sample: sample_stats["median_seqs_per_probe"]
+            for sample, sample_stats in sample_stats.items()
+        }
+
+    ## ToDo: Rethink how to compute probe completeness
+    ## Get probe lens in aa
+    final_probes_dir = results_dir / ASM_PATHS["separation"].path.parent / "probes"
     probe_lens = {
-        file.stem: _get_len_probes(file)
-        for file in sorted(
-            (results_dir / "homolog_prospection/region_separation/input_probes").glob(
-                "*.fasta"
-            )
-        )
+        file.stem: len(SeqIO.read(file, "fasta"))
+        for file in sorted((final_probes_dir).glob("*.fasta"))
     }
 
     ## Make an auxiliary matrix of [Samples x probes]
-    table = AlnTable(samples, probe_lens)
+    # table = AlnTable(samples, probe_lens)
 
-    for probe_dir in (
-        results_dir / "homolog_prospection/region_separation/separation_output/scfs"
-    ).iterdir():
-        if probe_dir.is_file():
-            continue
+    # for probe_dir in (
+    #     results_dir / "homolog_prospection/region_separation/separation_output/scfs"
+    # ).iterdir():
+    #     if probe_dir.is_file():
+    #         continue
 
-        if counts := _condense_counts(
-            [_get_seqs_lens(aln, SCF_PATTERN) for aln in probe_dir.glob("*.fasta")]
-        ):
-            table.update_counts(counts, probe=probe_dir.name)
+    #     if counts := _condense_counts(
+    #         [_get_seqs_lens(aln, SCF_PATTERN) for aln in probe_dir.glob("*.fasta")]
+    #     ):
+    #         table.update_counts(counts, probe=probe_dir.name)
 
-    norm_table = table.make_normalized_table()
+    # norm_table = table.make_normalized_table()
 
-    for level in (25, 50, 75, 100, 125):
-        stats[f"probes_at_{level}pct"] = (norm_table > level / 100).sum(axis=1)
+    # for level in (25, 50, 75, 100, 125):
+    #     stats[f"probes_at_{level}pct"] = (norm_table > level / 100).sum(axis=1)
 
-    return stats.reset_index().rename({"index": "samples"}, axis=1), norm_table
+    # return stats.reset_index().rename({"index": "samples"}, axis=1), norm_table
+    return stats.reset_index().rename({"index": "samples"}, axis=1)
+
+
+def summarize_assemblies(
+    asm_dir: Path,
+    dir_struct: Literal["flat", "nested", "spreaded", "miniprot"] = "flat",
+    name: str | None = None,
+):
+    """Parse the samples (sequences) of the given assembly directory, compute
+    contiguity statistics and report them in a table in the specified path.
+
+    There are 3 directory structures supported, according to how the sequences
+    of each sample are structured in the assembly directory:
+
+    Flat:
+        asm_dir/
+        ├── sample1.fasta
+        ├── sample2.fasta
+        ├── ...
+        ├── ...
+        └── sampleN.fasta
+
+    Nested:
+        asm_dir/
+        ├── sample1/
+        │   └── NAME.fasta
+        ├── sample2/
+        │   └── NAME.fasta
+        ├── ...
+        └── sampleN/
+            └── NAME.fasta
+
+    Spreaded:
+        asm_dir/
+        ├── sample1/
+        │   ├── file1.fasta
+        │   ├── file2.fasta
+        │   ├── ...
+        │   └── fileN.fasta
+        ├── sample2/
+        │   ├── file1.fasta
+        │   ├── file2.fasta
+        │   ├── ...
+        │   └── fileN.fasta
+        └── sampleN
+            ├── file1.fasta
+            ├── file2.fasta
+            ├── ...
+            └── fileN.fasta
+
+    Miniprot:
+        asm_dir/
+        ├── probe1/
+        │   ├── probe1_X_XX_exons.fasta
+        │   ├── probe1_X_XX_genotigs.fasta
+        │   ├── probe1_X_XX_supercontigs.fasta
+        │   ├── ...
+        │   ├── probe1_Y_YY_exons.fasta
+        │   ├── probe1_Y_YY_genotigs.fasta
+        │   └── probe1_Y_YY_supercontigs.fasta
+        ├── probe2/
+        │   ├── probe2_X_XX_exons.fasta
+        │   ├── probe2_X_XX_genotigs.fasta
+        │   └── probe2_X_XX_supercontigs.fasta
+        └── probeN/
+            ├── probeN_X_XX_exons.fasta
+            ├── probeN_X_XX_genotigs.fasta
+            ├── probeN_X_XX_supercontigs.fasta
+            ├── ...
+            ├── probeN_Y_YY_exons.fasta
+            ├── probeN_Y_YY_genotigs.fasta
+            └── probeN_Y_YY_supercontigs.fasta
+
+    The default is to assume a flat directiry structure. If the dir_struct is
+    "nested" the common name of the file with the sequences is expected
+    as an argument. Name is ignored in any other scenario.
+
+    the miniprot s tructure is a special case where the sequences are organized
+    by probe rather than by sample. All supercontigs files are parsed and the sequences
+    are restructured per sample on the fly.
+    """
+
+    # ${asm_dir}/assembled/filtering/filtered_scfs/H1_A1/*.fasta  ## Spread
+    # ${asm_dir}/saute/target_assembly/H1_A1/fixed_vars.fasta  ## nested
+    # ${asm_dir}/homolog_prospection/homologs_filtering/filtered_scfs/H1_A1.fasta ## flat
+    # ${asm_dir}/homolog_prospection/allele_collapsing/H1_A1.fasta ## flat
+    # ${asm_dir}/homolog_prospection/region_separation/separation_output/scfs ## miniprot
+
+    match dir_struct:
+        case "flat":
+            sample_recs = {
+                path.stem: list(SeqIO.parse(path, "fasta"))
+                for path in sorted(asm_dir.iterdir())
+            }
+        case "nested":
+            if name is None:
+                raise ValueError(
+                    f"The name of the assembly has to be provided when {dir_struct=}"
+                )
+            sample_recs = {
+                path.parent.stem: list(SeqIO.parse(path, "fasta"))
+                for path in sorted(asm_dir.rglob(name))
+            }
+        case "spreaded":
+            sample_recs = {
+                sample_path.stem: [
+                    rec
+                    for file in sample_path.iterdir()
+                    for rec in SeqIO.parse(file, "fasta")
+                ]
+                for sample_path in sorted(asm_dir.iterdir())
+            }
+        case "miniprot":
+            sample_recs = defaultdict(list)
+            for file in sorted(asm_dir.rglob("*_supercontigs.fasta")):
+                for rec in SeqIO.parse(file, "fasta"):
+                    sample = rec.id.split("|")[0]
+                    sample_recs[sample].append(rec)
+
+        case _:
+            raise ValueError(
+                f"file {dir_struct=} not supported. Use option flat, saute, spreaded or miniprot."
+            )
+
+    # Compute contiguity stats for the assemblies and number of probes
+    sample_stats = {}
+    for sample, recs in sample_recs.items():
+        sample_stats[sample] = contiguity_stats(recs)
+        seq_per_probe = Counter(get_probe(rec, PROBE_EXT) for rec in recs)
+        sample_stats[sample]["probes"] = len(seq_per_probe)
+        sample_stats[sample]["median_seqs_per_probe"] = seq_per_probe.most_common(
+            len(seq_per_probe) // 2
+        )[-1][1]
+
+    return sample_stats
+
+    # with out_table.open("w") as out:
+    #     header = f"sample{sep}{sep.join(next(iter(sample_stats.values())))}\n"
+    #     out.write(header)
+
+    #     for sample, stats in sample_stats.items():
+    #         out.write(f"{sample}{sep}{sep.join(map(str, stats.values()))}\n")
 
 
 def snakemake_call(snakemake):

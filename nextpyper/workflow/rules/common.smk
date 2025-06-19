@@ -88,10 +88,10 @@ SAMPLE_TABLE = pd.read_csv(path_samples, sep="\t", names=cols)
 validate(SAMPLE_TABLE, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
 
 # Validate probes
-probes = list(SeqIO.parse(probes_path, "fasta"))
-probes_size = {probe.id: len(probe) for probe in probes}
+probes = SeqIO.to_dict(SeqIO.parse(probes_path, "fasta"))
+probes_size = {name: len(probe) for name, probe in probes.items()}
 min_probe_size = min(list(probes_size.values()))
-probes_list = list(probes_size.keys())
+probes_list = list(probes.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
 validate(PROBES, schema=(SCHEMES_DIR / "probes.yaml").resolve())
 
@@ -101,7 +101,7 @@ if multi_probes:
     try:
         probe_hier = {
             probe: [rec.id for rec in recs]
-            for probe, recs in group_probes(probes, pattern).items()
+            for probe, recs in group_probes(list(probes.values()), pattern).items()
         }
         all_probes_list = probes_list
         probes_list = list(probe_hier.keys())
@@ -118,7 +118,6 @@ else:
         raise Exception(
             f"Error: pattern {pattern} does not match all probes:\n{"\n".join(names)}"
         )
-
 
 # Make useful structures for the inputs
 sample_dict = SAMPLE_TABLE.set_index("sample").T.to_dict()

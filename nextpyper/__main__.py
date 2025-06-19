@@ -337,11 +337,12 @@ def summarize_run(**kwargs):
     out_table_path = kwargs["output"]
     tab_file = kwargs["seqs_per_probe"]
 
-    df, table = summarize_workflow(run_directory_path)
+    # df, table = summarize_workflow(run_directory_path)
+    df = summarize_workflow(run_directory_path)
     df.to_csv(out_table_path, index=False)
 
-    if tab_file:
-        table.T.to_csv(tab_file, float_format="%.2f")
+    # if tab_file:
+    #     table.T.to_csv(tab_file, float_format="%.2f")
 
 
 cli.add_command(run)
