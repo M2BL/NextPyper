@@ -13,10 +13,9 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import defaultdict, namedtuple
-from dataclasses import dataclass, field, fields
-import re
-from typing import Final, Optional, Self, TypedDict, Literal, Any
+from collections import namedtuple
+from dataclasses import dataclass, field
+from typing import Optional, Self
 
 # Named tuple that keeps the nodes in a path either as their suffixes or their cds and the sum of their length.
 GraphPath = namedtuple("GraphPath", ["path", "length"])
@@ -80,12 +79,12 @@ class Node:
     def get_children(self) -> list["Node"]:
         return self.children
 
-    def get_interval(self) -> "Interval":
+    def get_interval(self) -> Exon:
         return self.interval
 
 
 @dataclass
-class ItervalGraph:
+class IntervalGraph:
     """
     Data structure that create a graph of non overlapping intervals (nodes).
     Intervals are ordered by starting position. Starting with each target interval, we iterate over the rest
@@ -102,7 +101,7 @@ class ItervalGraph:
     -all_graph_path: all possible paths from a root_node to a leaf node.
     """
 
-    interval_list: list["Interval"]
+    interval_list: list[Exon]
     nodes: list[Node] = field(init=False, default_factory=list)
     node_dict: dict[int, Node] = field(init=False, default_factory=dict)
     root_nodes: list[int] = field(init=False, default_factory=list)
@@ -194,5 +193,5 @@ if __name__ == "__main__":
     ]
     interval_list = [Exon(*x) for x in inputs]
     print(interval_list)
-    IG = ItervalGraph(interval_list)
+    IG = IntervalGraph(interval_list)
     print(IG.get_best_path())

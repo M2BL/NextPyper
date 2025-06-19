@@ -15,9 +15,7 @@ __version__ = "0.1"
 # =======================================================================================
 from dataclasses import dataclass, field, fields
 from io import StringIO
-from pathlib import Path
-from typing import Final, Optional, Self, TypedDict, Literal, Any
-import os
+from typing import Optional, Literal
 
 AAs = (
     "A",
@@ -78,7 +76,7 @@ class Fragment:
     strand: Literal[-1, 1]
     frame: Literal[0, 1, 2]
     identity: float
-    correspondence: dict[int,int] = field(default_factory=dict, init=False)
+    correspondence: dict[int, int] = field(default_factory=dict, init=False)
 
     def get_correspondence(self) -> dict[int, int]:
         """
@@ -145,10 +143,12 @@ class Cds:
 
     def __repr__(self):
         if self.fragments:
-            return (f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=},"
-                    f"strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()}, global_score={self.get_global_score()})")
+            return (
+                f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=},"
+                f"strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()}, global_score={self.get_global_score()})"
+            )
         else:
-            return f"Cds()"
+            return "Cds()"
 
     def __post_init__(self):
         self._parse_gff()
@@ -163,7 +163,7 @@ class Cds:
                 len(self.target_nucleotides)
                 == len(self.target_AAs)
                 == len(self.query_AAs)
-            ), f"length of target_nucleotides, target_AAs and query_AAs do not match"
+            ), f"length of target_nucleotides ({self.target_nucleotides}), target_AAs ({self.target_AAs}) and query_AAs ({(self.query_AAs)}) do not match"
 
     def has_empty_cds(self) -> bool:
         """
@@ -215,7 +215,7 @@ class Cds:
             attributes = {
                 x.split("=")[0]: x.split("=")[1] for x in attributes if "=" in x
             }
-            if not (sequence_name in self.data):
+            if sequence_name not in self.data:
                 self.data[sequence_name] = []
             alpha = {
                 "source": source,
@@ -314,7 +314,6 @@ class Cds:
     def get_global_score(self) -> int:
         """Compute the alignment score as the sum of the fragment scores."""
         return sum([fragment.score for fragment in self.fragments])
-
 
 
 if __name__ == "__main__":
