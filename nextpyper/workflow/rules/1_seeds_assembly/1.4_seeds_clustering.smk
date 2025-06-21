@@ -33,6 +33,7 @@ rule vsearch_clustering:
     output:
         centroids=outdir / "clustering/centroids/{probe}.fasta",
         msaout=outdir / "clustering/msa/{probe}.fasta",
+        uc=outdir / "clustering/cluster_tables/{probe}.tsv",
     log:
         outdir / "logs/clustering/vsearch/{probe}.log",
     params:
@@ -40,3 +41,22 @@ rule vsearch_clustering:
     threads: 4
     wrapper:
         "v4.3.0/bio/vsearch"
+
+
+rule seeds_collection:
+    input:
+        cluster_tables=expand(
+            outdir / "clustering/cluster_tables/{probe}.tsv", probe=probes_list
+        ),
+        samples=expand(
+            outdir / "assembled/filtering/filtered_scfs/{sample}",
+            sample=sample_list,
+        ),
+    output:
+        seeds=expand(outdir / "saute/seeds/{sample}.fasta", sample=sample_list),
+    log:
+        expand(
+            outdir / "logs/clustering/seed_collection/{sample}.log", sample=sample_list
+        ),
+    script:
+        "../../../src/seeds_collection.py"

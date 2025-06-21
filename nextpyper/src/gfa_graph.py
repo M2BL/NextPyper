@@ -44,7 +44,8 @@ from graph_utils import (
     effective_cov,
     build_probe_trees,
 )
-from graph_alns_parser import Read
+
+# from graph_alns_parser import Read
 from union_find import UnionFind
 from diversity import select_k_paths
 
@@ -242,21 +243,21 @@ class Assembly_graph:
 
         return self
 
-    def link_edges(self, reads: list[Read]) -> Self:
-        """Given a list of paired reads, compute the link support that those pairs
-        exhibit. Each pair that connects a composition of edges is added as a
-        supported link, increasing its count in the dictionary. Compositions of
-        a single edge are not taken into account.
-        """
+    # def link_edges(self, reads: list["Read"]) -> Self:
+    #     """Given a list of paired reads, compute the link support that those pairs
+    #     exhibit. Each pair that connects a composition of edges is added as a
+    #     supported link, increasing its count in the dictionary. Compositions of
+    #     a single edge are not taken into account.
+    #     """
 
-        get_edges = lambda frags: (frag.edge.id for frag in frags)
+    #     get_edges = lambda frags: (frag.edge.id for frag in frags)
 
-        for read in reads:
-            edges = get_edges(read.fragments + read.mate.fragments)
-            if len(unique_edges := set(edges)) > 1:
-                self.linked_edges[tuple(sorted(unique_edges))] += 1
+    #     for read in reads:
+    #         edges = get_edges(read.fragments + read.mate.fragments)
+    #         if len(unique_edges := set(edges)) > 1:
+    #             self.linked_edges[tuple(sorted(unique_edges))] += 1
 
-        return self
+    #     return self
 
     def path_support(self, path: Path_on_graph) -> LinkSupport:
         "Return the links support that are congruent with the given path."

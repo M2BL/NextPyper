@@ -18,11 +18,10 @@ from Bio.SeqRecord import SeqRecord
 from Bio import Entrez
 
 sys.path.append((Path(workflow.basedir) / "../src/").as_posix())
-sys.path.append((Path(workflow.basedir) / "scripts").as_posix())
+# sys.path.append((Path(workflow.basedir) / "scripts").as_posix())
 
 nextpyper_version = "0.0.1"
 
-from prefix_seqs import prefix_fasta
 from multi_seq_probes import group_probes, NoGrouping
 
 

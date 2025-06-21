@@ -1,34 +1,34 @@
-rule merge_consensus_probes:
-    input:
-        expand(outdir / "clustering/centroids/{probes}.fasta", probes=probes_list),
-    output:
-        outdir / "saute/consensus.fasta",
-    shell:
-        "cat {input} > {output}"
+# rule merge_consensus_probes:
+#     input:
+#         expand(outdir / "clustering/centroids/{probes}.fasta", probes=probes_list),
+#     output:
+#         outdir / "saute/consensus.fasta",
+#     shell:
+#         "cat {input} > {output}"
 
 
-def aggregate_split(wildcards):
-    chkpt_out = checkpoints.seeds_filtering.get(sample=wildcards.sample).output[0]
-    return collect(
-        outdir
-        / f"assembled/filtering/filtered_scfs/{wildcards.sample}/{{probe}}.fasta",
-        probe=glob_wildcards(Path(chkpt_out) / "{probe}.fasta").probe,
-    )
+# def aggregate_split(wildcards):
+#     chkpt_out = checkpoints.seeds_filtering.get(sample=wildcards.sample).output[0]
+#     return collect(
+#         outdir
+#         / f"assembled/filtering/filtered_scfs/{wildcards.sample}/{{probe}}.fasta",
+#         probe=glob_wildcards(Path(chkpt_out) / "{probe}.fasta").probe,
+#     )
 
 
-rule collect_sample_seeds:
-    input:
-        intra=aggregate_split,
-        inter=outdir / "saute/consensus.fasta",
-    output:
-        outdir / "saute/seeds/{sample}.fasta",
-    conda:
-        "../../envs/preprocessing.yaml"
-    shell:
-        """
-        cat {input.intra} > {output}
-        seqkit grep -vrnp {wildcards.sample} {input.inter} >> {output}
-        """
+# rule collect_sample_seeds:
+#     input:
+#         intra=aggregate_split,
+#         inter=outdir / "saute/consensus.fasta",
+#     output:
+#         outdir / "saute/seeds/{sample}.fasta",
+#     conda:
+#         "../../envs/preprocessing.yaml"
+#     shell:
+#         """
+#         cat {input.intra} > {output}
+#         seqkit grep -vrnp {wildcards.sample} {input.inter} >> {output}
+#         """
 
 
 rule saute_assembly:
