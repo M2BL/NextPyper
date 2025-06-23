@@ -228,7 +228,7 @@ def categorize_sample(
     hits: pl.DataFrame,
     chimera_df: pl.DataFrame,
     targets: list[str],
-    min_hit_tcov: float = 0.25,
+    min_hit_tcov: float = 0.0,
     min_length_cov: float = 0.7,
     min_idt: float = 0.99,
     include_borderline: bool = False,
@@ -338,8 +338,8 @@ def parse_args():
     parser.add_argument(
         "--min_tcov",
         type=float,
-        default=0.25,
-        help="Minimum target coverage of the query to consider a hit (default: 0.25)",
+        default=0.0,
+        help="Minimum target coverage of the query to consider a hit (default: 0.0)",
     )
     parser.add_argument(
         "--min_tot_cov",
@@ -402,7 +402,8 @@ def main():
             separator="\t",
             has_header=True,
             skip_rows=2,
-            infer_schema_length=1000,
+            schema_overrides={"% identity": pl.Float64},
+            infer_schema_length=10000,
         )
         chimera_df = pl.read_csv(chimera_path, separator="\t", has_header=False)
         targets = SeqIO.to_dict(SeqIO.parse(targets_path, "fasta"))
@@ -446,7 +447,8 @@ def main():
                     separator="\t",
                     has_header=True,
                     skip_rows=2,
-                    infer_schema_length=1000,
+                    schema_overrides={"% identity": pl.Float64},
+                    infer_schema_length=10000,
                 )
                 chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
                 targets = SeqIO.to_dict(SeqIO.parse(targets_file, "fasta"))
