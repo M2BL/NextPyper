@@ -78,10 +78,15 @@ def snakemake_call(snakemake):
                 table.filter(pl.col("sample") == sample).select("cluster_id").unique()
             )
 
+            # First, add the seeds from the current sample
+            sample_seeds[sample].extend(
+                sample_recs[sample].get(probe.stem, {}).values()
+            )
+
             # Include all the sequences of the identified clusters as seeds for the sample
             for inter_sample, rec in (
                 table.join(clusters, on="cluster_id", how="inner")
-                .filter(pl.col("type") != "C")
+                .filter((pl.col("type") == "C") & (pl.col("sample") != sample))
                 .select(["sample", "query"])
                 .iter_rows()
             ):
