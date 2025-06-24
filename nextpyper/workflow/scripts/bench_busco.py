@@ -123,20 +123,19 @@ def build_target_trees(
     return target_trees
 
 
-def get_longest_path(itree: IntervalTree, min_overlap_length_int: int) -> int:
+def get_longest_path(itree: IntervalTree, max_ovlp: int) -> int:
     """
     Perform a dfs on the interval in order to find the combination that yields the longest path
     Parameters
     ----------
     itree
-    min_overlap_length_int: max overlap in nucleotides allowed between two fragments to fuse the paths
+    max_ovlp: max overlap in nucleotides allowed between two fragments to fuse the paths
 
     Returns the length of the longest path
     -------
 
     """
     longest_path = LongestPath(0)
-    all_intervals = sorted(itree, key=lambda i: i.begin)
 
     def dfs_util(
         current_fragment: Interval,
@@ -150,24 +149,29 @@ def get_longest_path(itree: IntervalTree, min_overlap_length_int: int) -> int:
             return
 
         for next_fragment in remaining_fragments:
-            if (
-                overlap := current_fragment.overlap_size(next_fragment)
-            ) <= min_overlap_length_int:
+            if (overlap := current_fragment.overlap_size(next_fragment)) <= max_ovlp:
                 current_length += next_fragment.length() - overlap
 
-            next_fragment_idx = remaining_fragments.index(next_fragment)
+            no_ovlp_fragments = sorted(
+                set(itree)
+                - set(itree.overlap(0 + max_ovlp, next_fragment.end - max_ovlp))
+            )
+
             dfs_util(
                 next_fragment,
-                remaining_fragments[next_fragment_idx + 1 :],
+                no_ovlp_fragments,
                 longest_path,
                 current_length,
             )
 
     for start_frg in sorted(itree):
-        start_frg_idx = all_intervals.index(start_frg)
+        remaining_fragments = sorted(
+            set(itree) - set(itree.overlap(0 + max_ovlp, start_frg.end - max_ovlp))
+        )
+
         dfs_util(
             start_frg,
-            all_intervals.copy()[start_frg_idx + 1 :],
+            remaining_fragments,
             longest_path,
             start_frg.length(),
         )
