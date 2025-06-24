@@ -186,8 +186,9 @@ def find_busco_category(
     Category codes are defined as:
     0: Complete single copy
     1: Complete and duplicated
-    2: Fragmented (single or multiple copies all fragmented)
-    3: Missing
+    2: Fragmented success (single or multiple copies all fragmented, fulfill acceptance criteria)
+    3: Fragmented failure (single or multiple fragments detected, that do not fulfill acceptance criteria)
+    4: Missing
     Parameters
     ----------
     itree: intput interval tree
@@ -200,7 +201,7 @@ def find_busco_category(
     """
     itree = itree.copy()  # avoid modifying the original tree
     if itree.is_empty():
-        return 3
+        return 4
 
     interval_0 = list(itree.all_intervals)[0]
     length_threshold = interval_0.data.tlen * min_length_percent
@@ -241,10 +242,11 @@ def categorize_sample(
     Category codes are defined as:
     0: Complete single copy
     1: Complete and duplicated
-    2: Fragmented (single or multiple copies all fragmented)
-    3: Missing
-    4: Recovered chimera (The query is chimeric but still meets acceptance criteria)
-    5: Failed chimera (The query is chimeric and does not meet acceptance criteria)
+    2: Fragmented success (single or multiple copies all fragmented)
+    3: Fragmented failure (single or multiple fragments detected, that do not fulfill acceptance criteria)
+    4: Missing
+    5: Recovered chimera (The query is chimeric but still meets acceptance criteria)
+    6: Failed chimera (The query is chimeric and does not meet acceptance criteria)
     Parameters
     ----------
     hits: mmseqs hits dataframe.
@@ -320,13 +322,15 @@ def categorize_sample(
         chim_cat = chim_cat_dict.get(target, None)
 
         if no_chim_cat is None and chim_cat is None:
-            final_cat[target] = 3
+            final_cat[target] = 4
         elif no_chim_cat == chim_cat:
             final_cat[target] = no_chim_cat
-        elif chim_cat != 3:
-            final_cat[target] = 4
-        else:
+        elif chim_cat in (0, 1, 2):
+            # If the chimera is complete or fragmented, we consider it recovered
             final_cat[target] = 5
+        else:
+            # chimera fails acceptance criteria (3 or 4)
+            final_cat[target] = 6
 
     return final_cat
 
