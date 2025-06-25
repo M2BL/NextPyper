@@ -14,6 +14,7 @@ checkpoint per_probe_scaffold_grouping:
     params:
         pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
         probes=probes_list,
+        mode="scfs",
     script:
         "../../../src/multi_seq_probes.py"
 
@@ -34,20 +35,14 @@ checkpoint split_matching_probes:
         ),
     log:
         outdir / "logs/homolog_prospection/region_separation/probe_grouping.log",
+    params:
+        pattern=lambda wildcards: pattern,
+        probes=probes_list,
+        mode="multi_probes" if multi_probes else "single_probes",
     conda:
         "../../envs/preprocessing.yaml"
-    shell:
-        """
-        cat {input.tables} | cut -f 2 | sort | uniq > probe_ids.txt
-        seqkit grep -nf probe_ids.txt {input.probes} > temp_matching_probes.fasta 2> {log}
-        rm probe_ids.txt
-
-        for outfile in {output}; do
-            name=$(basename $outfile .fasta)
-            seqkit grep -rnp "$name" temp_matching_probes.fasta > $outfile
-        done
-        rm temp_matching_probes.fasta
-        """
+    script:
+        "../../../src/multi_seq_probes.py"
 
 
 checkpoint separate_cds_by_regions:

@@ -157,13 +157,44 @@ def snakemake_call(snakemake):
         outfolder = Path(snakemake.output[0]).parent
         pattern = snakemake.params.pattern
         probes_list = snakemake.params.probes
+        mode = snakemake.params.mode
         pat = re.compile(pattern, re.VERBOSE)
 
-        all_recs = [rec for file in inputs for rec in SeqIO.parse(file, "fasta")]
-        grouped_scfs = group_probes(all_recs, pat, match_group="probe")
+        # Todo: Refactor this block as a function
+        match mode:
+            case "scfs":
+                all_recs = [
+                    rec for file in inputs for rec in SeqIO.parse(file, "fasta")
+                ]
+                grouped_recs = group_probes(all_recs, pat, match_group="probe")
+            case "single_probes":
+                grouped_recs = {
+                    pat.search(rec.id)[1]: rec
+                    for rec in SeqIO.parse(inputs.probes, "fasta")
+                }
+            case "multi_probes":
+                tables_dir = Path(inputs.tables[0]).parent
+                matched_probes = set(
+                    pd.concat(
+                        pd.read_csv(table, sep="\t") for table in tables_dir.iterdir()
+                    )["theader"].unique()
+                )
+                all_recs = [
+                    rec
+                    for rec in SeqIO.parse(inputs.probes, "fasta")
+                    if rec.id in matched_probes
+                ]
+                grouped_recs = group_probes(all_recs, pat)
+                # It could happen that in a very ideal scenario where a single probe
+                # version per probe is the only surviving probe, this would raise a NoGrouping exception.
+            case _:
+                raise ValueError(
+                    f"{mode=} not recognized. Use scfs, single_probes, multi_probes."
+                )
 
+        # Writing output is common to all uses
         outfolder.mkdir(exist_ok=True)
-        for probe, recs in grouped_scfs.items():
+        for probe, recs in grouped_recs.items():
             SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
 
         for probe in probes_list:
