@@ -56,7 +56,7 @@ rule seeds_collection:
         seeds=expand(outdir / "saute/seeds/{sample}.fasta", sample=sample_list),
     log:
         expand(
-            outdir / "logs/clustering/seed_collection/{sample}.log", sample=sample_list
+            outdir / "logs/clustering/seed_collection/{sample}.cov", sample=sample_list
         ),
     script:
         "../../../src/seeds_collection.py"

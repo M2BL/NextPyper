@@ -1,34 +1,6 @@
-# rule merge_consensus_probes:
-#     input:
-#         expand(outdir / "clustering/centroids/{probes}.fasta", probes=probes_list),
-#     output:
-#         outdir / "saute/consensus.fasta",
-#     shell:
-#         "cat {input} > {output}"
-
-
-# def aggregate_split(wildcards):
-#     chkpt_out = checkpoints.seeds_filtering.get(sample=wildcards.sample).output[0]
-#     return collect(
-#         outdir
-#         / f"assembled/filtering/filtered_scfs/{wildcards.sample}/{{probe}}.fasta",
-#         probe=glob_wildcards(Path(chkpt_out) / "{probe}.fasta").probe,
-#     )
-
-
-# rule collect_sample_seeds:
-#     input:
-#         intra=aggregate_split,
-#         inter=outdir / "saute/consensus.fasta",
-#     output:
-#         outdir / "saute/seeds/{sample}.fasta",
-#     conda:
-#         "../../envs/preprocessing.yaml"
-#     shell:
-#         """
-#         cat {input.intra} > {output}
-#         seqkit grep -vrnp {wildcards.sample} {input.inter} >> {output}
-#         """
+def low_cov_params(wildcards, input):
+    med_cov = float(Path(input.cov).read_text())
+    return "" if med_cov < 20 else "--secondary_kmer 21 --secondary_kmer_threshold 5"
 
 
 rule saute_assembly:
@@ -36,19 +8,23 @@ rule saute_assembly:
         reads1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
         reads2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
         seeds=outdir / "saute/seeds/{sample}.fasta",
+        cov=outdir / "logs/clustering/seed_collection/{sample}.cov",
     output:
         all_vars=outdir / "saute/target_assembly/{sample}/all_vars.fasta",
         target_vars=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
         graph=outdir / "saute/target_assembly/{sample}/graph.gfa",
     params:
-        "--max_variants 10 --extend_ends --remove_homopolymer_indels",
+        glob="--max_variants 10 --extend_ends --remove_homopolymer_indels ",
+        target_cov=saute_target_cov,
+        cov=low_cov_params,
     log:
         outdir / "logs/saute/{sample}.log",
     threads: 8
     conda:
         "../../envs/saute.yaml"
     shell:
-        "(saute --cores {threads} {params} "
+        "(saute --cores {threads} {params.glob} {params.cov} "
+        "--target_coverage {params.target_cov} "
         "--reads {input.reads1},{input.reads2} "
         "--targets {input.seeds} "
         "--gfa {output.graph} "

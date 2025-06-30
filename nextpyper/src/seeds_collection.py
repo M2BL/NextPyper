@@ -9,7 +9,7 @@
 #       All rights reserved.
 
 """
-Filter sequences based on mmseqs2 alignments against probes.
+Collect the potentially informative seeds for saute assembly based on vsearch clustering.
 """
 
 __version__ = "0.1"
@@ -20,8 +20,10 @@ __version__ = "0.1"
 
 from pathlib import Path
 from collections import defaultdict
+import re
 
 from Bio import SeqIO
+import numpy as np
 import polars as pl
 
 # =======================================================================================
@@ -40,7 +42,7 @@ CLUSTER_COLS = [
     "query",
     "centroid",
 ]
-REC_PAT = r"^(.*?)-"
+REC_PAT = r"^(.*?)-.*_cov_([\d\.]+)$"
 
 # =============================================================================
 #                FUNCTIONS
@@ -52,6 +54,7 @@ def snakemake_call(snakemake):
     cluster_tables_dir = snakemake.input.cluster_tables
     sample_probes_dir = snakemake.input.samples
     seeds_out = snakemake.output.seeds
+    cov_log_dir = Path(snakemake.log[0]).parent
 
     # Parse the records fo all the samples
     sample_recs = {
@@ -63,6 +66,7 @@ def snakemake_call(snakemake):
     }
 
     # Redistribute the seeds accroding to the clusters
+    pat = re.compile(REC_PAT)
     sample_seeds = defaultdict(list)
     for probe in map(Path, cluster_tables_dir):
         if probe.stat().st_size == 0:
@@ -73,7 +77,7 @@ def snakemake_call(snakemake):
         ).with_columns(sample=pl.col("query").str.extract(REC_PAT))
 
         for sample in sample_recs:
-            # Find the clusters where there sequencunces of the sample
+            # Find the clusters where there are sequences of the sample
             clusters = (
                 table.filter(pl.col("sample") == sample).select("cluster_id").unique()
             )
@@ -82,6 +86,11 @@ def snakemake_call(snakemake):
             sample_seeds[sample].extend(
                 sample_recs[sample].get(probe.stem, {}).values()
             )
+            # Compute median coverage observed for sample sequences
+            med_cov = np.median(
+                [float(pat.search(rec.id)[2]) for rec in sample_seeds[sample]]
+            )
+            (cov_log_dir / f"{sample}.cov").write_text(f"{med_cov}")
 
             # Include all the sequences of the identified clusters as seeds for the sample
             for inter_sample, rec in (

@@ -26,6 +26,8 @@ nextpyper:
                 max_intron_size: 2000
             output:
                 max_extensions: 5
+        saute:
+            target_cov: 0.2
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
             evalue: 1.000E-9
