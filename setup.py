@@ -51,7 +51,7 @@ setup(
     py_modules=["nextpyper"],
     install_requires=[
         "snaketool-utils>=0.0.4",
-        "snakemake>=7.14.0",
+        "snakemake>=9.3.1",
         "pyyaml>=6.0",
         "Click>=8.1.3",
         "pandas>=2.2",
