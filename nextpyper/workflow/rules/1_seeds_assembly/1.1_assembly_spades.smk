@@ -4,11 +4,11 @@ def select_asm_kmer(wildcards, input):
             summary = json.load(file)
             k_mid = int(summary["summary"]["after_filtering"]["read2_mean_length"]) // 2
             if k_mid >= 117:
-                return "107,127"
+                return "21,45,107,127"
             elif k_mid % 2 == 0:
-                return f"{k_mid-9},{k_mid+11}"
+                return f"21,45,{k_mid-9},{k_mid+11}"
             else:
-                return f"{k_mid-10},{k_mid+10}"
+                return f"21,45,{k_mid-10},{k_mid+10}"
     else:
         return spades_k
 
