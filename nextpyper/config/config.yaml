@@ -14,6 +14,8 @@ nextpyper:
             translated_prop: 0.95
             stop_per_1Kbp: 2 
             min_exon_length: 20
+        cp_cleaning:
+            min_sp_probes_cov: 80
         multi_probe_clustering:
             mmseq2_min_seq_id: 0.8
         spades:

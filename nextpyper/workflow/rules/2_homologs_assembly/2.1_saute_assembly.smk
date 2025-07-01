@@ -5,8 +5,8 @@ def low_cov_params(wildcards, input):
 
 rule saute_assembly:
     input:
-        reads1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
-        reads2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
+        reads1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        reads2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
         seeds=outdir / "saute/seeds/{sample}.fasta",
         cov=outdir / "logs/clustering/seed_collection/{sample}.cov",
     output:

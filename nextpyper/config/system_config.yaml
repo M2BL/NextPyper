@@ -1,3 +1,4 @@
 nextpyper:
     # Config you don't want users to change
     blosum62: "../../data/blosum62.csv"
+    cp_refs_map: "../../data/cps_seqids.csv"
