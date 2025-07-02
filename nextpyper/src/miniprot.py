@@ -218,7 +218,7 @@ def run_miniprot_boundary_scorer(
     try:
         subprocess.run(
             boundary_scorer_cmd,
-            timeout=100,
+            timeout=1000,
             shell=True,
             input=miniprot,
         )
@@ -709,11 +709,14 @@ class OverlappingCds(MiniprotInit):
                     )
                     miniprot_result.seek(0)
                     # run miniprot_boundary scorer
-                    run_miniprot_boundary_scorer(
-                        remove_gff(miniprot_result),
-                        boundary_scorer_out,
-                        self.substitution_matrix_path,
-                    )
+                    try:
+                        run_miniprot_boundary_scorer(
+                            remove_gff(miniprot_result),
+                            boundary_scorer_out,
+                            self.substitution_matrix_path,
+                        )
+                    except:
+                        continue
                     cds._find_probe_exons(
                         self._boundary_scorer_parser(boundary_scorer_out)
                     )
@@ -924,6 +927,15 @@ def main():
 
     snakemake_call(snakemake)
 
+def debug():
+    parameters = [8, 0.85, 0.1, 10, 0.6,]
+    matrix = "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/blosum62.csv"
+    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/bug_miniprot_pack/10248_probe.fasta"
+    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/bug_miniprot_pack/small.fasta"
+    olc = OverlappingCds(probe_file, scfs,matrix, *parameters)
+    print("overlapping:", olc)
+    outdir = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/bug_miniprot_pack")
+    olc.save_records(outdir, 10)
 
 if __name__ == "__main__":
     if "snakemake" in globals():
