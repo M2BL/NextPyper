@@ -38,7 +38,11 @@ pattern = lookup("args/probe_pattern", within=config)
 multi_probes = lookup("args/multi_probes", within=config)
 max_threads = lookup("args/threads", within=config)
 
+use_ref_cps = config["args"]["use_ref_cps"]
+custom_cps = Path(custom_cps) if (custom_cps := config["args"]["custom_cps"]) else None
+
 blosum62 = workflow.source_path(config["blosum62"])
+cp_refs_map = workflow.source_path(config["cp_refs_map"])
 
 ## Read Workflow parameters:
 pipeline = lookup("pipeline", within=config)

@@ -15,8 +15,8 @@ def select_asm_kmer(wildcards, input):
 
 rule spades_assembly:
     input:
-        in1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
-        in2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
+        in1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        in2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
         json=outdir / "logs/preprocessing/fastp/{sample}.json",
     output:
         out_dir=directory(outdir / "assembled/spades/{sample}"),
