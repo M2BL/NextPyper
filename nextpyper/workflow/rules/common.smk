@@ -77,7 +77,7 @@ homolog_scf_min_idt = lookup("homolog_scf_min_idt", within=mmseqs_filt)
 
 # Saute
 saute_target_cov = lookup("saute/target_cov", within=pipeline)
-SAUTE_PRE_FIX_PAT = r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
+SAUTE_PRE_FIX_PAT = r"^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 SAUTE_POST_FIX_PAT = r"^(?P<sample1>.*?)\|.*?-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 
 # Region separation

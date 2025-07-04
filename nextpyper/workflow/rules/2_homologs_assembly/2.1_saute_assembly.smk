@@ -34,7 +34,7 @@ rule saute_assembly:
 
 rule fix_homologs_header:
     input:
-        outdir / "saute/target_assembly/{sample}/target_vars.fasta",
+        outdir / "saute/target_assembly/{sample}/all_vars.fasta",
     output:
         outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
     params:
