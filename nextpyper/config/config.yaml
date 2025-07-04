@@ -23,9 +23,9 @@ nextpyper:
         scaffolds_extension:
             exploration:
                 floor_len_extension: 3000
-                ceiling_len_extension: 7000
+                ceiling_len_extension: 6000
                 probe_len_scaling: 3
-                max_intron_size: 2000
+                max_intron_size: auto
             output:
                 max_extensions: 5
         saute:

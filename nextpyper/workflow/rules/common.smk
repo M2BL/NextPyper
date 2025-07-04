@@ -7,12 +7,14 @@ from snakemake.utils import min_version
 from snakemake.utils import validate
 from pathlib import Path
 from collections import Counter, defaultdict
+from operator import itemgetter
 import json
 import sys
 import os
 import re
 import pandas as pd
 import polars as pl
+from more_itertools import last
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio import Entrez

@@ -35,10 +35,20 @@ rule raw_assembly_to_probes_matching:
         """
 
 
+def get_max_intron_size(wildcards, input):
+    """Parametrize the maximum intron size that can be bridged during extension
+    by taking twice the maximum observed insert size of the data."""
+
+    with open(input.stats) as file:
+        insert_hist = json.load(file)["insert_size"]["histogram"]
+        return last(filter(itemgetter(1), enumerate(insert_hist)))[0] * 2
+
+
 rule extend_paths:
     input:
         graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
         table=outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
+        stats=outdir / "logs/preprocessing/fastp/{sample}.json",
     output:
         outdir / "assembled/extension/{sample}.fasta",
     params:
@@ -46,7 +56,9 @@ rule extend_paths:
         ceil_len=ceil_len_extension,
         plen_scaling=plen_scaling_factor,
         max_extensions=max_extensions,
-        max_intron_size=max_intron_size,
+        max_intron_size=(
+            max_intron_size if max_intron_size != "auto" else get_max_intron_size
+        ),
         probe_pattern=lambda wildcards: pattern,
     log:
         outdir / "logs/assembled/extension/{sample}.log",
