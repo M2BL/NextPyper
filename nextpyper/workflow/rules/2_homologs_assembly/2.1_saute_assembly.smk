@@ -1,6 +1,12 @@
 def low_cov_params(wildcards, input):
+    with open(input.json) as file:
+        summary = json.load(file)
+        k_mid = int(summary["summary"]["after_filtering"]["read2_mean_length"]) // 2
+        k = k_mid + 1 if k_mid % 2 == 0 else k_mid
+        low_params = f"--kmer {k} --secondary_kmer 21 --secondary_kmer_threshold 5"
+
     med_cov = float(Path(input.cov).read_text())
-    return "" if med_cov < 20 else "--secondary_kmer 21 --secondary_kmer_threshold 5"
+    return "" if med_cov < 20 else low_params
 
 
 rule saute_assembly:
@@ -9,6 +15,7 @@ rule saute_assembly:
         reads2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
         seeds=outdir / "saute/seeds/{sample}.fasta",
         cov=outdir / "logs/clustering/seed_collection/{sample}.cov",
+        json=outdir / "logs/preprocessing/fastp/{sample}.json",
     output:
         all_vars=outdir / "saute/target_assembly/{sample}/all_vars.fasta",
         target_vars=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
