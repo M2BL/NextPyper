@@ -47,7 +47,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict, namedtuple
 from io import StringIO
 from itertools import chain
-from operator import attrgetter
+from operator import attrgetter, add
 from pathlib import Path
 import subprocess
 import sys
@@ -74,15 +74,6 @@ MAX_EXPANSION_INTERVAL = (
 # =======================================================================================
 #               FUNCTIONS
 # =======================================================================================
-def fuse_intervals(intervals: list[Interval]) -> Interval:
-    """Fuse several Interval objects into a single Interval.
-    Data attributes are fused into a single list, lower and higher bounds
-    are set to min and max values respectively."""
-    min_value = sorted(intervals, key=lambda i: i.begin)[0].begin
-    max_value = sorted(intervals, key=lambda i: i.end)[-1].end
-    data = list(chain(*[x.data for x in intervals]))
-    return Interval(min_value, max_value, data)
-
 
 def cluster_intervals(intervals: list[Interval]) -> list[Interval]:
     """
@@ -90,16 +81,7 @@ def cluster_intervals(intervals: list[Interval]) -> list[Interval]:
     The data field of intervals is made out of a list of EndPoint objects.
     """
     it = IntervalTree.from_tuples(intervals)
-    used_idxs = []
-    for interval in intervals:
-        idx = interval.data[0].idx
-        if idx in used_idxs:
-            continue
-        centered_intervals = sorted(it[idx])
-        new_interval = fuse_intervals(centered_intervals)
-        del it[idx]
-        it.add(new_interval)
-        used_idxs.extend(x.idx for x in new_interval.data)
+    it.merge_overlaps(strict=True, data_reducer=add)
     return it
 
 
@@ -304,7 +286,6 @@ class EndPoint:
     """
     Container for start or end of an exon.
     """
-
     idx: int
     name: str
 
@@ -930,11 +911,11 @@ def main():
 def debug():
     parameters = [8, 0.85, 0.1, 10, 0.6,]
     matrix = "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/blosum62.csv"
-    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/bug_miniprot_pack/10248_probe.fasta"
-    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/bug_miniprot_pack/small.fasta"
+    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/9211_probes.fasta"
+    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/9211_scfs.fasta"
     olc = OverlappingCds(probe_file, scfs,matrix, *parameters)
     print("overlapping:", olc)
-    outdir = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/bug_miniprot_pack")
+    outdir = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/outdir")
     olc.save_records(outdir, 10)
 
 if __name__ == "__main__":
