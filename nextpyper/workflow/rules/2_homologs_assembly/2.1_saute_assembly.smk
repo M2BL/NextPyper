@@ -1,12 +1,15 @@
 def low_cov_params(wildcards, input):
-    with open(input.json) as file:
-        summary = json.load(file)
-        k_mid = int(summary["summary"]["after_filtering"]["read2_mean_length"]) // 2
-        k = k_mid + 1 if k_mid % 2 == 0 else k_mid
-        low_params = f"--kmer {k} --secondary_kmer 21 --secondary_kmer_threshold 5"
+    if (med_cov := float(Path(input.cov).read_text())) > 20:
+        return ""
+    elif med_cov < 10:
+        k = 49
+    else:
+        with open(input.json) as file:
+            summary = json.load(file)
+            k_mid = int(summary["summary"]["after_filtering"]["read2_mean_length"]) // 2
+            k = k_mid + 1 if k_mid % 2 == 0 else k_mid
 
-    med_cov = float(Path(input.cov).read_text())
-    return "" if med_cov < 20 else low_params
+    return f"--kmer {k} --secondary_kmer 21 --secondary_kmer_threshold 5"
 
 
 rule saute_assembly:
