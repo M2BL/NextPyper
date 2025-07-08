@@ -475,7 +475,7 @@ def main():
 
                 # Add a last "pseudo-category" with the counts of extra sequences
                 # that do not hit any target (noise)
-                category_counts[6] = chimera_df.join(
+                category_counts[7] = chimera_df.join(
                     df, left_on="column_2", right_on=tuple(MAGIC_COLS)[0], how="anti"
                 ).shape[0]
 
