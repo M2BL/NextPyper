@@ -123,20 +123,19 @@ def build_target_trees(
     return target_trees
 
 
-def get_longest_path(itree: IntervalTree, min_overlap_length_int: int) -> int:
+def get_longest_path(itree: IntervalTree, max_ovlp: int) -> int:
     """
     Perform a dfs on the interval in order to find the combination that yields the longest path
     Parameters
     ----------
     itree
-    min_overlap_length_int: max overlap in nucleotides allowed between two fragments to fuse the paths
+    max_ovlp: max overlap in nucleotides allowed between two fragments to fuse the paths
 
     Returns the length of the longest path
     -------
 
     """
     longest_path = LongestPath(0)
-    all_intervals = sorted(itree, key=lambda i: i.begin)
 
     def dfs_util(
         current_fragment: Interval,
@@ -150,24 +149,29 @@ def get_longest_path(itree: IntervalTree, min_overlap_length_int: int) -> int:
             return
 
         for next_fragment in remaining_fragments:
-            if (
-                overlap := current_fragment.overlap_size(next_fragment)
-            ) <= min_overlap_length_int:
+            if (overlap := current_fragment.overlap_size(next_fragment)) <= max_ovlp:
                 current_length += next_fragment.length() - overlap
 
-            next_fragment_idx = remaining_fragments.index(next_fragment)
+            no_ovlp_fragments = sorted(
+                set(itree)
+                - set(itree.overlap(0 + max_ovlp, next_fragment.end - max_ovlp))
+            )
+
             dfs_util(
                 next_fragment,
-                remaining_fragments[next_fragment_idx + 1 :],
+                no_ovlp_fragments,
                 longest_path,
                 current_length,
             )
 
     for start_frg in sorted(itree):
-        start_frg_idx = all_intervals.index(start_frg)
+        remaining_fragments = sorted(
+            set(itree) - set(itree.overlap(0 + max_ovlp, start_frg.end - max_ovlp))
+        )
+
         dfs_util(
             start_frg,
-            all_intervals.copy()[start_frg_idx + 1 :],
+            remaining_fragments,
             longest_path,
             start_frg.length(),
         )
@@ -182,8 +186,9 @@ def find_busco_category(
     Category codes are defined as:
     0: Complete single copy
     1: Complete and duplicated
-    2: Fragmented (single or multiple copies all fragmented)
-    3: Missing
+    2: Fragmented success (single or multiple copies all fragmented, fulfill acceptance criteria)
+    3: Fragmented failure (single or multiple fragments detected, that do not fulfill acceptance criteria)
+    4: Missing
     Parameters
     ----------
     itree: intput interval tree
@@ -196,7 +201,7 @@ def find_busco_category(
     """
     itree = itree.copy()  # avoid modifying the original tree
     if itree.is_empty():
-        return 3
+        return 4
 
     interval_0 = list(itree.all_intervals)[0]
     length_threshold = interval_0.data.tlen * min_length_percent
@@ -228,7 +233,7 @@ def categorize_sample(
     hits: pl.DataFrame,
     chimera_df: pl.DataFrame,
     targets: list[str],
-    min_hit_tcov: float = 0.25,
+    min_hit_tcov: float = 0.0,
     min_length_cov: float = 0.7,
     min_idt: float = 0.99,
     include_borderline: bool = False,
@@ -237,10 +242,11 @@ def categorize_sample(
     Category codes are defined as:
     0: Complete single copy
     1: Complete and duplicated
-    2: Fragmented (single or multiple copies all fragmented)
-    3: Missing
-    4: Recovered chimera (The query is chimeric but still meets acceptance criteria)
-    5: Failed chimera (The query is chimeric and does not meet acceptance criteria)
+    2: Fragmented success (single or multiple copies all fragmented)
+    3: Fragmented failure (single or multiple fragments detected, that do not fulfill acceptance criteria)
+    4: Missing
+    5: Recovered chimera (The query is chimeric but still meets acceptance criteria)
+    6: Failed chimera (The query is chimeric and does not meet acceptance criteria)
     Parameters
     ----------
     hits: mmseqs hits dataframe.
@@ -316,13 +322,15 @@ def categorize_sample(
         chim_cat = chim_cat_dict.get(target, None)
 
         if no_chim_cat is None and chim_cat is None:
-            final_cat[target] = 3
+            final_cat[target] = 4
         elif no_chim_cat == chim_cat:
             final_cat[target] = no_chim_cat
-        elif chim_cat != 3:
-            final_cat[target] = 4
-        else:
+        elif chim_cat in (0, 1, 2):
+            # If the chimera is complete or fragmented, we consider it recovered
             final_cat[target] = 5
+        else:
+            # chimera fails acceptance criteria (3 or 4)
+            final_cat[target] = 6
 
     return final_cat
 
@@ -338,8 +346,8 @@ def parse_args():
     parser.add_argument(
         "--min_tcov",
         type=float,
-        default=0.25,
-        help="Minimum target coverage of the query to consider a hit (default: 0.25)",
+        default=0.0,
+        help="Minimum target coverage of the query to consider a hit (default: 0.0)",
     )
     parser.add_argument(
         "--min_tot_cov",
@@ -402,7 +410,8 @@ def main():
             separator="\t",
             has_header=True,
             skip_rows=2,
-            infer_schema_length=1000,
+            schema_overrides={"% identity": pl.Float64},
+            infer_schema_length=10000,
         )
         chimera_df = pl.read_csv(chimera_path, separator="\t", has_header=False)
         targets = SeqIO.to_dict(SeqIO.parse(targets_path, "fasta"))
@@ -446,7 +455,8 @@ def main():
                     separator="\t",
                     has_header=True,
                     skip_rows=2,
-                    infer_schema_length=1000,
+                    schema_overrides={"% identity": pl.Float64},
+                    infer_schema_length=10000,
                 )
                 chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
                 targets = SeqIO.to_dict(SeqIO.parse(targets_file, "fasta"))
