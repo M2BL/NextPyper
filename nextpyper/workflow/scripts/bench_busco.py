@@ -274,6 +274,7 @@ def categorize_sample(
         .rename(MAGIC_COLS)
         .join(target_lens, on="target")
         .with_columns(
+            fident=pl.col("fident") / 100,
             tcov=(pl.col("tend") - pl.col("tstart")).abs() / pl.col("tlen"),
             qcov=(pl.col("qend") - pl.col("qstart")).abs() / pl.col("qlen"),
         )
@@ -306,6 +307,12 @@ def categorize_sample(
     chim_trees = build_target_trees(df3, min_idt)
     no_chim_trees = build_target_trees(df3.filter(~pl.col("chimera")), min_idt)
 
+    # Compute the number of "noise" sequences
+    # All unaligned sequences count
+    noise = len(hits[:, 0].unique()) - len(predf["query"].unique())
+    # Add sequences that won't be assigned tp any target tree
+    noise += len(df3.filter(pl.col("fident") < min_idt))
+
     # Compute the categories with both sets of trees
     chim_cat_dict = {
         target: find_busco_category(tree, min_length_cov, 0)
@@ -332,7 +339,7 @@ def categorize_sample(
             # chimera fails acceptance criteria (3 or 4)
             final_cat[target] = 6
 
-    return final_cat
+    return final_cat, noise
 
 
 def parse_args():
@@ -415,7 +422,7 @@ def main():
         )
         chimera_df = pl.read_csv(chimera_path, separator="\t", has_header=False)
         targets = SeqIO.to_dict(SeqIO.parse(targets_path, "fasta"))
-        categories = categorize_sample(
+        categories, noise = categorize_sample(
             df,
             chimera_df,
             targets,
@@ -460,7 +467,7 @@ def main():
                 )
                 chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
                 targets = SeqIO.to_dict(SeqIO.parse(targets_file, "fasta"))
-                categories = categorize_sample(
+                categories, noise = categorize_sample(
                     df,
                     chimera_df,
                     targets,
@@ -474,12 +481,13 @@ def main():
                 category_counts = Counter(categories.values())
 
                 # Add a last "pseudo-category" with the counts of extra sequences
-                # that do not hit any target (noise)
-                category_counts[7] = chimera_df.join(
-                    df, left_on="column_2", right_on=tuple(MAGIC_COLS)[0], how="anti"
-                ).shape[0]
+                # that do not hit any target (noise) or meet idt criteria.
+                category_counts[7] = noise
 
-                categories = "\t".join(str(category_counts.get(i, 0)) for i in range(7))
+                categories = "\t".join(
+                    str(category_counts.get(i, 0))
+                    for i in range(max(category_counts) + 1)
+                )
                 out_file.write(f"{sample_name}\t{categories}\n")
 
 
