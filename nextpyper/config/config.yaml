@@ -28,6 +28,8 @@ nextpyper:
                 max_intron_size: auto
             output:
                 max_extensions: 5
+        seeds:
+            min_sister_sample_freq: 0.5
         saute:
             target_cov: 0.2
         mmseqs_matching:

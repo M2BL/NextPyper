@@ -54,6 +54,8 @@ rule seeds_collection:
         ),
     output:
         seeds=expand(outdir / "saute/seeds/{sample}.fasta", sample=sample_list),
+    params:
+        min_sister_freq=min_sister_sample_freq,
     log:
         expand(
             outdir / "logs/clustering/seed_collection/{sample}.cov", sample=sample_list
