@@ -32,6 +32,8 @@ nextpyper:
             min_sister_sample_freq: 0.5
         saute:
             target_cov: 0.2
+            primary_target_depth: 5
+            secondary_target_depth: 10
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
             evalue: 1.000E-9

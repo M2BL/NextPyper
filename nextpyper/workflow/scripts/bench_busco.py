@@ -270,7 +270,7 @@ def categorize_sample(
 
     # Add tlen, tcov and qcov to the hits table
     predf = (
-        hits.select(MAGIC_COLS)
+        hits.select(*MAGIC_COLS.keys())
         .rename(MAGIC_COLS)
         .join(target_lens, on="target")
         .with_columns(
