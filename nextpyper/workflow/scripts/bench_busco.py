@@ -472,6 +472,9 @@ def main():
                 # extra sequences that do not hit any target or meet idt criteria.
                 category_counts[6] = noise
 
+                # Finally, add the total number of sequences in the assembly
+                category_counts[7] = len(chimera_df)
+
                 categories = "\t".join(
                     str(category_counts.get(i, 0))
                     for i in range(max(category_counts) + 1)
