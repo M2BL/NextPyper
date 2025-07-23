@@ -26,6 +26,8 @@ from Bio import SeqIO
 import numpy as np
 import polars as pl
 
+from multi_seq_probes import group_probes
+
 # =======================================================================================
 #               CONSTANTS
 # =======================================================================================
@@ -42,7 +44,7 @@ CLUSTER_COLS = [
     "query",
     "centroid",
 ]
-REC_PAT = r"^(.*?)-.*_cov_([\d\.]+)$"
+REC_PAT = r"^(.*?)-(.*?)_.*_cov_([\d\.]+)$"
 
 # =============================================================================
 #                FUNCTIONS
@@ -53,7 +55,10 @@ def snakemake_call(snakemake):
 
     cluster_tables_dir = snakemake.input.cluster_tables
     sample_probes_dir = snakemake.input.samples
+    probes_path = snakemake.input.probes
     seeds_out = snakemake.output.seeds
+    probes_pattern = snakemake.params.pattern
+    multi_probes = snakemake.params.is_multi
     min_sister_freq = snakemake.params.min_sister_freq
     cov_log_dir = Path(snakemake.log[0]).parent
 
@@ -65,6 +70,20 @@ def snakemake_call(snakemake):
         }
         for sample in map(Path, sample_probes_dir)
     }
+
+    # Read the probes in order to supplement the seeds in case they are missing
+    probes = list(SeqIO.parse(probes_path, "fasta"))
+    if multi_probes:
+        probes_dict = group_probes(probes, probes_pattern)
+    else:
+        probe_pat = re.compile(probes_pattern)
+        probes_dict = {probe_pat.search(probe.id)[1]: [probe] for probe in probes}
+
+    # Reformat the probes name to follow the seeds pattern
+    for probe, recs in probes_dict.items():
+        for rec in recs:
+            rec.id = f"{rec.id}-{probe}_EDGE_0_length_{len(rec)}_cov_0.0"
+            rec.name = rec.description = ""
 
     pat = re.compile(REC_PAT)
     probe_tables = {}
@@ -112,7 +131,7 @@ def snakemake_call(snakemake):
 
             # Compute median coverage observed for sample sequences
             med_cov = np.median(
-                [float(pat.search(rec.id)[2]) for rec in sample_seeds[sample]]
+                [float(pat.search(rec.id)[3]) for rec in sample_seeds[sample]]
             )
             (cov_log_dir / f"{sample}.cov").write_text(f"{med_cov}")
 
@@ -131,6 +150,11 @@ def snakemake_call(snakemake):
                 .iter_rows()
             ):
                 sample_seeds[sample].append(sample_recs[inter_sample][probe][rec])
+
+            # Finally, add the probes that were not present in the sample seeds.
+            covered_probes = {pat.search(seed.id)[2] for seed in sample_seeds[sample]}
+            for missing_probe in set(probes_dict) - covered_probes:
+                sample_seeds[sample].extend(probes_dict[missing_probe])
 
     # Write the seeds for all the samples
     seeds_out_dir = Path(seeds_out[0]).parent
