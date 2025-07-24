@@ -9,7 +9,24 @@
 #       All rights reserved.
 
 """
-Collect the potentially informative seeds for saute assembly based on vsearch clustering.
+This module does two tasks in preparation for assembly with saute:
+
+1. Collects potentially informative seeds based on vsearch clustering.
+2. A Heuristic computes the kmer sizes based on the depth observed during the seeds assembly.
+
+The seeds for a given sample are composed of:
+    - The seeds assembled for that sample (intra-seeds).
+    - The seeds of "sister-samples" (inter-seeds).
+    - The probes sequences for those probes that were not represented already
+      in the intra or inter-seeds.
+
+#ToDo: Expand the docstring to include more details about the sister samples and inter-seeds.
+
+The computation of the kmer sizes is based on the depth observed during the seeds assembly.
+The read median depth of the sample observed during assembly is computed from the kmer depth
+and kmer size found during seeds assembly. The heuristic consists in computing the primary
+and secondary kmer sizes by targeting a given primary and secondary depth. The kmer sizes
+are constrained to a range of values defined in the heuristic parameters.
 """
 
 __version__ = "0.1"
@@ -19,6 +36,7 @@ __version__ = "0.1"
 # =======================================================================================
 
 from pathlib import Path
+from typing import TypedDict
 from collections import Counter, defaultdict
 import json
 import re
@@ -49,68 +67,117 @@ CLUSTER_COLS = [
 REC_PAT = r"^(.*?)-(.*?)_.*_cov_([\d\.]+)$"
 
 # =============================================================================
+#                CLASSES
+# =============================================================================
+
+
+class KmerParams(TypedDict):
+    """Parameters for kmer size computation."""
+
+    primary_target_depth: int
+    secondary_target_depth: int
+    k1_min: float
+    k1_max: float
+    k2_min: float
+    k2_max: float
+
+
+# =============================================================================
 #                FUNCTIONS
 # =============================================================================
 
 
-def saute_kmer_params(wildcards, input):
-    # Read the median kmer cov in spades scaffolds
-    med_cov = float(Path(input.cov).read_text())
-    # Read the read lenght of reads
-    with open(input.json) as file:
+def get_spades_kmer_size(spades_folder: Path) -> int:
+    """Get the kmer size used by spades."""
+    kspades = one(spades_folder.glob("K*/final_contigs.paths")).parent.name[1:]
+    return int(kspades)
+
+
+def get_read_length(read_stats: Path) -> int:
+    """Get the read length from the fastp report."""
+    with open(read_stats) as file:
         summary = json.load(file)
-        L = int(summary["summary"]["after_filtering"]["read2_mean_length"])
+        return int(summary["summary"]["after_filtering"]["read2_mean_length"])
 
-    # Read the Kmer size used by spades
-    spades_folder = outdir / f"assembled/spades/{wildcards.sample}"
-    kspades = int(one(spades_folder.glob("K*/final_contigs.paths")).parent.name[1:])
 
-    # Compute median depth observed
+def write_kmer_params(kmer_results: dict, outfile: Path) -> None:
+    """Write the kmer results to a log file."""
+
+    with open(outfile, "w") as file:
+        json.dump(kmer_results, file, indent=4)
+
+
+def compute_saute_kmers(
+    med_cov: float, L: int, kspades: int, kmer_params: KmerParams
+) -> str:
+    """Compute the kmer sizes to be used by saute based on the median coverage observed by
+    spades, read length, and the target depths for primary and secondary kmers. The kmer
+    sizes are constrained to a range of values defined in the heuristic parameters."""
+
+    # Compute median depth observed in base space
     read_med_cov = med_cov * L / (L - kspades + 1)
 
-    # Compute kmer sizes for the given targets
-    k2nd = int(L * (1 - (secondary_target_depth / read_med_cov)) + 1)
-    k1st = int(L * (1 - (primary_target_depth / read_med_cov)) + 1)
+    # Compute kmer sizes for the given targets depths
+    k1 = int(L * (1 - (kmer_params["primary_target_depth"] / read_med_cov)) + 1)
+    k2 = int(L * (1 - (kmer_params["secondary_target_depth"] / read_med_cov)) + 1)
 
-    # Adjust kmer to ranges kmer: 1st [0.5 - 0.8]L, 2nd [0.15 - 0.3]L
-    k2nd_min, k2nd_max = int(L * 0.15), int(L * 0.3)
-    k1st_min, k1st_max = int(L * 0.5), int(L * 0.8)
+    # Constrain the kmer sizes to "sane" ranges (defined in the parameters):
+    k1_min, k1_max = int(L * kmer_params["k1_min"]), int(L * kmer_params["k1_max"])
+    k2_min, k2_max = int(L * kmer_params["k2_min"]), int(L * kmer_params["k2_max"])
 
-    if k2nd < k2nd_min:
-        k2nd = k2nd_min
-    elif k2nd > k2nd_max:
-        k2nd = k2nd_max
+    if k2 < k2_min:
+        k2 = k2_min
+    elif k2 > k2_max:
+        k2 = k2_max
 
-    if k1st < k1st_min:
-        k1st = k1st_min
-    elif k1st > k1st_max:
-        k1st = k1st_max
+    if k1 < k1_min:
+        k1 = k1_min
+    elif k1 > k1_max:
+        k1 = k1_max
 
     # Cap secondary kmer on 21 and ensure odd kmers
-    k2nd = 21 if k2nd < 21 else k2nd
-    k2nd = k2nd + 1 if k2nd % 2 == 0 else k2nd
-    k1st = k1st + 1 if k1st % 2 == 0 else k1st
+    k2 = 21 if k2 < 21 else k2
+    k2 = k2 - 1 if k2 % 2 == 0 else k2
+    k1 = k1 - 1 if k1 % 2 == 0 else k1
 
-    return f"--kmer {k1st} --secondary_kmer {k2nd}"
+    # Pack the results to log them later
+    kmer_results = {
+        "read_med_cov": read_med_cov,
+        "primary_target_depth": kmer_params["primary_target_depth"],
+        "secondary_target_depth": kmer_params["secondary_target_depth"],
+        "k1_min": k1_min,
+        "k1_max": k1_max,
+        "k2_min": k2_min,
+        "k2_max": k2_max,
+        "k1": k1,
+        "k2": k2,
+    }
+
+    return kmer_results
 
 
 def snakemake_call(snakemake):
 
+    # Read inputs for seed collection
     cluster_tables_dir = snakemake.input.cluster_tables
     sample_probes_dir = snakemake.input.samples
-    spades_folders = snakemake.input.spades_folders
     probes_path = snakemake.input.probes
 
+    # Read inputs for saute kmer size computation
+    spades_folders = snakemake.input.spades_folders
+    read_stats = snakemake.input.read_stats
+
+    # Read outputs
     seeds_out = snakemake.output.seeds
     saute_params = snakemake.output.saute_params
 
+    # Params for seed collection
     probes_pattern = snakemake.params.pattern
     multi_probes = snakemake.params.is_multi
-    primary_target_depth = snakemake.params.primary_target_depth
-    secondary_target_depth = snakemake.params.secondary_target_depth
-
     min_sister_freq = snakemake.params.min_sister_freq
-    cov_log_dir = Path(snakemake.log[0]).parent
+
+    # Params for saute kmer size computation
+    heuristic_params = snakemake.params.heuristic_params
 
     # Parse the records fo all the samples
     sample_recs = {
@@ -123,11 +190,27 @@ def snakemake_call(snakemake):
 
     pat = re.compile(REC_PAT)
 
+    ## Kmer size parameters computation
+    # Organize the Spades folders and fastp reports to make them accessible by sample
+    spades_folders = {folder.name: folder for folder in map(Path, spades_folders)}
+    read_lengths = {file.stem: get_read_length(file) for file in map(Path, read_stats)}
+    kmer_params_out = {file.stem: file for file in map(Path, saute_params)}
+
+    # Compute the kmer sizes to be used by saute for each sample
     for sample, probe_recs in sample_recs.items():
         med_cov = np.median(
             [float(pat.search(rec)[3]) for recs in probe_recs.values() for rec in recs]
         )
+        L = read_lengths[sample]
+        kspades = get_spades_kmer_size(spades_folders[sample])
+        kmer_results = compute_saute_kmers(med_cov, L, kspades, heuristic_params)
 
+        kmer_log = {"read_length": L, "kspades": kspades}
+        kmer_log.update(kmer_results)
+
+        write_kmer_params(kmer_log, kmer_params_out[sample])
+
+    ## Seed collection
     # Read the probes in order to supplement the seeds in case they are missing
     probes = list(SeqIO.parse(probes_path, "fasta"))
     if multi_probes:
@@ -184,12 +267,6 @@ def snakemake_call(snakemake):
         for sample in sample_recs:
             # First, add the seeds from the current sample
             sample_seeds[sample].extend(sample_recs[sample].get(probe, {}).values())
-
-            # Compute median coverage observed for sample sequences
-            med_cov = np.median(
-                [float(pat.search(rec.id)[3]) for rec in sample_seeds[sample]]
-            )
-            (cov_log_dir / f"{sample}.cov").write_text(f"{med_cov}")
 
             # Find the clusters that sister samples matched
             clusters = (

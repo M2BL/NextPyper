@@ -45,6 +45,7 @@ rule vsearch_clustering:
 
 rule seeds_collection:
     input:
+        probes=probes_path.resolve(),
         cluster_tables=expand(
             outdir / "clustering/cluster_tables/{probe}.tsv", probe=probes_list
         ),
@@ -53,19 +54,18 @@ rule seeds_collection:
             sample=sample_list,
         ),
         spades_folders=expand(outdir / "assembled/spades/{sample}", sample=sample_list),
-        probes=probes_path.resolve(),
+        read_stats=expand(
+            outdir / "logs/preprocessing/fastp/{sample}.json", sample=sample_list
+        ),
     output:
         seeds=expand(outdir / "saute/seeds/{sample}.fasta", sample=sample_list),
-        saute_params=expand(outdir / "saute/params/{sample}.json", sample=sample_list),
+        saute_params=expand(
+            outdir / "logs/saute/kmer_params/{sample}.json", sample=sample_list
+        ),
     params:
         min_sister_freq=min_sister_sample_freq,
         pattern=pattern,
         is_multi=multi_probes,
-        primary_target_depth=primary_target_depth,
-        secondary_target_depth=secondary_target_depth,
-    # log:
-    #     expand(
-    #         outdir / "logs/clustering/seed_collection/{sample}.cov", sample=sample_list
-    #     ),
+        heuristic_params=saute_heuristic_params,
     script:
         "../../../src/seeds_collection.py"

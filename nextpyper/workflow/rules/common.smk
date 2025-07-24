@@ -80,10 +80,11 @@ homolog_scf_min_idt = lookup("homolog_scf_min_idt", within=mmseqs_filt)
 # Seeds
 min_sister_sample_freq = lookup("seeds/min_sister_sample_freq", within=pipeline)
 
+# Saute heuristic:
+saute_heuristic_params = lookup("saute/heuristic", within=pipeline)
+
 # Saute
-saute_target_cov = lookup("saute/target_cov", within=pipeline)
-primary_target_depth = lookup("saute/primary_target_depth", within=pipeline)
-secondary_target_depth = lookup("saute/secondary_target_depth", within=pipeline)
+saute_target_cov = lookup("saute/assembly/target_cov", within=pipeline)
 SAUTE_PRE_FIX_PAT = r"^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 SAUTE_POST_FIX_PAT = r"^(?P<sample1>.*?)\|.*?-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 
