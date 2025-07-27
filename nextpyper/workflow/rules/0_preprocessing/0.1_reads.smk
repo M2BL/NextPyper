@@ -37,6 +37,8 @@ rule fastp_pe:
 
 
 checkpoint prepare_cps:
+    input:
+        cp_refs_map.resolve(),
     output:
         outdir / "preprocessed/ref_cps.fasta",
     log:
@@ -48,13 +50,14 @@ checkpoint prepare_cps:
     run:
         out_cps = Path(output[0])
         min_probes_cov = params.min_probes_cov
+        custom_cps = params.custom
 
         with open(log[0], "w") as outlog:
             sys.stdout = sys.stderr = outlog
             cps = []
 
             if use_ref_cps:
-                kp2seqid = pl.read_csv(cp_refs_map)
+                kp2seqid = pl.read_csv(Path(input[0]))
                 probe_cov = Counter(probe.split("_")[0] for probe in probes)
                 selected_cps = {
                     sp for sp, count in probe_cov.items() if count >= min_probes_cov
