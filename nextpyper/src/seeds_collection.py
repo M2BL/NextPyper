@@ -236,10 +236,9 @@ def snakemake_call(snakemake):
         ).with_columns(sample=pl.col("query").str.extract(REC_PAT))
 
         for sample in sample_recs:
-            clusters = (
+            clusters = set(
                 probe_tables[probe.stem]
-                .filter(pl.col("sample") == sample)
-                .select("cluster_id")
+                .filter(pl.col("sample") == sample)["cluster_id"]
                 .unique()
             )
             sister_samples[sample].update(
