@@ -34,10 +34,10 @@ nextpyper:
             heuristic:
                 primary_target_depth: 15
                 secondary_target_depth: 30
-                k1_min: 0.35
-                k1_max: 0.8
+                k1_min: 0.3
+                k1_max: 0.5
                 k2_min: 0.15
-                k2_max: 0.25
+                k2_max: 0.2
             assembly:
                 target_cov: 0.2
         mmseqs_matching:
