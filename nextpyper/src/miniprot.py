@@ -14,18 +14,20 @@ The class OverlappingCds is used after the vsearch clustering of SAUTE scaffolds
 It maps all probe versions against the consensus sequences of vsearch clusters. It seeks
 to find the best mapping probe version over all the consensus sequences and use it as
 a common reference in order to determine which sequences are not overlapping.
-Strictly non-overlapping sequences (there are no bridging scaffolds) are saved in separate
-files.
+Strictly non-overlapping sequences (there are no bridging scaffolds) are saved in separate files.
 Sequences that do not meet miniprot length and similarity thresholds are discarded.
 Exon-intron boundaries are then inferred with miniprot-boundary-scored (https://anaconda.org/bioconda/miniprot-boundary-scorer)
 that rely on a AA substitution matrix.
+The minimum similarity information for miniprot to keep a scaffold is passed via a dictionary with accession names
+as keys and similarity thresholds as values.
 #  Usage example:
     probe_fasta = ".../test_data/test_clustering/probe_3_aa.fasta"
     consensus_contig_fasta = "../test_data/test_clustering/gene_3_consensus.fasta"
     matrix = "../test_data/test_paralogy_2/blosum62.csv"
-    parameters = [8, 0.85, 0.1, 10, 0.7] # See attribute definitions in the MiniprotInit class.
+    thresholds_dict = {"accession_0":0.8, accession_1":0.9, "accession_2":0.75, "accession_3":0.65}}
+    parameters = [8, 0.1, 10, 0.7] # See attribute definitions in the MiniprotInit class.
     # load the data, perform the computation in order to separate non-overlapping sequences:
-    olc = OverlappingCds(probe_fasta, consensus_contig_fasta, matrix, *parameters)
+    olc = OverlappingCds(probe_fasta, consensus_contig_fasta, matrix, thresholds_dict, *parameters)
     # Non overlapping sets of sequences are saved in a separate file.
     out_dir = "../test_data/test_clustering/nonoverlapping"
     min_exon_length = 10
@@ -156,14 +158,13 @@ def run_miniprot(
     probe_path: Path,
     scaffold_path: Path,
     treads=2,
-    min_similarity=0.80,
     min_coverage=0.01,
 ) -> StringIO:
     """
     Wrapper for running miniprot.
     :return:
     """
-    miniprot_cmd = f"miniprot -t {treads} --gff --aln --outn 1 -J 50 --outs {min_similarity} --outc {min_coverage} {scaffold_path} {probe_path}".split()
+    miniprot_cmd = f"miniprot -t {treads} --gff --aln --outn 1 -J 50 -E 3 --outc {min_coverage} {scaffold_path} {probe_path}".split()
     try:
         miniprot = subprocess.run(
             miniprot_cmd,
@@ -435,15 +436,14 @@ class MiniprotInit:
     ----------
     -probes_fasta: path to the amino acid probes fasta file (multiprobe)
     -scaffold_fasta: path to the nucleotide scaffold fasta file.
+    -min_global_identity_dict: dictionary of thresholds identity over all several fragments.
     -treads: for miniprot.
-    -min_probe_scaffold_sim: mapping similarity for miniprot.
     -min_fragment_cov: fraction of the probe covered by a contig for miniprot.
     -min_exonic_length: minimum length of concatenated exons after trimming used for saving.
-    -min_global_identity: identity over all several fragments. Should be slightly lower than min_probe_contig_sim.
 
     Post Init
     -probes_path: probe_fasta string converted to Path.
-    -scaffold_path: cscaffold_fasta string converted to Path.
+    -scaffold_path: scaffold_fasta string converted to Path.
     -probes_dict: dict of probe name as key and SeqRecord as value.
     -scaffold_dict: dict ofscaffold name as key and SeqRecord as value.
 
@@ -452,11 +452,10 @@ class MiniprotInit:
     probes_fasta: str
     scaffold_fasta: str
     substitution_matrix: str
+    min_global_identity_dict: dict[str:float]
     treads: int = field(default=8)
-    min_probe_scaffold_sim: float = field(default=0.80)
     min_fragment_cov: float = field(default=0.05)
     min_exonic_length: int = field(default=200)
-    min_global_identity: float = field(default=0.00)
     probes_path: Path = field(init=False, repr=False)
     scaffold_path: Path = field(init=False, repr=False)
     probes_dict: dict[str, SeqRecord] = field(
@@ -499,7 +498,6 @@ class MiniprotInit:
             probe_path_temp,
             scaffold_path_temp,
             self.treads,
-            self.min_probe_scaffold_sim,
             self.min_fragment_cov,
         )
         return miniprot_out
@@ -524,7 +522,7 @@ class OverlappingCds(MiniprotInit):
     """
 
     user_probe: str = field(default=None)
-    # min_overlapping = 0.1
+
     miniprot_out: Optional[defaultdict[str, dict[str, StringIO]]] = field(
         init=False, repr=False, default_factory=lambda: defaultdict(dict)
     )
@@ -562,6 +560,8 @@ class OverlappingCds(MiniprotInit):
                     SeqIO.write(record, probe_fasta, "fasta")
                     tmp_probe_paths[probe_name] = probe_fasta
             for scaffold, record in self.scaffold_dict.items():
+                accession = scaffold.split('|')[0]
+
                 print(f"working on scaffold {scaffold}")
                 for probe_name, probe_path in tmp_probe_paths.items():
                     print(f"working on probe {probe_name}")
@@ -578,10 +578,10 @@ class OverlappingCds(MiniprotInit):
                         self.miniprot_out[scaffold] = {probe_name: miniprot_result}
                     cds = Cds(miniprot_result)
                     cds.probe_name = probe_name
-
+                    print(f"{accession=} with identity {self.min_global_identity_dict.get(accession, 0.85)}")
                     if (
                         not cds.is_empty()
-                        and cds.global_identity >= self.min_global_identity
+                        and cds.global_identity >= self.min_global_identity_dict.get(accession, 0.85)
                     ):
                         self.cds_dict[scaffold].append(cds)
                 print("cds", self.cds_dict.get(scaffold))
@@ -899,7 +899,6 @@ def main():
         threads=1,
         params=Run(
             substitution_matrix=sys.argv[3],
-            min_probe_scaffold_sim=0.85,
             min_fragment_cov=0.1,
             min_exonic_length=10,
             min_global_identity=0.6,
@@ -909,17 +908,26 @@ def main():
     snakemake_call(snakemake)
 
 def debug():
-    parameters = [8, 0.85, 0.1, 10, 0.6,]
+    from random import uniform
+    print('here')
+    def mk_threshold_dict(fasta:str):
+        records = SeqIO.parse(fasta, "fasta")
+        return {rec.id.split('|')[0]:uniform(0.6,1) for rec in records}
+
     matrix = "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/blosum62.csv"
-    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/9211_probes.fasta"
-    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/9211_scfs.fasta"
-    olc = OverlappingCds(probe_file, scfs,matrix, *parameters)
+    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/5168_probe.fasta"
+    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/5168_scfs2.fasta"
+    parameters = [mk_threshold_dict(scfs), 8,  0.1, 10,]
+    olc = OverlappingCds(probe_file, scfs, matrix, *parameters)
     print("overlapping:", olc)
     outdir = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/outdir")
     olc.save_records(outdir, 10)
 
 if __name__ == "__main__":
-    if "snakemake" in globals():
-        snakemake_call(snakemake)
-    else:
-        main()
+    print('YO')
+    debug()
+    # if "snakemake" in globals():
+    #     snakemake_call(snakemake)
+    # else:
+    #     debug()
+    #     #main()

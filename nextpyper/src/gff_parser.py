@@ -243,6 +243,7 @@ class Cds:
             probe_name = target_splt[0]
             query_start = int(target_splt[1])
             query_end = int(target_splt[2])
+            print(f"{item["Identity"]=}")
             if item["feature"] == "CDS":
                 fragment = Fragment(
                     contig,
