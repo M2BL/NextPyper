@@ -445,7 +445,7 @@ class MiniprotInit:
     -probes_path: probe_fasta string converted to Path.
     -scaffold_path: scaffold_fasta string converted to Path.
     -probes_dict: dict of probe name as key and SeqRecord as value.
-    -scaffold_dict: dict ofscaffold name as key and SeqRecord as value.
+    -scaffold_dict: dict of scaffold name as key and SeqRecord as value.
 
     """
 
@@ -578,7 +578,7 @@ class OverlappingCds(MiniprotInit):
                         self.miniprot_out[scaffold] = {probe_name: miniprot_result}
                     cds = Cds(miniprot_result)
                     cds.probe_name = probe_name
-                    print(f"{accession=} with identity {self.min_global_identity_dict.get(accession, 0.85)}")
+                    #print(f"{accession=} with identity {self.min_global_identity_dict.get(accession, 0.85)}")
                     if (
                         not cds.is_empty()
                         and cds.global_identity >= self.min_global_identity_dict.get(accession, 0.85)
@@ -909,7 +909,6 @@ def main():
 
 def debug():
     from random import uniform
-    print('here')
     def mk_threshold_dict(fasta:str):
         records = SeqIO.parse(fasta, "fasta")
         return {rec.id.split('|')[0]:uniform(0.6,1) for rec in records}
@@ -924,10 +923,8 @@ def debug():
     olc.save_records(outdir, 10)
 
 if __name__ == "__main__":
-    print('YO')
-    debug()
-    # if "snakemake" in globals():
-    #     snakemake_call(snakemake)
-    # else:
-    #     debug()
-    #     #main()
+    #debug()
+    if "snakemake" in globals():
+        snakemake_call(snakemake)
+    else:
+         main()

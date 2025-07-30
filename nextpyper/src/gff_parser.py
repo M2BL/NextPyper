@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 #
-#    Copyright (C) 2024
+#    Copyright (C) 2025
 #    Simón Villanueva CORRALES: simon.corrales@ibot.cas.cz
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
 #       All rights reserved.
 
-__version__ = "0.1"
+__version__ = "0.2"
 
 # =======================================================================================
 #               IMPORTS
@@ -180,11 +180,11 @@ class Cds:
                 or line.startswith("##AAS")
             ):
                 continue
-            # target (contig) nucleotides
+            # target (scaffold) nucleotides
             if line.startswith("##ATN"):
                 self.target_nucleotides = line.removeprefix("##ATN\t").replace("\n", "")
                 continue
-            # target (contig) amino acids
+            # target (scaffold) amino acids
             if line.startswith("##ATA"):
                 self.target_AAs = line.removeprefix("##ATA\t").replace("\n", "")
                 continue
