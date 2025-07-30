@@ -28,8 +28,18 @@ nextpyper:
                 max_intron_size: auto
             output:
                 max_extensions: 5
+        seeds:
+            min_sister_sample_freq: 0.5
         saute:
-            target_cov: 0.2
+            heuristic:
+                primary_target_depth: 15
+                secondary_target_depth: 30
+                k1_min: 0.35
+                k1_max: 0.8
+                k2_min: 0.15
+                k2_max: 0.25
+            assembly:
+                target_cov: 0.2
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
             evalue: 1.000E-9

@@ -14,7 +14,7 @@ import os
 import re
 import pandas as pd
 import polars as pl
-from more_itertools import last
+from more_itertools import last, one
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio import Entrez
@@ -44,7 +44,7 @@ use_ref_cps = config["args"]["use_ref_cps"]
 custom_cps = Path(custom_cps) if (custom_cps := config["args"]["custom_cps"]) else None
 
 blosum62 = workflow.source_path(config["blosum62"])
-cp_refs_map = workflow.source_path(config["cp_refs_map"])
+cp_refs_map = Path(workflow.source_path(config["cp_refs_map"]))
 
 ## Read Workflow parameters:
 pipeline = lookup("pipeline", within=config)
@@ -77,8 +77,14 @@ seeds_scf_min_idt = lookup("seeds_scf_min_idt", within=mmseqs_filt)
 homolog_scf_min_cov = lookup("homolog_scf_min_cov", within=mmseqs_filt)
 homolog_scf_min_idt = lookup("homolog_scf_min_idt", within=mmseqs_filt)
 
+# Seeds
+min_sister_sample_freq = lookup("seeds/min_sister_sample_freq", within=pipeline)
+
+# Saute heuristic:
+saute_heuristic_params = lookup("saute/heuristic", within=pipeline)
+
 # Saute
-saute_target_cov = lookup("saute/target_cov", within=pipeline)
+saute_target_cov = lookup("saute/assembly/target_cov", within=pipeline)
 SAUTE_PRE_FIX_PAT = r"^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 SAUTE_POST_FIX_PAT = r"^(?P<sample1>.*?)\|.*?-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 

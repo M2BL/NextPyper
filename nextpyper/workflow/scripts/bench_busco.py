@@ -237,16 +237,21 @@ def categorize_sample(
     min_length_cov: float = 0.7,
     min_idt: float = 0.99,
     include_borderline: bool = False,
-) -> dict[str, int]:
+) -> tuple[dict[str, int], int, int]:
     """
+    Computes target-centric categories for a sample based on magicblast hits from a given assembly
+    and the reference targets.
+
     Category codes are defined as:
     0: Complete single copy
     1: Complete and duplicated
     2: Fragmented success (single or multiple copies all fragmented)
     3: Fragmented failure (single or multiple fragments detected, that do not fulfill acceptance criteria)
     4: Missing
-    5: Recovered chimera (The query is chimeric but still meets acceptance criteria)
-    6: Failed chimera (The query is chimeric and does not meet acceptance criteria)
+
+    Assembly-centric categories are also computed: Number of chimeric sequences found by
+    vsearch and the number of noise sequences (sequences that do not hit any target or do not meet the idt criteria).
+
     Parameters
     ----------
     hits: mmseqs hits dataframe.
@@ -257,7 +262,7 @@ def categorize_sample(
     min_length_cov: minimum total (considering multiple hits if needed) target coverage to consider the target recovered.
     include_borderline: whether to include borderline chimeric cases as chimeras (see vsearch documentation)
     ----------
-    Returns the category code
+    Returns the category code dictionary, number of chimeras and number of noise sequences.
     -------
     """
 
@@ -270,7 +275,7 @@ def categorize_sample(
 
     # Add tlen, tcov and qcov to the hits table
     predf = (
-        hits.select(MAGIC_COLS)
+        hits.select(*MAGIC_COLS.keys())
         .rename(MAGIC_COLS)
         .join(target_lens, on="target")
         .with_columns(
@@ -291,55 +296,35 @@ def categorize_sample(
     ).rename({"column_2": "query", "column_18": "chimera"})
 
     if include_borderline:
-        df3 = df2.join(
-            chimera_subset_df.with_columns_seq(chimera=pl.col("chimera") != "N"),
-            on="query",
-            how="left",
-        ).fill_null(False)
+        final_chimera_df = chimera_subset_df.with_columns_seq(
+            chimera=pl.col("chimera") != "N"
+        ).filter(pl.col("chimera"))
     else:
-        df3 = df2.join(
-            chimera_subset_df.with_columns_seq(chimera=pl.col("chimera") == "Y"),
-            on="query",
-            how="left",
-        ).fill_null(False)
+        final_chimera_df = chimera_subset_df.with_columns_seq(
+            chimera=pl.col("chimera") == "Y"
+        ).filter(pl.col("chimera"))
+
+    df3 = df2.join(final_chimera_df, on="query", how="anti")
+    n_chimeras = len(final_chimera_df)
 
     # Build target trees with and without chimeras
-    chim_trees = build_target_trees(df3, min_idt)
-    no_chim_trees = build_target_trees(df3.filter(~pl.col("chimera")), min_idt)
+    no_chim_trees = build_target_trees(df3, min_idt)
 
     # Compute the number of "noise" sequences
     # All unaligned sequences count
     noise = len(hits[:, 0].unique()) - len(predf["query"].unique())
-    # Add sequences that won't be assigned tp any target tree
+    # Add sequences that won't be assigned to any target tree
     noise += len(df3.filter(pl.col("fident") < min_idt))
 
-    # Compute the categories with both sets of trees
-    chim_cat_dict = {
-        target: find_busco_category(tree, min_length_cov, 0)
-        for target, tree in chim_trees.items()
-    }
+    # Compute the categories from the trees
     no_chim_cat_dict = {
         target: find_busco_category(tree, min_length_cov, 0)
         for target, tree in no_chim_trees.items()
     }
 
-    final_cat = {}
-    for target in targets:
-        no_chim_cat = no_chim_cat_dict.get(target, None)
-        chim_cat = chim_cat_dict.get(target, None)
+    final_cat = {target: no_chim_cat_dict.get(target, 4) for target in targets}
 
-        if no_chim_cat is None and chim_cat is None:
-            final_cat[target] = 4
-        elif no_chim_cat == chim_cat:
-            final_cat[target] = no_chim_cat
-        elif chim_cat in (0, 1, 2):
-            # If the chimera is complete or fragmented, we consider it recovered
-            final_cat[target] = 5
-        else:
-            # chimera fails acceptance criteria (3 or 4)
-            final_cat[target] = 6
-
-    return final_cat, noise
+    return final_cat, n_chimeras, noise
 
 
 def parse_args():
@@ -467,7 +452,7 @@ def main():
                 )
                 chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
                 targets = SeqIO.to_dict(SeqIO.parse(targets_file, "fasta"))
-                categories, noise = categorize_sample(
+                categories, n_chimeras, noise = categorize_sample(
                     df,
                     chimera_df,
                     targets,
@@ -480,9 +465,15 @@ def main():
                 # Summarize categories and write to output
                 category_counts = Counter(categories.values())
 
-                # Add a last "pseudo-category" with the counts of extra sequences
-                # that do not hit any target (noise) or meet idt criteria.
-                category_counts[7] = noise
+                # Add number of chimeras as extra assembly-centric category
+                category_counts[5] = n_chimeras
+
+                # Add a last noise assembly-centric category with the counts of
+                # extra sequences that do not hit any target or meet idt criteria.
+                category_counts[6] = noise
+
+                # Finally, add the total number of sequences in the assembly
+                category_counts[7] = len(chimera_df)
 
                 categories = "\t".join(
                     str(category_counts.get(i, 0))
