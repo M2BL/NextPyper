@@ -58,7 +58,7 @@ def find_sim_threshold_per_acc(
     mmseqs_idt_threshold: float = 0.6,
     min_cov: float = 0.5,
     flattening_value: float = 0.1,
-) -> float:
+) -> tuple[float, float] | None:
     """
     Given a similarity log computed by mmseqs2, fit a Gaussian distribution to the distribution of similarity values (histogram).
     Compute the mean and standard deviation of the Gaussian distribution.
@@ -77,9 +77,15 @@ def find_sim_threshold_per_acc(
         *[(x, y) for x, y in zip(bins[:-1], counts) if y >= min_count]
     )
     initial = [np.median(filtered_bins), np.std(filtered_bins), max(filtered_counts)]
-    gau_params, gau_covariance = curve_fit(
-        gaussian, filtered_bins, filtered_counts, p0=initial
-    )
+    bounds = [(mmseqs_idt_threshold, 0.0, 0.0), (1.0, 1.0, np.inf)]
+
+    try:
+        gau_params, gau_covariance = curve_fit(
+            gaussian, filtered_bins, filtered_counts, p0=initial, bounds=bounds
+        )
+    except (TypeError, RuntimeError, ValueError):
+        return None
+
     mu, sigma, _ = gau_params
     return mu, sigma
 
@@ -97,16 +103,22 @@ def snakemake_call(snakemake):
         for sample in map(Path, mmseq_tables)
     }
     samples_thresholds = {
-        sample: mu - 2 * abs(sigma) for sample, (mu, sigma) in samples_fit.items()
+        sample: params[0] - 2 * abs(params[1])
+        for sample, params in samples_fit.items()
+        if params
     }
 
     with out_path.open("w") as f:
         json.dump(samples_thresholds, f, indent=4)
 
     with open(snakemake.log[0], "w") as outlog:
-        outlog.write("sample\tmu\t\tsigma\n")
-        for sample, (mu, sigma) in samples_fit.items():
-            outlog.write(f"{sample}\t{mu:.4f}\t{sigma:.4f}\n")
+        outlog.write("sample\tmu\tsigma\n")
+        for sample, params in samples_fit.items():
+            if params:
+                mu, sigma = params
+                outlog.write(f"{sample}\t{mu:.4f}\t{sigma:.4f}\n")
+            else:
+                outlog.write(f"{sample}\t{np.nan}\t{np.nan}\n")
 
 
 def main(): ...

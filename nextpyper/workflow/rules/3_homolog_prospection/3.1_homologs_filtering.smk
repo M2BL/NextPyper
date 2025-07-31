@@ -65,7 +65,7 @@ rule estimate_divergence:
     output:
         outdir / "homolog_prospection/region_separation/divergence_thresholds.json",
     log:
-        outdir / "homolog_prospection/region_separation/divergence_estimates.tsv",
+        outdir / "logs/homolog_prospection/region_separation/divergence_estimates.tsv",
     params:
         min_idt=homolog_scf_min_idt,
         min_cov=div_est_min_cov,
