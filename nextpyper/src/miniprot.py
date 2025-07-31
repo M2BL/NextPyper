@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict, namedtuple
 from io import StringIO
 from itertools import chain
+import json
 from operator import attrgetter, add
 from pathlib import Path
 import subprocess
@@ -76,6 +77,7 @@ MAX_EXPANSION_INTERVAL = (
 # =======================================================================================
 #               FUNCTIONS
 # =======================================================================================
+
 
 def cluster_intervals(intervals: list[Interval]) -> list[Interval]:
     """
@@ -157,14 +159,14 @@ def remove_gff(miniprot_out) -> bytes:
 def run_miniprot(
     probe_path: Path,
     scaffold_path: Path,
-    treads=2,
+    threads=2,
     min_coverage=0.01,
 ) -> StringIO:
     """
     Wrapper for running miniprot.
     :return:
     """
-    miniprot_cmd = f"miniprot -t {treads} --gff --aln --outn 1 -J 50 -E 3 --outc {min_coverage} {scaffold_path} {probe_path}".split()
+    miniprot_cmd = f"miniprot -t {threads} --gff --aln --outn 1 -J 50 -E 3 --outc {min_coverage} {scaffold_path} {probe_path}".split()
     try:
         miniprot = subprocess.run(
             miniprot_cmd,
@@ -287,6 +289,7 @@ class EndPoint:
     """
     Container for start or end of an exon.
     """
+
     idx: int
     name: str
 
@@ -437,7 +440,7 @@ class MiniprotInit:
     -probes_fasta: path to the amino acid probes fasta file (multiprobe)
     -scaffold_fasta: path to the nucleotide scaffold fasta file.
     -min_global_identity_dict: dictionary of thresholds identity over all several fragments.
-    -treads: for miniprot.
+    -threads: for miniprot.
     -min_fragment_cov: fraction of the probe covered by a contig for miniprot.
     -min_exonic_length: minimum length of concatenated exons after trimming used for saving.
 
@@ -453,7 +456,7 @@ class MiniprotInit:
     scaffold_fasta: str
     substitution_matrix: str
     min_global_identity_dict: dict[str:float]
-    treads: int = field(default=8)
+    threads: int = field(default=8)
     min_fragment_cov: float = field(default=0.05)
     min_exonic_length: int = field(default=200)
     probes_path: Path = field(init=False, repr=False)
@@ -497,7 +500,7 @@ class MiniprotInit:
         miniprot_out = run_miniprot(
             probe_path_temp,
             scaffold_path_temp,
-            self.treads,
+            self.threads,
             self.min_fragment_cov,
         )
         return miniprot_out
@@ -560,7 +563,7 @@ class OverlappingCds(MiniprotInit):
                     SeqIO.write(record, probe_fasta, "fasta")
                     tmp_probe_paths[probe_name] = probe_fasta
             for scaffold, record in self.scaffold_dict.items():
-                accession = scaffold.split('|')[0]
+                accession = scaffold.split("|")[0]
 
                 print(f"working on scaffold {scaffold}")
                 for probe_name, probe_path in tmp_probe_paths.items():
@@ -578,10 +581,11 @@ class OverlappingCds(MiniprotInit):
                         self.miniprot_out[scaffold] = {probe_name: miniprot_result}
                     cds = Cds(miniprot_result)
                     cds.probe_name = probe_name
-                    #print(f"{accession=} with identity {self.min_global_identity_dict.get(accession, 0.85)}")
+                    # print(f"{accession=} with identity {self.min_global_identity_dict.get(accession, 0.85)}")
                     if (
                         not cds.is_empty()
-                        and cds.global_identity >= self.min_global_identity_dict.get(accession, 0.85)
+                        and cds.global_identity
+                        >= self.min_global_identity_dict.get(accession, 0.85)
                     ):
                         self.cds_dict[scaffold].append(cds)
                 print("cds", self.cds_dict.get(scaffold))
@@ -858,10 +862,17 @@ def snakemake_call(snakemake):
         outdir = Path(snakemake.output[0])
         scfs = Path(snakemake.input.scfs)
         probes = Path(snakemake.input.probes)
+        div_map = json.loads(Path(snakemake.input.div_map).read_bytes())
 
         outdir.mkdir(parents=True, exist_ok=True)
         if scfs.stat().st_size > 0:
-            olc = OverlappingCds(probes, scfs, treads=threads, **snakemake.params)
+            olc = OverlappingCds(
+                probes,
+                scfs,
+                min_global_identity_dict=div_map,
+                threads=threads,
+                **snakemake.params,
+            )
 
             ## Save scfs
             outdir.mkdir(parents=True, exist_ok=True)
@@ -873,9 +884,9 @@ def snakemake_call(snakemake):
 
 def main():
 
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         print(
-            "Usage: python miniprot.py <probes.fasta> <scfs.fasta> <matrix.csv> <outdir> <miniprot.log>"
+            "Usage: python miniprot.py <probes.fasta> <scfs.fasta> <matrix.csv> <div_map.json> <outdir> <miniprot.log>"
         )
         sys.exit(1)
 
@@ -892,39 +903,53 @@ def main():
             return self._dict[key]
 
     # Mock the snakemake object
+    div_map = json.loads(Path(sys.argv[4]).read_bytes())
+
     snakemake = Run(
         input=Run(probes=sys.argv[1], scfs=sys.argv[2]),
-        output=[sys.argv[4]],
-        log=[sys.argv[5]],
+        output=[sys.argv[5]],
+        log=[sys.argv[6]],
         threads=1,
         params=Run(
             substitution_matrix=sys.argv[3],
             min_fragment_cov=0.1,
             min_exonic_length=10,
-            min_global_identity=0.6,
+            min_global_identity_dict=div_map,
         ),
     )
 
     snakemake_call(snakemake)
 
+
 def debug():
     from random import uniform
-    def mk_threshold_dict(fasta:str):
-        records = SeqIO.parse(fasta, "fasta")
-        return {rec.id.split('|')[0]:uniform(0.6,1) for rec in records}
 
-    matrix = "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/blosum62.csv"
+    def mk_threshold_dict(fasta: str):
+        records = SeqIO.parse(fasta, "fasta")
+        return {rec.id.split("|")[0]: uniform(0.6, 1) for rec in records}
+
+    matrix = (
+        "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/blosum62.csv"
+    )
     probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/5168_probe.fasta"
     scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/5168_scfs2.fasta"
-    parameters = [mk_threshold_dict(scfs), 8,  0.1, 10,]
+    parameters = [
+        mk_threshold_dict(scfs),
+        8,
+        0.1,
+        10,
+    ]
     olc = OverlappingCds(probe_file, scfs, matrix, *parameters)
     print("overlapping:", olc)
-    outdir = Path("/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/outdir")
+    outdir = Path(
+        "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/outdir"
+    )
     olc.save_records(outdir, 10)
 
+
 if __name__ == "__main__":
-    #debug()
+    # debug()
     if "snakemake" in globals():
         snakemake_call(snakemake)
     else:
-         main()
+        main()

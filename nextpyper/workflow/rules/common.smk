@@ -88,9 +88,12 @@ saute_target_cov = lookup("saute/assembly/target_cov", within=pipeline)
 SAUTE_PRE_FIX_PAT = r"^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 SAUTE_POST_FIX_PAT = r"^(?P<sample1>.*?)\|.*?-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 
+# Divergence estimation
+div_est_min_cov = lookup("divergence_estimation/min_cov", within=pipeline)
+div_est_flat_prop = lookup("divergence_estimation/flatenning_prop", within=pipeline)
+
 # Region separation
 reg_sep = lookup("region_separation", within=pipeline)
-min_probe_scaffold_sim = lookup("min_probe_scaffold_sim", within=reg_sep)
 min_fragment_cov = lookup("min_fragment_cov", within=reg_sep)
 min_exonic_length = lookup("min_exonic_length", within=reg_sep)
 
