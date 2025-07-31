@@ -53,3 +53,22 @@ use rule seeds_filtering as homologs_filtering with:
         separate_probes=lambda wildcards: False,
         qpat=lambda wildcards: SAUTE_POST_FIX_PAT,
         tpat=lambda wildcards: pattern,
+
+
+rule estimate_divergence:
+    input:
+        expand(
+            outdir
+            / "logs/homolog_prospection/homologs_filtering/scfs_filtering/{samples}.log",
+            samples=sample_list,
+        ),
+    output:
+        outdir / "homolog_prospection/region_separation/divergence_thresholds.json",
+    log:
+        outdir / "homolog_prospection/region_separation/divergence_estimates.tsv",
+    params:
+        min_idt=homolog_scf_min_idt,
+        min_cov=div_est_min_cov,
+        flattening_prop=div_est_flat_prop,
+    script:
+        "../../../src/divergence_estimation.py"

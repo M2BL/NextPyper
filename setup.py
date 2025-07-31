@@ -58,6 +58,7 @@ setup(
         "biopython>=1.83",
         "numpy>=1.26",
         "scikit-learn>=1.5",
+        "scipy>=1.14",
         "polars>=1.9",
         "intervaltree>=3.1",
         "kmedoids>=0.5.3.1",

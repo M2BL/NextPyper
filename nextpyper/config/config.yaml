@@ -34,15 +34,15 @@ nextpyper:
             heuristic:
                 primary_target_depth: 15
                 secondary_target_depth: 30
-                k1_min: 0.35
-                k1_max: 0.8
+                k1_min: 0.3
+                k1_max: 0.5
                 k2_min: 0.15
-                k2_max: 0.25
+                k2_max: 0.2
             assembly:
                 target_cov: 0.2
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
-            evalue: 1.000E-9
+            evalue: 1.000E-6
             min_orf_len: 15
             sensitivity: 7.5
         homolog_filtering:
@@ -50,7 +50,9 @@ nextpyper:
             seeds_scf_min_idt: 0.6
             homolog_scf_min_cov: 0.1
             homolog_scf_min_idt: 0.6
+        divergence_estimation:
+            min_cov: 0.5
+            flatenning_prop: 0.1
         region_separation:
-            min_probe_scaffold_sim: 0.85
             min_fragment_cov: 0.1
             min_exonic_length: 10

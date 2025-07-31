@@ -50,13 +50,14 @@ checkpoint separate_cds_by_regions:
         probes=outdir
         / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
         scfs=outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
+        div_map=outdir
+        / "homolog_prospection/region_separation/divergence_thresholds.json",
     output:
         directory(
             outdir
             / "homolog_prospection/region_separation/separation_output/scfs/{probe}"
         ),
     params:
-        min_probe_scaffold_sim=min_probe_scaffold_sim,
         min_fragment_cov=min_fragment_cov,
         min_exonic_length=min_exonic_length,
         substitution_matrix=blosum62,
