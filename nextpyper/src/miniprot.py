@@ -440,6 +440,7 @@ class MiniprotInit:
     -probes_fasta: path to the amino acid probes fasta file (multiprobe)
     -scaffold_fasta: path to the nucleotide scaffold fasta file.
     -min_global_identity_dict: dictionary of thresholds identity over all several fragments.
+    -min_global_identity: identity value to use if sample is not present in min_global_identity_dict
     -threads: for miniprot.
     -min_fragment_cov: fraction of the probe covered by a contig for miniprot.
     -min_exonic_length: minimum length of concatenated exons after trimming used for saving.
@@ -455,7 +456,8 @@ class MiniprotInit:
     probes_fasta: str
     scaffold_fasta: str
     substitution_matrix: str
-    min_global_identity_dict: dict[str:float]
+    min_global_identity_dict: dict[str:float] = field(default_factory=dict)
+    min_global_identity: float = field(default=0.85)
     threads: int = field(default=8)
     min_fragment_cov: float = field(default=0.05)
     min_exonic_length: int = field(default=200)
@@ -585,7 +587,9 @@ class OverlappingCds(MiniprotInit):
                     if (
                         not cds.is_empty()
                         and cds.global_identity
-                        >= self.min_global_identity_dict.get(accession, 0.85)
+                        >= self.min_global_identity_dict.get(
+                            accession, self.min_global_identity
+                        )
                     ):
                         self.cds_dict[scaffold].append(cds)
                 print("cds", self.cds_dict.get(scaffold))

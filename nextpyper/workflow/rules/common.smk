@@ -94,6 +94,7 @@ div_est_flat_prop = lookup("divergence_estimation/flatenning_prop", within=pipel
 
 # Region separation
 reg_sep = lookup("region_separation", within=pipeline)
+min_global_identity = lookup("min_global_identity", within=reg_sep)
 min_fragment_cov = lookup("min_fragment_cov", within=reg_sep)
 min_exonic_length = lookup("min_exonic_length", within=reg_sep)
 

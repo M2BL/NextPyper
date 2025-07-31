@@ -58,6 +58,7 @@ checkpoint separate_cds_by_regions:
             / "homolog_prospection/region_separation/separation_output/scfs/{probe}"
         ),
     params:
+        min_global_identity=min_global_identity,
         min_fragment_cov=min_fragment_cov,
         min_exonic_length=min_exonic_length,
         substitution_matrix=blosum62,
