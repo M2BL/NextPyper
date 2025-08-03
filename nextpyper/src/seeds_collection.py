@@ -156,6 +156,47 @@ def compute_saute_kmers(
     return kmer_results
 
 
+def infer_sister_samples(
+    probe_tables: dict[str, dict[str, pl.DataFrame]],
+) -> dict[str, dict[str, tuple[int, int]]]:
+    """Use the clustering results for all the probes to determine the sister samples
+    of all samples in the run.
+
+    For a given sample and probe, look at which other samples co-occur in the same
+    clusters for that probe. Those will constitute the "sister-samples" for that sample
+    according to that probe.
+
+    After consulting all the probes, keep the sister samples that were voted by more than
+    min_sister_freq proportion of all probes.
+
+    Return a dictionary of samples as key and their inferred sister-samples as values.
+    """
+
+    sister_samples = defaultdict(Counter)
+    samples = pl.concat(probe_tables.values())["sample"].unique().to_list()
+
+    for probe, table in probe_tables.items():
+        for sample in samples:
+            clusters = set(
+                table.filter(pl.col("sample") == sample)["cluster_id"].unique()
+            )
+            sister_samples[sample].update(
+                table.filter(pl.col("cluster_id").is_in(clusters))["sample"].unique()
+            )
+
+    # Compute the sister samples based on the votes of each probe
+    sister_samples = {
+        sample: {
+            sister: (count, counts[sample])
+            for sister, count in counts.most_common()
+            if sister != sample
+        }
+        for sample, counts in sister_samples.items()
+    }
+
+    return sister_samples
+
+
 def snakemake_call(snakemake):
 
     # Read inputs for seed collection
@@ -174,6 +215,7 @@ def snakemake_call(snakemake):
     # Params for seed collection
     probes_pattern = snakemake.params.pattern
     multi_probes = snakemake.params.is_multi
+    interseeds_use = snakemake.params.interseeds_use
     min_sister_freq = snakemake.params.min_sister_freq
 
     # Params for saute kmer size computation
@@ -225,8 +267,8 @@ def snakemake_call(snakemake):
             rec.id = f"{rec.id}-{probe}_EDGE_0_length_{len(rec)}_cov_0.0"
             rec.name = rec.description = ""
 
+    # Load the clustering tables
     probe_tables = {}
-    sister_samples = defaultdict(Counter)
     for probe in map(Path, cluster_tables_dir):
         if probe.stat().st_size == 0:
             continue
@@ -235,27 +277,26 @@ def snakemake_call(snakemake):
             probe, separator="\t", has_header=False, new_columns=CLUSTER_COLS
         ).with_columns(sample=pl.col("query").str.extract(REC_PAT))
 
-        for sample in sample_recs:
-            clusters = set(
-                probe_tables[probe.stem]
-                .filter(pl.col("sample") == sample)["cluster_id"]
-                .unique()
-            )
-            sister_samples[sample].update(
-                probe_tables[probe.stem]
-                .filter(pl.col("cluster_id").is_in(clusters))["sample"]
-                .unique()
-            )
+    # Subset the inter-seeds with the sister-samples approach
+    if interseeds_use == "sister":
+        sister_dir = Path(saute_params[0]).parent.parent / "sister_samples"
+        sister_dir.mkdir(parents=True, exist_ok=True)
 
-    # Compute the sister samples based on the votes of each probe
-    sister_samples = {
-        sample: {
-            sister
-            for sister, count in counts.most_common()
-            if sister != sample and (count / counts[sample]) > min_sister_freq
+        sister_samples_counts = infer_sister_samples(probe_tables, min_sister_freq)
+
+        # Log the sister samples counts
+        for sample, sister_samples in sister_samples_counts.items():
+            (sister_dir / sample).write_text(json.dumps(sister_samples))
+
+        # Filter to keep the sister samples above the frequency threshold
+        sister_samples = {
+            sample: {
+                sister
+                for sister, (count, max_count) in sister_samples.items()
+                if count / max_count > min_sister_freq
+            }
+            for sample, sister_samples in sister_samples_counts.items()
         }
-        for sample, counts in sister_samples.items()
-    }
 
     # Redistribute the seeds according complementing with the centroids of clusters
     # where sister samples are present
@@ -267,33 +308,37 @@ def snakemake_call(snakemake):
             # First, add the seeds from the current sample
             sample_seeds[sample].extend(sample_recs[sample].get(probe, {}).values())
 
-            # Find the clusters that sister samples matched
-            clusters = (
-                table.filter(pl.col("sample").is_in(sister_samples[sample]))
-                .select("cluster_id")
-                .unique()
-            )
+            # If following sister-sample strategy, subset the table to sister clusters
+            if interseeds_use == "sister":
+                # Find the clusters that sister samples matched
+                clusters = (
+                    table.filter(pl.col("sample").is_in(sister_samples[sample]))
+                    .select("cluster_id")
+                    .unique()
+                )
+                table = table.join(clusters, on="cluster_id", how="inner")
 
-            # Then, add the centroids of the clusters as extra seeds
-            for inter_sample, rec in (
-                table.join(clusters, on="cluster_id", how="inner")
-                .filter((pl.col("type") == "C") & (pl.col("sample") != sample))
-                .select(["sample", "query"])
-                .iter_rows()
-            ):
-                sample_seeds[sample].append(sample_recs[inter_sample][probe][rec])
+            # Then, add the centroids of the clusters as extra seeds (inter-seeds)
+            if interseeds_use != "none":
+                for inter_sample, rec in (
+                    table.filter((pl.col("type") == "C") & (pl.col("sample") != sample))
+                    .select(["sample", "query"])
+                    .iter_rows()
+                ):
+                    sample_seeds[sample].append(sample_recs[inter_sample][probe][rec])
 
-            # Finally, add the probes that were not present in the sample seeds.
-            covered_probes = {pat.search(seed.id)[2] for seed in sample_seeds[sample]}
-            for missing_probe in set(probes_dict) - covered_probes:
-                sample_seeds[sample].extend(probes_dict[missing_probe])
+    # Finally, add the probes that were not present in the sample seeds.
+    for sample, seeds in sample_seeds.items():
+        covered_probes = {pat.search(seed.id)[2] for seed in seeds}
+        for missing_probe in set(probes_dict) - covered_probes:
+            seeds.extend(probes_dict[missing_probe])
 
     # Write the seeds for all the samples
     seeds_out_dir = Path(seeds_out[0]).parent
     seeds_out_dir.mkdir(exist_ok=True, parents=True)
 
-    for sample, recs in sample_seeds.items():
-        SeqIO.write(recs, seeds_out_dir / f"{sample}.fasta", "fasta")
+    for sample, seeds in sample_seeds.items():
+        SeqIO.write(seeds, seeds_out_dir / f"{sample}.fasta", "fasta")
 
 
 def main(): ...

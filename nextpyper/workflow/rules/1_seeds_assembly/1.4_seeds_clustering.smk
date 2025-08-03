@@ -66,6 +66,7 @@ rule seeds_collection:
         min_sister_freq=min_sister_sample_freq,
         pattern=pattern,
         is_multi=multi_probes,
+        interseeds_use=interseeds_use,
         heuristic_params=saute_heuristic_params,
     script:
         "../../../src/seeds_collection.py"

@@ -39,6 +39,7 @@ path_samples = Path(lookup("args/input", within=config))
 pattern = lookup("args/probe_pattern", within=config)
 multi_probes = lookup("args/multi_probes", within=config)
 max_threads = lookup("args/threads", within=config)
+interseeds_use = lookup("args/interseeds", within=config)
 
 use_ref_cps = config["args"]["use_ref_cps"]
 custom_cps = Path(custom_cps) if (custom_cps := config["args"]["custom_cps"]) else None
