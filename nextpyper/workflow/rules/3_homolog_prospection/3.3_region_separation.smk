@@ -1,4 +1,4 @@
-checkpoint per_probe_scaffold_grouping:
+rule per_probe_scaffold_grouping:
     input:
         expand(
             outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
@@ -19,7 +19,7 @@ checkpoint per_probe_scaffold_grouping:
         "../../../src/multi_seq_probes.py"
 
 
-checkpoint split_matching_probes:
+rule split_matching_probes:
     input:
         probes=outdir / "homolog_prospection/matching_probes.fasta",
         tables=expand(
@@ -45,7 +45,7 @@ checkpoint split_matching_probes:
         "../../../src/multi_seq_probes.py"
 
 
-checkpoint separate_cds_by_regions:
+rule separate_cds_by_regions:
     input:
         probes=outdir
         / "homolog_prospection/region_separation/input_probes/{probe}.fasta",

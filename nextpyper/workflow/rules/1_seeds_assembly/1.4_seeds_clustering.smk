@@ -1,30 +1,21 @@
-def aggregate_sample_per_probe(wildcards):
-    probe_inputs = defaultdict(list)
-    for sample in sample_list:
-        checkpoint_output = checkpoints.seeds_filtering.get(sample=sample).output[0]
-        global_match = glob_wildcards(Path(checkpoint_output) / "{probe}.fasta")
-
-        for probe in global_match.probe:
-            probe_inputs[probe].append(
-                outdir / f"assembled/filtering/filtered_scfs/{sample}/{probe}.fasta"
-            )
-
-    return probe_inputs[wildcards.probe]
-
-
-rule merge_samples_seeds:
+rule distribute_seeds:
     input:
-        probe=aggregate_sample_per_probe,
-        chkpt=outdir / "logs/dones/splitting.done",
+        expand(
+            outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
+            sample=sample_list,
+        ),
     output:
-        outfile=outdir / "clustering/sample_merged_input/{probe}.fasta",
-    shell:
-        """
-        for file in {input.probe}; do 
-            cat $file 
-        done > {output}
-        touch {output}
-        """
+        expand(
+            outdir / "clustering/sample_merged_input/{probe}.fasta", probe=probes_list
+        ),
+    log:
+        outdir / "logs/clustering/seed_distribution.log",
+    params:
+        pattern=lambda wildcards: r"-(?P<probe>.*?)_",
+        probes=probes_list,
+        mode="scfs",
+    script:
+        "../../../src/multi_seq_probes.py"
 
 
 rule vsearch_clustering:
@@ -50,7 +41,7 @@ rule seeds_collection:
             outdir / "clustering/cluster_tables/{probe}.tsv", probe=probes_list
         ),
         samples=expand(
-            outdir / "assembled/filtering/filtered_scfs/{sample}",
+            outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
             sample=sample_list,
         ),
         spades_folders=expand(outdir / "assembled/spades/{sample}", sample=sample_list),

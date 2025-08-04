@@ -217,13 +217,13 @@ def snakemake_call(snakemake):
     # Parse the records fo all the samples
     sample_recs = {
         sample.stem: {
-            probe.stem: SeqIO.to_dict(SeqIO.parse(probe, "fasta"))
-            for probe in Path(sample).glob("*.fasta")
+            probe: SeqIO.to_dict(recs)
+            for probe, recs in group_probes(
+                list(SeqIO.parse(sample, "fasta")), REC_PAT, 2
+            ).items()
         }
         for sample in map(Path, sample_probes_dir)
     }
-
-    pat = re.compile(REC_PAT)
 
     ## Kmer size parameters computation
     # Organize the Spades folders and fastp reports to make them accessible by sample
@@ -232,6 +232,7 @@ def snakemake_call(snakemake):
     kmer_params_out = {file.stem: file for file in map(Path, saute_params)}
 
     # Compute the kmer sizes to be used by saute for each sample
+    pat = re.compile(REC_PAT)
     for sample, probe_recs in sample_recs.items():
         med_cov = np.median(
             [float(pat.search(rec)[3]) for recs in probe_recs.values() for rec in recs]
@@ -276,7 +277,7 @@ def snakemake_call(snakemake):
         sister_dir = Path(saute_params[0]).parent.parent / "sister_samples"
         sister_dir.mkdir(parents=True, exist_ok=True)
 
-        sister_samples_counts = infer_sister_samples(probe_tables, min_sister_freq)
+        sister_samples_counts = infer_sister_samples(probe_tables)
 
         # Log the sister samples counts
         for sample, sister_samples in sister_samples_counts.items():

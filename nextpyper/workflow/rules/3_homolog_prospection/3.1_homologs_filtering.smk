@@ -51,6 +51,7 @@ use rule seeds_filtering as homologs_filtering with:
         min_cov=homolog_scf_min_cov,
         min_idt=homolog_scf_min_idt,
         separate_probes=lambda wildcards: False,
+        separate_scfs=lambda wildcards: False,
         qpat=lambda wildcards: SAUTE_POST_FIX_PAT,
         tpat=lambda wildcards: pattern,
 

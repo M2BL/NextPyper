@@ -46,7 +46,7 @@ def orient_scf(rec: SeqRecord, trans: bool) -> SeqRecord:
     return rec
 
 
-def tag_probe(rec: SeqRecord, probe) -> SeqRecord:
+def tag_probe(rec: SeqRecord, probe: str) -> SeqRecord:
     idx = rec.id.index("-")
     rec.id = f"{rec.id[:idx+1]}{probe}_{rec.id[idx+1:]}"
     rec.name = rec.description = ""
@@ -148,6 +148,7 @@ def match_mmseqs_recs(
     qpat: str,
     tpat: str,
     sep_probes: bool = False,
+    tag_scfs: bool = False,
     log_results: bool = True,
 ) -> None:
     """Given a set of file with sequences, and a table with mmseqs2 matches against a set
@@ -162,7 +163,7 @@ def match_mmseqs_recs(
     Otherwise, all sequences will be written together in a single file.
     """
 
-    recs = list(SeqIO.parse(rec_path, "fasta"))
+    recs_dict = SeqIO.to_dict(SeqIO.parse(rec_path, "fasta"))
     df = pl.read_csv(table_path, separator="\t", has_header=True)
 
     filt_df = compute_hits(df, min_cov, min_idt, qpat, tpat)
@@ -174,7 +175,7 @@ def match_mmseqs_recs(
     # Separate the surviving sequences by probe
     if sep_probes:
         out_path.mkdir(exist_ok=True)
-        recs_dict = {rec.id: rec for rec in recs}
+        # recs_dict = {rec.id: rec for rec in recs}
         iter_df = filt_df.group_by("tprobe").all().select(["tprobe", "query", "cis"])
 
         for probe, ids, orient_list in iter_df.iter_rows():
@@ -184,12 +185,21 @@ def match_mmseqs_recs(
             ]
             SeqIO.write(probe_recs, out_path / f"{probe}.fasta", "fasta")
 
-    # Output all sequences in a single file
+    # Do not separate the sequences in multiple files, but tag them.
+    elif tag_scfs:
+        iter_df = filt_df.select(["tprobe", "query", "cis"]).iter_rows()
+        filt_scfs = [
+            tag_probe(orient_scf(recs_dict[rec_id], not cis), probe)
+            for probe, rec_id, cis in iter_df
+        ]
+        SeqIO.write(filt_scfs, out_path, "fasta")
+
+    # Output all sequences in a single file (they are already tagged)
     else:
         filt_ids = dict(
             filt_df.select(["query", "cis"]).with_columns(~pl.col("cis")).iter_rows()
         )
-        filt_scfs = filt_records(recs, filt_ids)
+        filt_scfs = filt_records(recs_dict.values(), filt_ids)
         SeqIO.write(filt_scfs, out_path, "fasta")
 
 
@@ -200,6 +210,7 @@ def snakemake_call(snakemake):
         min_idt = snakemake.params.min_idt
         min_cov = snakemake.params.min_cov
         sep_probes = snakemake.params.separate_probes
+        tag_scfs = snakemake.params.get("tag_scfs", False)
 
         recs = Path(snakemake.input.scfs)
         table = Path(snakemake.input.table)
@@ -208,7 +219,9 @@ def snakemake_call(snakemake):
         qpat = snakemake.params.get("qpat", SAUTE_PAT)
         tpat = snakemake.params.get("tpat", REF_PAT)
 
-        match_mmseqs_recs(recs, table, out, min_cov, min_idt, qpat, tpat, sep_probes)
+        match_mmseqs_recs(
+            recs, table, out, min_cov, min_idt, qpat, tpat, sep_probes, tag_scfs
+        )
 
 
 def main():
