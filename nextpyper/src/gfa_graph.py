@@ -947,7 +947,7 @@ def snakemake_call(snakemake):
         newpaths = defaultdict(list)
         if not hasattr(graph, "K"):
             for name, path in graph.paths.items():
-                path.name = path.name.replace("NODE", "EDGE")
+                path.name = f'{out.stem}-{path.name.replace("NODE", "EDGE")}'
                 newpaths[name].append(path)
 
         # Explore the colored graph:
@@ -963,7 +963,8 @@ def snakemake_call(snakemake):
                 path_extensions.items(), key=lambda x: int(node_pat.match(x[0])[1])
             ):
                 for extension in extensions:
-                    name = make_path_name(extension, next(counter), graph)
+                    name = f"{out.stem}-"
+                    name += make_path_name(extension, next(counter), graph)
                     newpaths[path].append(Path_on_graph(name, extension))
 
         # Log the extensions: old_path -> new_path

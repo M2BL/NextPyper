@@ -64,14 +64,3 @@ rule extend_paths:
         outdir / "logs/assembled/extension/{sample}.log",
     script:
         "../../../src/gfa_graph.py"
-
-
-rule prefix_seeds:
-    input:
-        outdir / "assembled/extension/{sample}.fasta",
-    output:
-        outdir / "assembled/prefixed/{sample}.fasta",
-    conda:
-        "../../envs/preprocessing.yaml"
-    shell:
-        """bioawk -c fastx '{{printf ">{wildcards.sample}-%s",$name; print "\\n"$seq}}' {input} > {output}"""

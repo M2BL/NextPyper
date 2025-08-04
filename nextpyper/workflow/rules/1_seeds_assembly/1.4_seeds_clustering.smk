@@ -22,8 +22,6 @@ rule vsearch_clustering:
     input:
         cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
-        centroids=outdir / "clustering/centroids/{probe}.fasta",
-        msaout=outdir / "clustering/msa/{probe}.fasta",
         uc=outdir / "clustering/cluster_tables/{probe}.tsv",
     log:
         outdir / "logs/clustering/vsearch/{probe}.log",

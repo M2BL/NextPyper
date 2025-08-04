@@ -1,7 +1,7 @@
 use rule raw_assembly_to_probes_matching as seeds_to_probes_matching with:
     input:
         probes=outdir / "assembled/filtering/dbs/probes/probes",
-        query=outdir / "assembled/prefixed/{sample}.fasta",
+        query=outdir / "assembled/extension/{sample}.fasta",
     output:
         outdir / "assembled/filtering/matching_tables/{sample}.tsv",
     params:
@@ -15,7 +15,7 @@ use rule raw_assembly_to_probes_matching as seeds_to_probes_matching with:
 
 rule seeds_filtering:
     input:
-        scfs=outdir / "assembled/prefixed/{sample}.fasta",
+        scfs=outdir / "assembled/extension/{sample}.fasta",
         table=outdir / "assembled/filtering/matching_tables/{sample}.tsv",
     output:
         outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
