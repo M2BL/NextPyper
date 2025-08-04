@@ -18,7 +18,7 @@ checkpoint seeds_filtering:
         scfs=outdir / "assembled/prefixed/{sample}.fasta",
         table=outdir / "assembled/filtering/matching_tables/{sample}.tsv",
     output:
-        directory(outdir / "assembled/filtering/filtered_scfs/{sample}"),
+        temp(directory(outdir / "assembled/filtering/filtered_scfs/{sample}")),
     log:
         outdir / "logs/assembled/filtering/scfs_filtering/{sample}.log",
     params:
@@ -31,7 +31,6 @@ checkpoint seeds_filtering:
         "../../../src/homolog_filtering.py"
 
 
-## See Rule 3.1 for further explanation
 def aggregate_split(wildcards):
     direcs = []
     for sample in sample_list:

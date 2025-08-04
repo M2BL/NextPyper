@@ -32,10 +32,10 @@ nextpyper:
             min_sister_sample_freq: 0.5
         saute:
             heuristic:
-                primary_target_depth: 15
-                secondary_target_depth: 30
+                primary_target_depth: 20
+                secondary_target_depth: 40
                 k1_min: 0.3
-                k1_max: 0.5
+                k1_max: 0.6
                 k2_min: 0.15
                 k2_max: 0.2
             assembly:

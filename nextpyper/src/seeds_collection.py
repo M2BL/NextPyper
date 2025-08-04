@@ -95,16 +95,9 @@ def get_spades_kmer_size(spades_folder: Path) -> int:
 
 def get_read_length(read_stats: Path) -> int:
     """Get the read length from the fastp report."""
-    with open(read_stats) as file:
-        summary = json.load(file)
-        return int(summary["summary"]["after_filtering"]["read2_mean_length"])
 
-
-def write_kmer_params(kmer_results: dict, outfile: Path) -> None:
-    """Write the kmer results to a log file."""
-
-    with open(outfile, "w") as file:
-        json.dump(kmer_results, file, indent=4)
+    summary = json.loads(read_stats.read_text())
+    return int(summary["summary"]["after_filtering"]["read2_mean_length"])
 
 
 def compute_saute_kmers(
@@ -250,7 +243,8 @@ def snakemake_call(snakemake):
         kmer_log = {"read_length": L, "kspades": kspades}
         kmer_log.update(kmer_results)
 
-        write_kmer_params(kmer_log, kmer_params_out[sample])
+        # Write the kmer results to a log file
+        kmer_params_out[sample].write_text(json.dumps(kmer_log, indent=4))
 
     ## Seed collection
     # Read the probes in order to supplement the seeds in case they are missing
