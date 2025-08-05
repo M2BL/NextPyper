@@ -118,6 +118,10 @@ def compute_saute_kmers(
     k1_min, k1_max = int(L * kmer_params["k1_min"]), int(L * kmer_params["k1_max"])
     k2_min, k2_max = int(L * kmer_params["k2_min"]), int(L * kmer_params["k2_max"])
 
+    # Cap primary and secondary kmers to their respective absolute floors (Def: 49, 21)
+    k1_min = max(k1_min, int(kmer_params["k1_floor"]))
+    k2_min = max(k2_min, int(kmer_params["k2_floor"]))
+
     if k2 < k2_min:
         k2 = k2_min
     elif k2 > k2_max:
@@ -128,8 +132,7 @@ def compute_saute_kmers(
     elif k1 > k1_max:
         k1 = k1_max
 
-    # Cap secondary kmer on 21 and ensure odd kmers
-    k2 = 21 if k2 < 21 else k2
+    # Ensure odd kmers
     k2 = k2 - 1 if k2 % 2 == 0 else k2
     k1 = k1 - 1 if k1 % 2 == 0 else k1
 

@@ -38,6 +38,8 @@ nextpyper:
                 k1_max: 0.6
                 k2_min: 0.15
                 k2_max: 0.2
+                k1_floor: 49
+                k2_floor: 21
             assembly:
                 target_cov: 0.2
         mmseqs_matching:
