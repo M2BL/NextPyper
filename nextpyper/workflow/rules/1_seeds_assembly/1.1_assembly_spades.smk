@@ -1,14 +1,13 @@
 def select_asm_kmer(wildcards, input):
     if spades_k == "auto":
-        with open(input.json) as file:
-            summary = json.load(file)
-            k_mid = int(summary["summary"]["after_filtering"]["read2_mean_length"]) // 2
-            if k_mid >= 117:
-                return "21,45,107,127"
-            elif k_mid % 2 == 0:
-                return f"21,45,{k_mid-9},{k_mid+11}"
-            else:
-                return f"21,45,{k_mid-10},{k_mid+10}"
+        summary = json.loads(Path(input.json).read_text())
+        k_mid = int(summary["summary"]["after_filtering"]["read2_mean_length"]) // 2
+        if k_mid >= 117:
+            return "21,45,107,127"
+        elif k_mid % 2 == 0:
+            return f"21,45,{k_mid-9},{k_mid+11}"
+        else:
+            return f"21,45,{k_mid-10},{k_mid+10}"
     else:
         return spades_k
 
@@ -26,7 +25,7 @@ rule spades_assembly:
             "--rna" if sample_dict[wildcards.sample]["type"] == "rna" else "--meta"
         ),
         k=select_asm_kmer,
-        params=f"--only-assembler",
+        params="--only-assembler",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
     threads: 4

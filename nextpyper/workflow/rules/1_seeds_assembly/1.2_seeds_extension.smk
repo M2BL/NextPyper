@@ -2,7 +2,7 @@ rule make_mmseqs_probes_db:
     input:
         outdir / "translated_probes/longest_cds.fasta",
     output:
-        outdir / "assembled/filtering/dbs/probes/probes",
+        outdir / "assembled/filtering/dbs/probes",
     log:
         outdir / "logs/assembled/filtering/dbs/probes.log",
     conda:
@@ -13,7 +13,7 @@ rule make_mmseqs_probes_db:
 
 rule raw_assembly_to_probes_matching:
     input:
-        probes=outdir / "assembled/filtering/dbs/probes/probes",
+        probes=outdir / "assembled/filtering/dbs/probes",
         query=outdir / "assembled/scaffolds/{sample}.fasta",
     output:
         outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",

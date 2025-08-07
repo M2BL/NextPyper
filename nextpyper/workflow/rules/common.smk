@@ -71,12 +71,10 @@ mmseq_evalue = lookup("mmseqs_matching/evalue", within=pipeline)
 min_orf_len = lookup("mmseqs_matching/min_orf_len", within=pipeline)
 mmseq_sens = lookup("mmseqs_matching/sensitivity", within=pipeline)
 
-# MMseqs filtering
+# Seeds and Homologs filtering
 mmseqs_filt = lookup("homolog_filtering", within=pipeline)
-seeds_scf_min_cov = lookup("seeds_scf_min_cov", within=mmseqs_filt)
-seeds_scf_min_idt = lookup("seeds_scf_min_idt", within=mmseqs_filt)
-homolog_scf_min_cov = lookup("homolog_scf_min_cov", within=mmseqs_filt)
-homolog_scf_min_idt = lookup("homolog_scf_min_idt", within=mmseqs_filt)
+seeds_filt_params = lookup("homolog_filtering/seeds", within=pipeline)
+homologs_filt_params = lookup("homolog_filtering/homologs", within=pipeline)
 
 # Seeds
 min_sister_sample_freq = lookup("seeds/min_sister_sample_freq", within=pipeline)

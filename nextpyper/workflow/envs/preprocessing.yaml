@@ -8,3 +8,4 @@ dependencies:
     - seqkit>=2.8,<2.10
     - minimap2>=2.28
     - samtools>=1.14
+    - coverm>=0.7

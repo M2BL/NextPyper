@@ -43,6 +43,10 @@ rule seeds_collection:
             sample=sample_list,
         ),
         spades_folders=expand(outdir / "assembled/spades/{sample}", sample=sample_list),
+        covs=expand(
+            outdir / "assembled/filtering/coverage/{sample}.metabat",
+            sample=sample_list,
+        ),
         read_stats=expand(
             outdir / "logs/preprocessing/fastp/{sample}.json", sample=sample_list
         ),
@@ -56,6 +60,7 @@ rule seeds_collection:
         pattern=pattern,
         is_multi=multi_probes,
         interseeds_use=interseeds_use,
+        cov_by_mapping=lookup("seeds/cov_by_mapping", within=pipeline),
         heuristic_params=saute_heuristic_params,
     script:
         "../../../src/seeds_collection.py"

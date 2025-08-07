@@ -24,8 +24,8 @@ rule split_matching_probes:
         probes=outdir / "homolog_prospection/matching_probes.fasta",
         tables=expand(
             outdir
-            / "logs/homolog_prospection/homologs_filtering/scfs_filtering/{samples}.log",
-            samples=sample_list,
+            / "homolog_prospection/homologs_filtering/homolog_filt_tables/{sample}.tsv",
+            sample=sample_list,
         ),
     output:
         expand(
@@ -39,8 +39,6 @@ rule split_matching_probes:
         pattern=lambda wildcards: pattern,
         probes=probes_list,
         mode="multi_probes" if multi_probes else "single_probes",
-    conda:
-        "../../envs/preprocessing.yaml"
     script:
         "../../../src/multi_seq_probes.py"
 

@@ -1,29 +1,57 @@
 use rule raw_assembly_to_probes_matching as seeds_to_probes_matching with:
     input:
-        probes=outdir / "assembled/filtering/dbs/probes/probes",
+        probes=outdir / "assembled/filtering/dbs/probes",
         query=outdir / "assembled/extension/{sample}.fasta",
     output:
         outdir / "assembled/filtering/matching_tables/{sample}.tsv",
-    params:
-        fields=mmseq_fields,
-        evalue=mmseq_evalue,
-        min_orf_len=min_orf_len,
-        sensitivity=mmseq_sens,
     log:
         outdir / "logs/assembled/filtering/mmseqs/{sample}.log",
+
+
+rule seeds_coverage:
+    input:
+        scfs=outdir / "assembled/extension/{sample}.fasta",
+        clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
+    output:
+        counts=outdir / "assembled/filtering/coverage/{sample}.counts",
+        metabat=outdir / "assembled/filtering/coverage/{sample}.metabat",
+        hist=outdir / "assembled/filtering/coverage/{sample}.hist",
+    params:
+        extra="--proper-pairs-only --exclude-supplementary",
+    log:
+        outdir / "logs/assembled/filtering/coverage/{sample}.log",
+    threads: 4
+    conda:
+        "../../envs/preprocessing.yaml"
+    shell:
+        """
+        minimap2 -t {threads} -ax sr {input.scfs} {input.clean1} {input.clean2} 2> {log} | \
+        samtools sort -u -@ {threads} > tmp_{wildcards.sample}.bam 2> {log}
+        coverm contig -m count {params.extra} -b tmp_{wildcards.sample}.bam  > {output.counts} 2> {log}
+        coverm contig -m metabat {params.extra} -b tmp_{wildcards.sample}.bam  > {output.metabat} 2> {log}
+        coverm contig -m coverage_histogram {params.extra} -b tmp_{wildcards.sample}.bam  > {output.hist} 2> {log}
+        rm tmp_{wildcards.sample}.bam
+        """
 
 
 rule seeds_filtering:
     input:
         scfs=outdir / "assembled/extension/{sample}.fasta",
-        table=outdir / "assembled/filtering/matching_tables/{sample}.tsv",
+        hits=outdir / "assembled/filtering/matching_tables/{sample}.tsv",
+        covs=outdir / "assembled/filtering/coverage/{sample}.metabat",
     output:
-        outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
+        scfs=outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
+        metrics=outdir / "assembled/filtering/seeds_filt_tables/{sample}.tsv",
     log:
-        outdir / "logs/assembled/filtering/scfs_filtering/{sample}.log",
+        outdir / "logs/assembled/filtering/seeds_filtering/{sample}.log",
     params:
-        min_cov=seeds_scf_min_cov,
-        min_idt=seeds_scf_min_idt,
+        min_cov=lookup("scf_min_cov", within=seeds_filt_params),
+        min_idt=lookup("scf_min_idt", within=seeds_filt_params),
+        max_gc=lookup("max_gc", within=seeds_filt_params),
+        min_gc=lookup("min_gc", within=seeds_filt_params),
+        cov_threshold=lookup("cov_threshold", within=seeds_filt_params),
+        cov_dynamic_filt=lookup("cov_dynamic_filt", within=seeds_filt_params),
         separate_probes=lambda wildcards: False,
         tag_scfs=lambda wildcards: True,
         qpat=lambda wildcards: False,

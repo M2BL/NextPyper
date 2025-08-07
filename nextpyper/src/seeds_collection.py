@@ -65,6 +65,7 @@ CLUSTER_COLS = [
     "centroid",
 ]
 REC_PAT = r"^(.*?)-(.*?)_.*_cov_([\d\.]+)$"
+METABAT_COLS = ("query", "len", "cov", "nu", "var")
 
 # =============================================================================
 #                CLASSES
@@ -93,6 +94,12 @@ def get_spades_kmer_size(spades_folder: Path) -> int:
     return int(kspades)
 
 
+def get_map_coverage(cov_table: Path) -> float:
+    """Get the median depth of coverage found by read mapping."""
+    meta_df = pl.read_csv(cov_table, separator="\t", new_columns=METABAT_COLS)
+    return meta_df["cov"].median()
+
+
 def get_read_length(read_stats: Path) -> int:
     """Get the read length from the fastp report."""
 
@@ -101,14 +108,13 @@ def get_read_length(read_stats: Path) -> int:
 
 
 def compute_saute_kmers(
-    med_cov: float, L: int, kspades: int, kmer_params: KmerParams
+    read_med_cov: float,
+    L: int,
+    kmer_params: KmerParams,
 ) -> str:
-    """Compute the kmer sizes to be used by saute based on the median coverage observed by
-    spades, read length, and the target depths for primary and secondary kmers. The kmer
+    """Compute the kmer sizes to be used by saute based on the median coverage,
+    read length, and the target depths for primary and secondary kmers. The kmer
     sizes are constrained to a range of values defined in the heuristic parameters."""
-
-    # Compute median depth observed in base space
-    read_med_cov = med_cov * L / (L - kspades + 1)
 
     # Compute kmer sizes for the given targets depths
     k1 = int(L * (1 - (kmer_params["primary_target_depth"] / read_med_cov)) + 1)
@@ -203,6 +209,7 @@ def snakemake_call(snakemake):
     # Read inputs for saute kmer size computation
     spades_folders = snakemake.input.spades_folders
     read_stats = snakemake.input.read_stats
+    cov_paths = snakemake.input.covs
 
     # Read outputs
     seeds_out = snakemake.output.seeds
@@ -215,6 +222,7 @@ def snakemake_call(snakemake):
     min_sister_freq = snakemake.params.min_sister_freq
 
     # Params for saute kmer size computation
+    cov_by_mapping = snakemake.params.cov_by_mapping
     heuristic_params = snakemake.params.heuristic_params
 
     # Parse the records fo all the samples
@@ -231,20 +239,39 @@ def snakemake_call(snakemake):
     ## Kmer size parameters computation
     # Organize the Spades folders and fastp reports to make them accessible by sample
     spades_folders = {folder.name: folder for folder in map(Path, spades_folders)}
+    read_covs = {file.stem: get_map_coverage(file) for file in map(Path, cov_paths)}
     read_lengths = {file.stem: get_read_length(file) for file in map(Path, read_stats)}
     kmer_params_out = {file.stem: file for file in map(Path, saute_params)}
 
     # Compute the kmer sizes to be used by saute for each sample
     pat = re.compile(REC_PAT)
     for sample, probe_recs in sample_recs.items():
-        med_cov = np.median(
-            [float(pat.search(rec)[3]) for recs in probe_recs.values() for rec in recs]
-        )
         L = read_lengths[sample]
-        kspades = get_spades_kmer_size(spades_folders[sample])
-        kmer_results = compute_saute_kmers(med_cov, L, kspades, heuristic_params)
 
-        kmer_log = {"read_length": L, "kspades": kspades}
+        # Compute median depth observed in base space
+        # By mapping
+        if cov_by_mapping:
+            read_med_cov = read_covs[sample]
+            kmer_log = {"read_length": L, "cov_estimation": "mapping"}
+
+        # By spades assembly
+        else:
+            kspades = get_spades_kmer_size(spades_folders[sample])
+            med_cov = np.median(
+                [
+                    float(pat.search(rec)[3])
+                    for recs in probe_recs.values()
+                    for rec in recs
+                ]
+            )
+            read_med_cov = med_cov * L / (L - kspades + 1)
+            kmer_log = {
+                "read_length": L,
+                "cov_estimation": "assembly",
+                "kspades": kspades,
+            }
+
+        kmer_results = compute_saute_kmers(read_med_cov, L, heuristic_params)
         kmer_log.update(kmer_results)
 
         # Write the kmer results to a log file
@@ -284,7 +311,7 @@ def snakemake_call(snakemake):
 
         # Log the sister samples counts
         for sample, sister_samples in sister_samples_counts.items():
-            (sister_dir / sample).write_text(json.dumps(sister_samples))
+            (sister_dir / f"{sample}.json").write_text(json.dumps(sister_samples))
 
         # Filter to keep the sister samples above the frequency threshold
         sister_samples = {
