@@ -27,10 +27,10 @@ rule seeds_coverage:
     shell:
         """
         minimap2 -t {threads} -ax sr {input.scfs} {input.clean1} {input.clean2} 2> {log} | \
-        samtools sort -u -@ {threads} > tmp_{wildcards.sample}.bam 2> {log}
-        coverm contig -m count {params.extra} -b tmp_{wildcards.sample}.bam  > {output.counts} 2> {log}
-        coverm contig -m metabat {params.extra} -b tmp_{wildcards.sample}.bam  > {output.metabat} 2> {log}
-        coverm contig -m coverage_histogram {params.extra} -b tmp_{wildcards.sample}.bam  > {output.hist} 2> {log}
+        samtools sort -u -@ {threads} > tmp_{wildcards.sample}.bam 2>> {log}
+        coverm contig -m count {params.extra} -b tmp_{wildcards.sample}.bam  > {output.counts} 2>> {log}
+        coverm contig -m metabat {params.extra} -b tmp_{wildcards.sample}.bam  > {output.metabat} 2>> {log}
+        coverm contig -m coverage_histogram {params.extra} -b tmp_{wildcards.sample}.bam  > {output.hist} 2>> {log}
         rm tmp_{wildcards.sample}.bam
         """
 

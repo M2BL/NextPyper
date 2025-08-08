@@ -73,7 +73,7 @@ use rule seeds_filtering as homologs_filtering with:
         cov_threshold=lookup("cov_threshold", within=homologs_filt_params),
         cov_dynamic_filt=lookup("cov_dynamic_filt", within=homologs_filt_params),
         separate_probes=lambda wildcards: False,
-        separate_scfs=lambda wildcards: False,
+        tag_scfs=lambda wildcards: False,
         qpat=lambda wildcards: SAUTE_POST_FIX_PAT,
         tpat=lambda wildcards: pattern,
 

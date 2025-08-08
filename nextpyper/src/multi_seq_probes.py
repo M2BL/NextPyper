@@ -156,12 +156,19 @@ def snakemake_call(snakemake):
         inputs = snakemake.input
         outfolder = Path(snakemake.output[0]).parent
         pattern = snakemake.params.pattern
-        probes_list = snakemake.params.probes
+        probes_list = snakemake.params.get("probes")
         mode = snakemake.params.mode
         pat = re.compile(pattern, re.VERBOSE)
 
         # Todo: Refactor this block as a function
         match mode:
+            case "supercontigs":
+                all_recs = [
+                    rec
+                    for file in Path(inputs[0]).parent.rglob("*supercontigs.fasta")
+                    for rec in SeqIO.parse(file, "fasta")
+                ]
+                grouped_recs = group_probes(all_recs, pat, match_group="sample1")
             case "scfs":
                 all_recs = [
                     rec for file in inputs for rec in SeqIO.parse(file, "fasta")
@@ -193,12 +200,17 @@ def snakemake_call(snakemake):
                 )
 
         # Writing output is common to all uses
+        # In "supercontigs" mode, "probe" is actually samples.
         outfolder.mkdir(exist_ok=True)
         for probe, recs in grouped_recs.items():
             SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
 
-        for probe in probes_list:
-            (outfolder / f"{probe}.fasta").touch(exist_ok=True)
+        # In all cases, we may have missing probes, so we need to at least touch them
+        # In supercontigs mode this is not needed, because the outputs are per sample,
+        # which are guaranteed to exist.
+        if mode != "supercontigs":
+            for probe in probes_list:
+                (outfolder / f"{probe}.fasta").touch(exist_ok=True)
 
 
 if __name__ == "__main__":

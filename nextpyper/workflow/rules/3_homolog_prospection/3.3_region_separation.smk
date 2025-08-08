@@ -99,3 +99,44 @@ rule align_regions:
             fi 
         done
         """
+
+
+rule collect_supercontigs:
+    input:
+        expand(
+            outdir
+            / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
+            probe=probes_list,
+        ),
+    output:
+        expand(
+            outdir
+            / "homolog_prospection/region_separation/consolidated/supercontigs_per_sample/{sample}.fasta",
+            sample=sample_list,
+        ),
+    log:
+        outdir
+        / "logs/homolog_prospection/region_separation/consolidated/supercontigs_grouping.log",
+    params:
+        pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
+        mode="supercontigs",
+    script:
+        "../../../src/multi_seq_probes.py"
+
+
+use rule seeds_coverage as supercontigs_coverage with:
+    input:
+        scfs=outdir
+        / "homolog_prospection/region_separation/consolidated/supercontigs_per_sample/{sample}.fasta",
+        clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
+    output:
+        counts=outdir
+        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.counts",
+        metabat=outdir
+        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.metabat",
+        hist=outdir
+        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.hist",
+    log:
+        outdir
+        / "logs/homolog_prospection/region_separation/consolidated/coverage/{sample}.log",
