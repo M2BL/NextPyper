@@ -18,10 +18,10 @@ rule raw_assembly_to_probes_matching:
     output:
         outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
     params:
-        fields=mmseq_fields,
-        evalue=mmseq_evalue,
-        min_orf_len=min_orf_len,
-        sensitivity=mmseq_sens,
+        fields=lookup("mmseqs_matching/fields", within=pipeline),
+        evalue=lookup("mmseqs_matching/evalue", within=pipeline),
+        min_orf_len=lookup("mmseqs_matching/min_orf_len", within=pipeline),
+        sensitivity=lookup("mmseqs_matching/sensitivity", within=pipeline),
     log:
         outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
     threads: 4
@@ -30,7 +30,13 @@ rule raw_assembly_to_probes_matching:
     shell:
         """
         mkdir -p temp_{wildcards.sample}
-        mmseqs easy-search {input.query} {input.probes} {output} temp_{wildcards.sample} --threads {threads} -s {params.sensitivity} -e {params.evalue} --min-length {params.min_orf_len} --format-mode 4 --format-output {params.fields} --remove-tmp-files -a > {log} 2>&1
+        mmseqs easy-search {input.query} {input.probes} {output} temp_{wildcards.sample} \
+        --threads {threads} \
+        -s {params.sensitivity} \
+        -e {params.evalue} \
+        --min-length {params.min_orf_len} \
+        --format-mode 4 --format-output {params.fields} \
+        --remove-tmp-files -a > {log} 2>&1
         rm -r temp_{wildcards.sample}
         """
 
@@ -39,9 +45,8 @@ def get_max_intron_size(wildcards, input):
     """Parametrize the maximum intron size that can be bridged during extension
     by taking twice the maximum observed insert size of the data."""
 
-    with open(input.stats) as file:
-        insert_hist = json.load(file)["insert_size"]["histogram"]
-        return last(filter(itemgetter(1), enumerate(insert_hist)))[0] * 2
+    insert_hist = json.loads(Path(input.stats).read_text())["insert_size"]["histogram"]
+    return last(filter(itemgetter(1), enumerate(insert_hist)))[0] * 2
 
 
 rule extend_paths:
@@ -52,14 +57,16 @@ rule extend_paths:
     output:
         outdir / "assembled/extension/{sample}.fasta",
     params:
-        floor_len=floor_len_extension,
-        ceil_len=ceil_len_extension,
-        plen_scaling=plen_scaling_factor,
-        max_extensions=max_extensions,
+        floor_len=lookup("floor_len_extension", within=scf_ext),
+        ceil_len=lookup("ceiling_len_extension", within=scf_ext),
+        plen_scaling=lookup("probe_len_scaling", within=scf_ext),
+        max_extensions=lookup("max_extensions", within=scf_ext),
         max_intron_size=(
-            max_intron_size if max_intron_size != "auto" else get_max_intron_size
+            get_max_intron_size
+            if (size := lookup("max_intron_size", within=scf_ext)) == "auto"
+            else size
         ),
-        probe_pattern=lambda wildcards: pattern,
+        probe_pattern=lambda wildcards: probe_pattern,
     log:
         outdir / "logs/assembled/extension/{sample}.log",
     script:

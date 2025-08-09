@@ -7,7 +7,7 @@
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
 #       All rights reserved.
-"""Fix Saute sequences headers by updating the length and cov values and add the sample name"""
+"""Fix Saute sequences headers by updating the length and cov values and adding the sample name"""
 
 __version__ = "0.1"
 

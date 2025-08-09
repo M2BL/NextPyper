@@ -18,8 +18,12 @@ rule saute_assembly:
         target_vars=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
         graph=outdir / "saute/target_assembly/{sample}/graph.gfa",
     params:
-        glob="--max_variants 10 --extend_ends --remove_homopolymer_indels --secondary_kmer_threshold 3 ",
-        target_cov=saute_target_cov,
+        extra="--extend_ends --remove_homopolymer_indels ",
+        kmer_threshold=lookup(
+            "saute/assembly/secondary_kmer_threshold", within=pipeline
+        ),
+        max_var=lookup("saute/assembly/max_variants", within=pipeline),
+        target_cov=lookup("saute/assembly/target_cov", within=pipeline),
         kmers=saute_kmer,
     log:
         outdir / "logs/saute/assembly/{sample}.log",
@@ -27,13 +31,16 @@ rule saute_assembly:
     conda:
         "../../envs/saute.yaml"
     shell:
-        "(saute --cores {threads} {params.glob} {params.kmers} "
-        "--target_coverage {params.target_cov} "
-        "--reads {input.reads1},{input.reads2} "
-        "--targets {input.seeds} "
-        "--gfa {output.graph} "
-        "--all_variants {output.all_vars} "
-        "--selected_variants {output.target_vars}) > {log} 2>&1 "
+        """saute --cores {threads} {params.extra} {params.kmers} \
+        --target_coverage {params.target_cov} \
+        --max_variants {params.max_var} \
+        --secondary_kmer_threshold {params.kmer_threshold} \
+        --reads {input.reads1},{input.reads2} \
+        --targets {input.seeds} \
+        --gfa {output.graph} \
+        --all_variants {output.all_vars} \
+        --selected_variants {output.target_vars} > {log} 2>&1
+        """
 
 
 rule fix_homologs_header:

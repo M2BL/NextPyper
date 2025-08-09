@@ -1,4 +1,4 @@
-rule per_probe_scaffold_grouping:
+use rule distribute_seeds as per_probe_scaffold_grouping with:
     input:
         expand(
             outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
@@ -13,13 +13,9 @@ rule per_probe_scaffold_grouping:
         outdir / "logs/homolog_prospection/region_separation/scfs_grouping.log",
     params:
         pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
-        probes=probes_list,
-        mode="scfs",
-    script:
-        "../../../src/multi_seq_probes.py"
 
 
-rule split_matching_probes:
+use rule distribute_seeds as split_matching_probes with:
     input:
         probes=outdir / "homolog_prospection/matching_probes.fasta",
         tables=expand(
@@ -36,11 +32,8 @@ rule split_matching_probes:
     log:
         outdir / "logs/homolog_prospection/region_separation/probe_grouping.log",
     params:
-        pattern=lambda wildcards: pattern,
-        probes=probes_list,
+        pattern=lambda wildcards: probe_pattern,
         mode="multi_probes" if multi_probes else "single_probes",
-    script:
-        "../../../src/multi_seq_probes.py"
 
 
 rule separate_cds_by_regions:
@@ -56,9 +49,9 @@ rule separate_cds_by_regions:
             / "homolog_prospection/region_separation/separation_output/scfs/{probe}"
         ),
     params:
-        min_global_identity=min_global_identity,
-        min_fragment_cov=min_fragment_cov,
-        min_exonic_length=min_exonic_length,
+        min_global_identity=lookup("min_global_identity", within=reg_sep),
+        min_fragment_cov=lookup("min_fragment_cov", within=reg_sep),
+        min_exonic_length=lookup("min_exonic_length", within=reg_sep),
         substitution_matrix=blosum62,
     log:
         outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
@@ -101,7 +94,7 @@ rule align_regions:
         """
 
 
-rule collect_supercontigs:
+use rule per_probe_scaffold_grouping as collect_supercontigs with:
     input:
         expand(
             outdir
@@ -118,10 +111,7 @@ rule collect_supercontigs:
         outdir
         / "logs/homolog_prospection/region_separation/consolidated/supercontigs_grouping.log",
     params:
-        pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
         mode="supercontigs",
-    script:
-        "../../../src/multi_seq_probes.py"
 
 
 use rule seeds_coverage as supercontigs_coverage with:

@@ -72,10 +72,8 @@ use rule seeds_filtering as homologs_filtering with:
         min_gc=lookup("min_gc", within=homologs_filt_params),
         cov_threshold=lookup("cov_threshold", within=homologs_filt_params),
         cov_dynamic_filt=lookup("cov_dynamic_filt", within=homologs_filt_params),
-        separate_probes=lambda wildcards: False,
         tag_scfs=lambda wildcards: False,
         qpat=lambda wildcards: SAUTE_POST_FIX_PAT,
-        tpat=lambda wildcards: pattern,
 
 
 rule estimate_divergence:
@@ -91,7 +89,7 @@ rule estimate_divergence:
         outdir / "logs/homolog_prospection/region_separation/divergence_estimates.tsv",
     params:
         min_idt=lookup("scf_min_idt", within=homologs_filt_params),
-        min_cov=div_est_min_cov,
-        flattening_prop=div_est_flat_prop,
+        min_cov=lookup("divergence_estimation/min_cov", within=pipeline),
+        flattening_prop=lookup("divergence_estimation/flatenning_prop", within=pipeline),
     script:
         "../../../src/divergence_estimation.py"

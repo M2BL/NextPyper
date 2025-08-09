@@ -1,4 +1,5 @@
 def select_asm_kmer(wildcards, input):
+    spades_k = lookup("spades/k", within=pipeline)
     if spades_k == "auto":
         summary = json.loads(Path(input.json).read_text())
         k_mid = int(summary["summary"]["after_filtering"]["read2_mean_length"]) // 2
@@ -21,18 +22,15 @@ rule spades_assembly:
         out_dir=directory(outdir / "assembled/spades/{sample}"),
         graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
     params:
-        mode=lambda wildcards: (
-            "--rna" if sample_dict[wildcards.sample]["type"] == "rna" else "--meta"
-        ),
         k=select_asm_kmer,
-        params="--only-assembler",
+        extra="--meta --only-assembler",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
     threads: 4
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
-        "spades.py -t {threads} {params.mode} {params.params} -k {params.k} -1 {input.in1} -2 {input.in2} -o {output.out_dir} > {log} 2>&1"
+        "spades.py -t {threads} {params.extra} -k {params.k} -1 {input.in1} -2 {input.in2} -o {output.out_dir} > {log} 2>&1"
 
 
 rule make_assembly_scaffolds:

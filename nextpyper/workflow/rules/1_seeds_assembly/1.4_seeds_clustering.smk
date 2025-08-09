@@ -56,11 +56,11 @@ rule seeds_collection:
             outdir / "logs/saute/kmer_params/{sample}.json", sample=sample_list
         ),
     params:
-        min_sister_freq=min_sister_sample_freq,
-        pattern=pattern,
+        min_sister_freq=lookup("seeds/min_sister_sample_freq", within=pipeline),
+        pattern=probe_pattern,
         is_multi=multi_probes,
         interseeds_use=interseeds_use,
         cov_by_mapping=lookup("seeds/cov_by_mapping", within=pipeline),
-        heuristic_params=saute_heuristic_params,
+        heuristic_params=lookup("saute/heuristic", within=pipeline),
     script:
         "../../../src/seeds_collection.py"

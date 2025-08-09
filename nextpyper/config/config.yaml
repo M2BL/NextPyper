@@ -21,13 +21,11 @@ nextpyper:
         spades:
             k: auto
         scaffolds_extension:
-            exploration:
-                floor_len_extension: 3000
-                ceiling_len_extension: 6000
-                probe_len_scaling: 3
-                max_intron_size: auto
-            output:
-                max_extensions: 5
+            floor_len_extension: 3000
+            ceiling_len_extension: 6000
+            probe_len_scaling: 3
+            max_intron_size: auto
+            max_extensions: 5
         seeds:
             min_sister_sample_freq: 0.5
             cov_by_mapping: true
@@ -43,6 +41,8 @@ nextpyper:
                 k2_floor: 21
             assembly:
                 target_cov: 0.2
+                max_variants: 10
+                secondary_kmer_threshold: 3
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
             evalue: 1.000E-6

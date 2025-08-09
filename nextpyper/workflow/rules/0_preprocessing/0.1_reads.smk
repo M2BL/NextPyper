@@ -1,16 +1,7 @@
-# The input function map the sample at hand to its input files (specified in the samples table):
-def get_raw_input_fastq_r1(wildcards):
-    return sample_dict[wildcards.sample]["path_forward"]
-
-
-def get_raw_input_fastq_r2(wildcards):
-    return sample_dict[wildcards.sample]["path_reverse"]
-
-
 rule fastp_pe:
     input:
-        in1=get_raw_input_fastq_r1,
-        in2=get_raw_input_fastq_r2,
+        in1=lookup(query="sample=='{sample}'", cols="path_forward", within=sample_table),
+        in2=lookup(query="sample=='{sample}'", cols="path_reverse", within=sample_table),
     output:
         trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
         trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
@@ -19,21 +10,21 @@ rule fastp_pe:
     log:
         outdir / "logs/preprocessing/fastp/{sample}.log",
     params:
-        trim_qual=trim_qual,
-        trim_min_len=trim_min_len,
+        trim_qual=lookup("preprocessing/trim_qual", within=pipeline),
+        trim_min_len=lookup("preprocessing/min_len", within=pipeline),
         extra="--trim_poly_g --trim_poly_x --low_complexity_filter --cut_tail",
     threads: 4
     conda:
         "../../envs/preprocessing.yaml"
     shell:
-        "(fastp --thread {threads} "
-        "{params.extra} "
-        "--cut_mean_quality {params.trim_qual} "
-        "--length_required {params.trim_min_len} "
-        "--in1 {input.in1} --in2 {input.in2} "
-        "--out1 {output.trim1} --out2 {output.trim2} "
-        "--html {output.html} "
-        "--json {output.json} ) 2> {log} "
+        """fastp --thread {threads} {params.extra} \
+        --cut_mean_quality {params.trim_qual} \
+        --length_required {params.trim_min_len} \
+        --in1 {input.in1} --in2 {input.in2} \
+        --out1 {output.trim1} --out2 {output.trim2} \
+        --html {output.html} \
+        --json {output.json} 2> {log} 
+        """
 
 
 checkpoint prepare_cps:
@@ -42,13 +33,15 @@ checkpoint prepare_cps:
     log:
         outdir / "logs/preprocessing/ref_cps.fasta",
     params:
-        custom=custom_cps,
+        cp_refs_map=cp_refs_map,
+        custom=lookup("args/custom_cps", within=config),
         min_probes_cov=lookup("cp_cleaning/min_sp_probes_cov", within=pipeline),
     retries: 5
     run:
         out_cps = Path(output[0])
         min_probes_cov = params.min_probes_cov
         custom_cps = params.custom
+        cp_refs_map = params.cp_refs_map
 
         with open(log[0], "w") as outlog:
             sys.stdout = sys.stderr = outlog

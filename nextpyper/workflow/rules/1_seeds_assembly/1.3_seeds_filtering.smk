@@ -55,6 +55,6 @@ rule seeds_filtering:
         separate_probes=lambda wildcards: False,
         tag_scfs=lambda wildcards: True,
         qpat=lambda wildcards: False,
-        tpat=lambda wildcards: pattern,
+        tpat=lambda wildcards: probe_pattern,
     script:
         "../../../src/homolog_filtering.py"
