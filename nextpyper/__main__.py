@@ -199,7 +199,7 @@ summarize_run_msg = """
 @click.option(
     "--pattern",
     "probe_pattern",
-    help="Pattern used to group the probes (RegEx)",
+    help="Pattern used to group the probe sequences (RegEx)",
     type=str,
     default=r"(.*)",
     show_default=True,

@@ -52,8 +52,8 @@ nextpyper:
             seeds:
                 max_gc: 0.6
                 min_gc: 0.2
-                cov_threshold: 2
-                cov_dynamic_filt: true
+                cov_threshold: 4
+                cov_dynamic_filt: False
                 scf_min_cov: 0.0
                 scf_min_idt: 0.6
             homologs:
