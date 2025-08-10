@@ -35,7 +35,7 @@ nextpyper:
                 secondary_target_depth: 30
                 k1_min: 0.35
                 k1_max: 0.6
-                k2_min: 0.15
+                k2_min: 0.1
                 k2_max: 0.2
                 k1_floor: 49
                 k2_floor: 21
