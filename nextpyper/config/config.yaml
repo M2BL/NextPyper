@@ -31,9 +31,9 @@ nextpyper:
             cov_by_mapping: true
         saute:
             heuristic:
-                primary_target_depth: 20
-                secondary_target_depth: 40
-                k1_min: 0.3
+                primary_target_depth: 15
+                secondary_target_depth: 30
+                k1_min: 0.35
                 k1_max: 0.6
                 k2_min: 0.15
                 k2_max: 0.2
