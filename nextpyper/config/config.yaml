@@ -14,29 +14,59 @@ nextpyper:
             translated_prop: 0.95
             stop_per_1Kbp: 2 
             min_exon_length: 20
+        cp_cleaning:
+            min_sp_probes_cov: 80
         multi_probe_clustering:
             mmseq2_min_seq_id: 0.8
         spades:
             k: auto
         scaffolds_extension:
-            exploration:
-                floor_len_extension: 3000
-                ceiling_len_extension: 7000
-                probe_len_scaling: 3
-                max_intron_size: 2000
-            output:
-                max_extensions: 5
+            floor_len_extension: 3000
+            ceiling_len_extension: 6000
+            probe_len_scaling: 3
+            max_intron_size: auto
+            max_extensions: 5
+        seeds:
+            min_sister_sample_freq: 0.5
+            cov_by_mapping: true
+        saute:
+            heuristic:
+                primary_target_depth: 15
+                secondary_target_depth: 30
+                k1_min: 0.35
+                k1_max: 0.6
+                k2_min: 0.1
+                k2_max: 0.2
+                k1_floor: 49
+                k2_floor: 21
+            assembly:
+                target_cov: 0.2
+                max_variants: 10
+                secondary_kmer_threshold: 3
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
-            evalue: 1.000E-9
+            evalue: 1.000E-6
             min_orf_len: 15
             sensitivity: 7.5
         homolog_filtering:
-            seeds_scf_min_cov: 0.0
-            seeds_scf_min_idt: 0.6
-            homolog_scf_min_cov: 0.1
-            homolog_scf_min_idt: 0.6
+            seeds:
+                max_gc: 0.6
+                min_gc: 0.2
+                cov_threshold: 4
+                cov_dynamic_filt: False
+                scf_min_cov: 0.0
+                scf_min_idt: 0.6
+            homologs:
+                max_gc: 0.6
+                min_gc: 0.2
+                cov_threshold: 2
+                cov_dynamic_filt: true
+                scf_min_cov: 0.1
+                scf_min_idt: 0.6
+        divergence_estimation:
+            min_cov: 0.5
+            flatenning_prop: 0.1
         region_separation:
-            min_probe_scaffold_sim: 0.85
+            min_global_identity: 0.85
             min_fragment_cov: 0.1
             min_exonic_length: 10

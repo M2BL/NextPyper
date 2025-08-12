@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-#    Copyright (C) 2024
+#    Copyright (C) 2025
 #    Simón Villanueva CORRALES: simon.corrales@ibot.cas.cz
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
@@ -180,11 +180,11 @@ class Cds:
                 or line.startswith("##AAS")
             ):
                 continue
-            # target (contig) nucleotides
+            # target (scaffold) nucleotides
             if line.startswith("##ATN"):
                 self.target_nucleotides = line.removeprefix("##ATN\t").replace("\n", "")
                 continue
-            # target (contig) amino acids
+            # target (scaffold) amino acids
             if line.startswith("##ATA"):
                 self.target_AAs = line.removeprefix("##ATA\t").replace("\n", "")
                 continue
@@ -243,6 +243,7 @@ class Cds:
             probe_name = target_splt[0]
             query_start = int(target_splt[1])
             query_end = int(target_splt[2])
+            print(f"{item["Identity"]=}")
             if item["feature"] == "CDS":
                 fragment = Fragment(
                     contig,

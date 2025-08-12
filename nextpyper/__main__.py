@@ -199,10 +199,39 @@ summarize_run_msg = """
 @click.option(
     "--pattern",
     "probe_pattern",
-    help="Pattern used to group the probes (RegEx)",
+    help="Pattern used to group the probe sequences (RegEx)",
     type=str,
-    default=r"(\d{4})$",
+    default=r"(.*)",
     show_default=True,
+)
+@click.option(
+    "--inter-seeds",
+    "interseeds",
+    help="""Which inter-sample seeds to use for Saute assembly. Interseeds 
+            help to boost probe recovery at the expense of higher 
+            computation time during assembly. The default 'sister' infers 
+            sister-samples that are likely to be the most informative to 
+            get inter-sample seeds from.""",
+    type=click.Choice(("all", "sister", "none")),
+    default="sister",
+    show_default=True,
+)
+@click.option(
+    "--use-ref-cps/--no-ref-cps",
+    "use_ref_cps",
+    help="""If using kew probes, whether to download reference 
+            chloroplasts for the most frequent species in the 
+            probe set for cpDNA filtering.""",
+    default=True,
+    show_default=True,
+)
+@click.option(
+    "--custom-cps",
+    "custom_cps",
+    help="Custom cps to use for cpDNA filtering (fasta)",
+    type=click.Path(readable=True, exists=True),
+    required=False,
+    default=None,
 )
 @common_options
 def run(**kwargs):

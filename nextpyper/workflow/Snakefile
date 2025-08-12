@@ -1,6 +1,6 @@
 # Update default config with runtime config
-configfile: os.path.join(workflow.basedir, "../", "config", "config.yaml")
-configfile: os.path.join(workflow.basedir, "../", "config", "system_config.yaml")
+configfile: Path(workflow.basedir) / "../config/config.yaml"
+configfile: Path(workflow.basedir) / "../config/system_config.yaml"
 
 
 config.update(config["nextpyper"])  # convenience if using namespaced config
@@ -8,12 +8,6 @@ config.update(config["nextpyper"])  # convenience if using namespaced config
 
 # Rules files
 include: Path(workflow.basedir) / "rules" / "common.smk"
-
-
-## List of outputs
-targets = []
-
-
 include: Path(workflow.basedir) / "rules/0_preprocessing/0.1_reads.smk"
 include: Path(workflow.basedir) / "rules/0_preprocessing/0.2_probes.smk"
 include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.1_assembly_spades.smk"
@@ -26,10 +20,20 @@ include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.2_allele_collap
 include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.3_region_separation.smk"
 
 
+## List of outputs
+targets = []
+
 targets.append(
     expand(
         outdir / "homolog_prospection/region_separation/alns/{probes}",
         probes=probes_list,
+    )
+)
+targets.append(
+    expand(
+        outdir
+        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.metabat",
+        sample=sample_list,
     )
 )
 

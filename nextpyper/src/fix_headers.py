@@ -7,7 +7,7 @@
 #    Yann J.K. BERTRAND: yjk_bertrand@ybertrand.org
 #
 #       All rights reserved.
-"""Fix Saute sequences headers by updating the length and cov values and add the sample name"""
+"""Fix Saute sequences headers by updating the length and cov values and adding the sample name"""
 
 __version__ = "0.1"
 
@@ -29,7 +29,7 @@ from more_itertools import interleave_longest
 #                FUNCTIONS
 # =============================================================================
 
-SAUTE_PAT = r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
+SAUTE_PAT = r"^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$"
 
 
 def update_specs(rec: SeqRecord, pat: re.Pattern) -> SeqRecord:
@@ -44,7 +44,7 @@ def update_specs(rec: SeqRecord, pat: re.Pattern) -> SeqRecord:
 
     info = match.groupdict()
     info["len"] = str(len(rec))
-    info["cov"] = info["cov"] = str(round(int(info["kmers"]) / len(rec), 4))
+    info["cov"] = str(round(int(info["kmers"]) / len(rec), 4))
 
     prefix = rec.id[0 : match.regs[1][0]]
     suffix = rec.id[match.regs[-1][1] : len(rec.id)]

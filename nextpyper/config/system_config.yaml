@@ -1,3 +1,7 @@
 nextpyper:
     # Config you don't want users to change
     blosum62: "../../data/blosum62.csv"
+    cp_refs_map: "../../data/cps_seqids.csv"
+    regex_patterns:
+        saute_pre_fix_pat: '^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$'
+        saute_post_fix_pat: '^(?P<sample1>.*?)\|.*?-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$'

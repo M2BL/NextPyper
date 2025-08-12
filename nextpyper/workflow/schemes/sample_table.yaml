@@ -1,4 +1,4 @@
-$schema: "http://json-schema.org/draft-07/schema#"
+$schema: "https://json-schema.org/draft/2020-12/schema"
 description: Sample table schema definition
 type: object
 properties:
@@ -16,7 +16,7 @@ properties:
     type: string
     format: uri
     description: path to fastq(compressed) file containing forward reads.
-    pattern: ".*(.fastq.bz2|.fq.bz2|.fastq.gz|.fq.gz|.fastq|.fq)$"
+    pattern: ".*(.fastq.gz|.fq.gz|.fastq|.fq)$"
   ploidy:
     type: string
     format: uri

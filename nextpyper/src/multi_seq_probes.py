@@ -41,12 +41,16 @@ class NoMatch(Exception):
 
 
 def group_probes(
-    recs: list[SeqRecord], pattern: str, match_group: int | str = 1
+    recs: list[SeqRecord],
+    pattern: str,
+    match_group: int | str = 1,
+    strict: bool = True,
 ) -> dict[str, list[SeqRecord]]:
     """Given a list of records with multiple sequences per probe, use the given
     pattern (a RegEx) to group the sequences using their ID. The pattern must
-    have at least one capture group. The first capture group will be used
-    to group the probes
+    have at least one capture group. By default, the first capture group will be used
+    to group the probes, although other captures group can be specified with match_group.
+    If strict, raise a NoGrouping exception if the pattern does not group any records.
     """
 
     def get_probe_generic(rec: SeqRecord, pattern: re.Pattern, match_group: int | str):
@@ -75,7 +79,7 @@ def group_probes(
         for probe, recs in groupby(sorted(recs, key=get_probe), key=get_probe)
     }
 
-    if len(probe_recs) == len(recs):
+    if len(probe_recs) == len(recs) and strict:
         raise NoGrouping(f"Pattern {pattern} yielded no grouping of the sequences.")
 
     return probe_recs
@@ -156,18 +160,61 @@ def snakemake_call(snakemake):
         inputs = snakemake.input
         outfolder = Path(snakemake.output[0]).parent
         pattern = snakemake.params.pattern
-        probes_list = snakemake.params.probes
+        probes_list = snakemake.params.get("probes")
+        mode = snakemake.params.mode
         pat = re.compile(pattern, re.VERBOSE)
 
-        all_recs = [rec for file in inputs for rec in SeqIO.parse(file, "fasta")]
-        grouped_scfs = group_probes(all_recs, pat, match_group="probe")
+        # Todo: Refactor this block as a function
+        match mode:
+            case "supercontigs":
+                all_recs = [
+                    rec
+                    for file in Path(inputs[0]).parent.rglob("*supercontigs.fasta")
+                    for rec in SeqIO.parse(file, "fasta")
+                ]
+                grouped_recs = group_probes(all_recs, pat, match_group="sample1")
+            case "scfs":
+                all_recs = [
+                    rec for file in inputs for rec in SeqIO.parse(file, "fasta")
+                ]
+                grouped_recs = group_probes(all_recs, pat, match_group="probe")
+            case "single_probes":
+                grouped_recs = {
+                    pat.search(rec.id)[1]: rec
+                    for rec in SeqIO.parse(inputs.probes, "fasta")
+                }
+            case "multi_probes":
+                tables_dir = Path(inputs.tables[0]).parent
+                matched_probes = set(
+                    pd.concat(
+                        pd.read_csv(table, sep="\t") for table in tables_dir.iterdir()
+                    )["theader"].unique()
+                )
+                all_recs = [
+                    rec
+                    for rec in SeqIO.parse(inputs.probes, "fasta")
+                    if rec.id in matched_probes
+                ]
+                grouped_recs = group_probes(all_recs, pat)
+                # It could happen that in a very ideal scenario where a single probe
+                # version per probe is the only surviving probe, this would raise a NoGrouping exception.
+            case _:
+                raise ValueError(
+                    f"{mode=} not recognized. Use scfs, supercontigs, single_probes or multi_probes."
+                )
 
+        # Writing output is common to all uses
+        # In "supercontigs" mode, "probe" is actually samples.
         outfolder.mkdir(exist_ok=True)
-        for probe, recs in grouped_scfs.items():
+        for probe, recs in grouped_recs.items():
             SeqIO.write(recs, outfolder / f"{probe}.fasta", "fasta")
 
-        for probe in probes_list:
-            (outfolder / f"{probe}.fasta").touch(exist_ok=True)
+        # In all cases, we may have missing probes, so we need to at least touch them
+        # In supercontigs mode this is not needed, because the outputs are per sample,
+        # which are guaranteed to exist.
+        if mode != "supercontigs":
+            for probe in probes_list:
+                (outfolder / f"{probe}.fasta").touch(exist_ok=True)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-checkpoint per_probe_scaffold_grouping:
+use rule distribute_seeds as per_probe_scaffold_grouping with:
     input:
         expand(
             outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
@@ -13,18 +13,15 @@ checkpoint per_probe_scaffold_grouping:
         outdir / "logs/homolog_prospection/region_separation/scfs_grouping.log",
     params:
         pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
-        probes=probes_list,
-    script:
-        "../../../src/multi_seq_probes.py"
 
 
-checkpoint split_matching_probes:
+use rule distribute_seeds as split_matching_probes with:
     input:
         probes=outdir / "homolog_prospection/matching_probes.fasta",
         tables=expand(
             outdir
-            / "logs/homolog_prospection/homologs_filtering/scfs_filtering/{samples}.log",
-            samples=sample_list,
+            / "homolog_prospection/homologs_filtering/homolog_filt_tables/{sample}.tsv",
+            sample=sample_list,
         ),
     output:
         expand(
@@ -34,36 +31,27 @@ checkpoint split_matching_probes:
         ),
     log:
         outdir / "logs/homolog_prospection/region_separation/probe_grouping.log",
-    conda:
-        "../../envs/preprocessing.yaml"
-    shell:
-        """
-        cat {input.tables} | cut -f 2 | sort | uniq > probe_ids.txt
-        seqkit grep -nf probe_ids.txt {input.probes} > temp_matching_probes.fasta 2> {log}
-        rm probe_ids.txt
-
-        for outfile in {output}; do
-            name=$(basename $outfile .fasta)
-            seqkit grep -rnp "$name" temp_matching_probes.fasta > $outfile
-        done
-        rm temp_matching_probes.fasta
-        """
+    params:
+        pattern=lambda wildcards: probe_pattern,
+        mode="multi_probes" if multi_probes else "single_probes",
 
 
-checkpoint separate_cds_by_regions:
+rule separate_cds_by_regions:
     input:
         probes=outdir
         / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
         scfs=outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
+        div_map=outdir
+        / "homolog_prospection/region_separation/divergence_thresholds.json",
     output:
         directory(
             outdir
             / "homolog_prospection/region_separation/separation_output/scfs/{probe}"
         ),
     params:
-        min_probe_scaffold_sim=min_probe_scaffold_sim,
-        min_fragment_cov=min_fragment_cov,
-        min_exonic_length=min_exonic_length,
+        min_global_identity=lookup("min_global_identity", within=reg_sep),
+        min_fragment_cov=lookup("min_fragment_cov", within=reg_sep),
+        min_exonic_length=lookup("min_exonic_length", within=reg_sep),
         substitution_matrix=blosum62,
     log:
         outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
@@ -104,3 +92,41 @@ rule align_regions:
             fi 
         done
         """
+
+
+use rule per_probe_scaffold_grouping as collect_supercontigs with:
+    input:
+        expand(
+            outdir
+            / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
+            probe=probes_list,
+        ),
+    output:
+        expand(
+            outdir
+            / "homolog_prospection/region_separation/consolidated/supercontigs_per_sample/{sample}.fasta",
+            sample=sample_list,
+        ),
+    log:
+        outdir
+        / "logs/homolog_prospection/region_separation/consolidated/supercontigs_grouping.log",
+    params:
+        mode="supercontigs",
+
+
+use rule seeds_coverage as supercontigs_coverage with:
+    input:
+        scfs=outdir
+        / "homolog_prospection/region_separation/consolidated/supercontigs_per_sample/{sample}.fasta",
+        clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+        clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
+    output:
+        counts=outdir
+        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.counts",
+        metabat=outdir
+        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.metabat",
+        hist=outdir
+        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.hist",
+    log:
+        outdir
+        / "logs/homolog_prospection/region_separation/consolidated/coverage/{sample}.log",
