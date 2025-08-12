@@ -41,12 +41,16 @@ class NoMatch(Exception):
 
 
 def group_probes(
-    recs: list[SeqRecord], pattern: str, match_group: int | str = 1
+    recs: list[SeqRecord],
+    pattern: str,
+    match_group: int | str = 1,
+    strict: bool = True,
 ) -> dict[str, list[SeqRecord]]:
     """Given a list of records with multiple sequences per probe, use the given
     pattern (a RegEx) to group the sequences using their ID. The pattern must
-    have at least one capture group. The first capture group will be used
-    to group the probes
+    have at least one capture group. By default, the first capture group will be used
+    to group the probes, although other captures group can be specified with match_group.
+    If strict, raise a NoGrouping exception if the pattern does not group any records.
     """
 
     def get_probe_generic(rec: SeqRecord, pattern: re.Pattern, match_group: int | str):
@@ -75,7 +79,7 @@ def group_probes(
         for probe, recs in groupby(sorted(recs, key=get_probe), key=get_probe)
     }
 
-    if len(probe_recs) == len(recs):
+    if len(probe_recs) == len(recs) and strict:
         raise NoGrouping(f"Pattern {pattern} yielded no grouping of the sequences.")
 
     return probe_recs
@@ -196,7 +200,7 @@ def snakemake_call(snakemake):
                 # version per probe is the only surviving probe, this would raise a NoGrouping exception.
             case _:
                 raise ValueError(
-                    f"{mode=} not recognized. Use scfs, single_probes, multi_probes."
+                    f"{mode=} not recognized. Use scfs, supercontigs, single_probes or multi_probes."
                 )
 
         # Writing output is common to all uses

@@ -230,7 +230,7 @@ def snakemake_call(snakemake):
         sample.stem: {
             probe: SeqIO.to_dict(recs)
             for probe, recs in group_probes(
-                list(SeqIO.parse(sample, "fasta")), REC_PAT, 2
+                list(SeqIO.parse(sample, "fasta")), REC_PAT, 2, strict=False
             ).items()
         }
         for sample in map(Path, sample_probes_dir)
