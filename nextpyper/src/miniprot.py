@@ -71,7 +71,7 @@ Region = namedtuple("Region", ["start", "end"])
 MAX_EXPANSION_INTERVAL = (
     10  # on scaffold size of flanking region on each side of the probe hits,
 )
-# used to find the common region that matches a given probe accross multiple scaffolds.
+# used to find the common region that matches a given probe across multiple scaffolds.
 
 
 # =======================================================================================
@@ -516,6 +516,7 @@ class OverlappingCds(MiniprotInit):
     Attributes
     ----------
     -user_probe: if specified, the probe with the best matching score to the scaffold is not computed with miniprot.
+    -maximum_intron_length: if specified, the maximum allowed intron length to keep a scaffold.
     #-min_overlapping: proportion of the exon length that is used to find an overlap with another exon.
         The length that is explored on each endpoint of the exon is capped with hard coded boundary.
     Post Init
@@ -527,6 +528,7 @@ class OverlappingCds(MiniprotInit):
     """
 
     user_probe: str = field(default=None)
+    maximum_intron_length: int = field(default=1000)
 
     miniprot_out: Optional[defaultdict[str, dict[str, StringIO]]] = field(
         init=False, repr=False, default_factory=lambda: defaultdict(dict)
@@ -590,6 +592,7 @@ class OverlappingCds(MiniprotInit):
                         >= self.min_global_identity_dict.get(
                             accession, self.min_global_identity
                         )
+                        and cds.get_longest_intron() < self.maximum_intron_length
                     ):
                         self.cds_dict[scaffold].append(cds)
                 print("cds", self.cds_dict.get(scaffold))

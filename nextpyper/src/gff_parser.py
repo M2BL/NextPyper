@@ -117,8 +117,8 @@ class Cds:
     Post Init
     -data: intermediate object that holds the output of the parsing.
     -fragments: list of Fragment objects. In theory miniprot should produce a single Fragment object.
-    -mRNA_start: index of the start of the mRNA sequence (nucleotide space), start precedes end.
-    -mRNA_end: index of the end of the mRNA sequence (nucleotide space).
+    -scaffold_start: index of the start of the scaffold sequence (nucleotide space), start precedes end.
+    -scaffold_end: index of the end of the scaffold sequence (nucleotide space).
     -probe_start: index of the start of the query (protein space), start precedes end.
     -probe_end: index of the end of the query (protein space).
     -target_nucleotides: sequence of the matching target (i.e. contig) in nucleotides.
@@ -130,8 +130,8 @@ class Cds:
     miniprot_output: StringIO = field(repr=False)
     data: dict[str, list] = field(default_factory=dict, init=False, repr=False)
     fragments: list[Fragment] = field(default_factory=list, init=False, repr=False)
-    mRNA_start: int = field(init=False)
-    mRNA_end: int = field(init=False)
+    scaffold_start: int = field(init=False)
+    scaffold_end: int = field(init=False)
     probe_start: int = field(init=False)
     probe_end: int = field(init=False)
     target_nucleotides: str = field(
@@ -144,7 +144,7 @@ class Cds:
     def __repr__(self):
         if self.fragments:
             return (
-                f"Cds({self.mRNA_start=},{self.mRNA_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=},"
+                f"Cds({self.scaffold_start=},{self.scaffold_end=},{self.probe_start=},{self.probe_end=},{self.global_identity=},"
                 f"strand={self.fragments[0].get_strand()}, contig={self.fragments[0].get_contig_name()}, global_score={self.get_global_score()})"
             )
         else:
@@ -192,7 +192,7 @@ class Cds:
             if line.startswith("##AQA"):
                 self.query_AAs = line.removeprefix("##AQA\t").replace("\n", "")
                 continue
-            # mRNA & CDS lines
+            # scaffold & CDS lines
             record = line.strip().split("\t")
             sequence_name = record[0]
             source = record[1]
@@ -243,7 +243,6 @@ class Cds:
             probe_name = target_splt[0]
             query_start = int(target_splt[1])
             query_end = int(target_splt[2])
-            print(f"{item["Identity"]=}")
             if item["feature"] == "CDS":
                 fragment = Fragment(
                     contig,
@@ -261,8 +260,8 @@ class Cds:
                 )
                 self.fragments.append(fragment)
             else:
-                self.mRNA_start = item["start"] - 1
-                self.mRNA_end = item["end"] - 1
+                self.scaffold_start = item["start"] - 1
+                self.scaffold_end = item["end"] - 1
                 self.probe_start = int(target_splt[1]) - 1
                 self.probe_end = int(target_splt[2]) - 1
                 self.global_identity = float(item["Identity"])
@@ -272,7 +271,7 @@ class Cds:
         fragment = self.fragments[frg_idx]
         frg_limit = fragment.query_end
         idx = 0
-        nuc_idx = self.mRNA_start if fragment.strand == 1 else self.mRNA_end
+        nuc_idx = self.scaffold_start if fragment.strand == 1 else self.scaffold_end
         query_AA_idx = self.probe_start
         probe_nucl_cor = {}
         while idx < len(self.target_nucleotides) + 1:
@@ -316,6 +315,30 @@ class Cds:
         """Compute the alignment score as the sum of the fragment scores."""
         return sum([fragment.score for fragment in self.fragments])
 
+    def get_longest_intron(self):
+        """Retrieve the length of the longest intron"""
+        sorted_fragments = sorted(self.fragments, key=lambda x: x.target_start)
+        if len(self.fragments) == 0:
+            return 0
+        maximum = 0
+        end = sorted_fragments[0].target_end
+        for fragment in sorted_fragments[1:]:
+            intron_length = abs(fragment.target_start - end)
+            if intron_length > maximum:
+                maximum = intron_length
+            end=fragment.target_end
+        return maximum
+
+def debug():
+    from pathlib import Path
+    from io import StringIO
+    miniprot_test = Path('../data/test_data/miniprot/miniprot.paf')
+    miniprot_out = list((line for line in open(miniprot_test)))
+    print(Cds(miniprot_out).get_longest_intron())
+
+
+
 
 if __name__ == "__main__":
-    ...
+    debug()
+
