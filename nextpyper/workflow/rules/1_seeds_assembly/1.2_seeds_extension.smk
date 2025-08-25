@@ -6,7 +6,7 @@ rule make_mmseqs_probes_db:
     log:
         outdir / "logs/assembled/filtering/dbs/probes.log",
     conda:
-        "../../envs/mmseqs2.yaml"
+        "../../envs/matching.yaml"
     shell:
         "mmseqs createdb --dbtype 1 {input} {output} > {log} 2>&1 "
 
@@ -26,7 +26,7 @@ rule raw_assembly_to_probes_matching:
         outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
     threads: 4
     conda:
-        "../../envs/mmseqs2.yaml"
+        "../../envs/matching.yaml"
     shell:
         """
         mkdir -p temp_{wildcards.sample}

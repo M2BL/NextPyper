@@ -1,7 +1,8 @@
-name: mmseqs2
+name: matching
 channels:
     - conda-forge
     - bioconda
     - defaults
 dependencies:
     - mmseqs2>=15
+    - diamond>=2.1.12

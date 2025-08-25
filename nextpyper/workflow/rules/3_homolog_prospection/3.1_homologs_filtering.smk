@@ -17,23 +17,24 @@ rule gather_matching_probes:
         """
 
 
-use rule make_mmseqs_probes_db as make_mmseqs_matching_probes_db with:
+use rule make_diamond_probes_db as make_diamond_matching_probes_db with:
     input:
         outdir / "homolog_prospection/matching_probes.fasta",
     output:
-        outdir / "homolog_prospection/homologs_filtering/dbs/matching_probes",
+        db=outdir / "homolog_prospection/homologs_filtering/dbs/matching_probes.dmnd",
     log:
         outdir / "logs/homolog_prospection/homologs_filtering/make_probes_db.log",
 
 
 use rule seeds_to_probes_matching as homologs_to_probes_matching with:
     input:
-        probes=outdir / "homolog_prospection/homologs_filtering/dbs/matching_probes",
+        probes=outdir
+        / "homolog_prospection/homologs_filtering/dbs/matching_probes.dmnd",
         query=outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
     output:
         outdir / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
     log:
-        outdir / "logs/homolog_prospection/homologs_filtering/mmseqs/{sample}.log",
+        outdir / "logs/homolog_prospection/homologs_filtering/diamond/{sample}.log",
 
 
 use rule seeds_coverage as homologs_coverage with:

@@ -68,6 +68,20 @@ from graph_utils import build_probe_trees, filt_probe_hits
 REF_PAT = r".*probe([0-9]+)$"
 SAUTE_PAT = r"^Contig_(?P<sample>.*?)-(?P<probe>.*?)_(?P<cluster>.+?)_(?P<seed>\d+?):(?P<component>\d+?):[^ ]+$"
 METABAT_COLS = ["query", "len", "cov", "nu", "var"]
+DMND_COLS = [
+    "query",
+    "evalue",
+    "qstart",
+    "qend",
+    "qlen",
+    "tstart",
+    "tend",
+    "tlen",
+    "theader",
+    "gapopen",
+    "nident",
+    "mismatch",
+]
 
 # =============================================================================
 #                FUNCTIONS
@@ -182,8 +196,8 @@ def compute_hits(
             cis=pl.col("qend") > pl.col("qstart"),
         )
 
-        probe_trees = build_probe_trees(pre_df, min_idt)
-        pre_df = filt_probe_hits(pre_df, probe_trees)
+    probe_trees = build_probe_trees(pre_df, min_idt)
+    pre_df = filt_probe_hits(pre_df, probe_trees)
 
     gdf = (
         pre_df.group_by(["query", "theader", "cis"])
@@ -259,7 +273,9 @@ def match_mmseqs_recs(
     """
 
     recs_dict = SeqIO.to_dict(SeqIO.parse(rec_path, "fasta"))
-    df = pl.read_csv(table_path, separator="\t", has_header=True)
+    df = pl.read_csv(
+        table_path, separator="\t", has_header=False, new_columns=DMND_COLS
+    )
     n0 = df["query"].unique().count()
     print(f"Starting seeds: {n0}")
 
@@ -276,7 +292,8 @@ def match_mmseqs_recs(
     # Compute the hits from the filtered sequences
     filt_df = compute_hits(df, min_cov, min_idt, qpat, tpat)
     n3 = filt_df["query"].unique().count()
-    print(f"Final set of seeds: {n3} (removed {n2 - n3})")
+    print(f"Seeds after Probes matching filter: {n3} (removed {n2 - n3})")
+    print(f"Final set of seeds: {n3} (total removed {n0 - n3})")
 
     # Save the computation results in the log
     if out_table:

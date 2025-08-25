@@ -48,6 +48,13 @@ nextpyper:
             evalue: 1.000E-6
             min_orf_len: 15
             sensitivity: 7.5
+        diamond_matching:
+            fields: 'qseqid evalue qstart qend qlen sstart send slen sseqid gapopen nident mismatch'
+            sensitivity: '--ultra-sensitive'
+            evalue: 1.000E-6
+            max_hsps: 10
+            min_orf_len: 15
+            gapopen: 13
         homolog_filtering:
             seeds:
                 max_gc: 0.6
