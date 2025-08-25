@@ -83,10 +83,9 @@ def snakemake_call(snakemake):
     out_path = Path(snakemake.output.normal)
     # expl_out_path = Path(snakemake.output.expl)
 
-    # sample = snakemake.params.sample
     pattern = snakemake.params.get("pattern", TARGET_PAT)
 
-    recs = SeqIO.parse(records_path, "fasta")
+    recs = list(SeqIO.parse(records_path, "fasta"))
     df = query2df(recs, pattern, FIELDS)
     new_recs = collapse_alleles(recs, df)
 
@@ -94,16 +93,14 @@ def snakemake_call(snakemake):
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3:
         print("Usage: python var_asm_parser.py <saute_asm.fasta> <output.fasta>")
         sys.exit(1)
 
     records_path = Path(sys.argv[1])
     out_path = Path(sys.argv[2])
-    # pattern = snakemake.params.get("pattern", TARGET_PAT)
-    # sample = sys.argv[3]
 
-    recs = SeqIO.parse(records_path, "fasta")
+    recs = list(SeqIO.parse(records_path, "fasta"))
     df = query2df(recs, TARGET_PAT, FIELDS)
     new_recs = collapse_alleles(recs, df)
     SeqIO.write(new_recs, out_path, "fasta")

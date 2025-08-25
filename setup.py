@@ -59,7 +59,7 @@ setup(
         "numpy>=1.26",
         "scikit-learn>=1.5",
         "scipy>=1.14",
-        "polars>=1.9",
+        "polars>=1.32.3",
         "intervaltree>=3.1",
         "kmedoids>=0.5.3.1",
         "more-itertools>=10.7",
