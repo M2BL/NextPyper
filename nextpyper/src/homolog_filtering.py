@@ -168,6 +168,7 @@ def compute_hits(
     # If query comes with probe information, filter to keep only matches of that probe.
     if qpat:
         pre_df = df.with_columns(
+            pl.col("tstart") - 1,
             qprobe=pl.col("query").str.extract(qpat, 2),
             tprobe=pl.col("theader").str.extract(tpat, 1),
             cis=pl.col("qend") > pl.col("qstart"),
@@ -176,11 +177,12 @@ def compute_hits(
     # Otherwise Determine the best probe.
     else:
         pre_df = df.with_columns(
+            pl.col("tstart") - 1,
             tprobe=pl.col("theader").str.extract(tpat, 1),
             cis=pl.col("qend") > pl.col("qstart"),
         )
 
-        probe_trees = build_probe_trees(pre_df)
+        probe_trees = build_probe_trees(pre_df, min_idt)
         pre_df = filt_probe_hits(pre_df, probe_trees)
 
     gdf = (
@@ -193,6 +195,8 @@ def compute_hits(
             pl.first("tprobe"),
             pl.col("tstart"),
             pl.col("tend"),
+            pl.first("glob_eff_cov"),
+            pl.first("glob_cov"),
         )
         .with_columns(
             adj_cov=(

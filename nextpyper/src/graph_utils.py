@@ -141,7 +141,7 @@ def build_probe_trees(
     probe_trees = {}
     for probe, phits in groupby(probe_hits.iter_rows(), itemgetter(0)):
         tree = IntervalTree(
-            Interval(tstart - 1, tend, idt)
+            Interval(tstart, tend, idt)
             for _, tstart, tend, n, m in phits
             if (idt := Fraction(n, n + m)) >= min_idt
         )
@@ -175,21 +175,21 @@ def filt_probe_hits(
         df.select(PROBE_COLS)
         .unique()
         .with_columns(
-            eff_cov=pl.col("theader").map_elements(
+            glob_eff_cov=pl.col("theader").map_elements(
                 lambda probe: effective_cov(probe_trees[probe]),
                 return_dtype=pl.Int64,
-            )
-            / pl.col("tlen")
+            ),
+            glob_cov=pl.col("theader").map_elements(
+                lambda probe: sum(inter.length() for inter in probe_trees[probe]),
+                return_dtype=pl.Int64,
+            ),
         )
     )
 
     # Pick the best probe version
-    best_probe_ver = (
-        probes_cov.drop("tlen")
-        .sort(["tprobe", "eff_cov"], descending=True)
-        .group_by("tprobe")
-        .agg(pl.first("theader"), pl.first("eff_cov"))
+    best_probe_ver = probes_cov.group_by("tprobe").agg(
+        pl.all().sort_by(["tprobe", "glob_eff_cov"], descending=True).first()
     )
 
     # Keep only the hits of the best probes
-    return df.join(best_probe_ver, on=["theader", "tprobe"])
+    return df.join(best_probe_ver, on=["theader", "tprobe", "tlen"])
