@@ -48,6 +48,7 @@ cp_refs_map = Path(workflow.source_path(lookup("cp_refs_map", within=config)))
 # Regex Patterns
 SAUTE_PRE_FIX_PAT = lookup("regex_patterns/saute_pre_fix_pat", within=config)
 SAUTE_POST_FIX_PAT = lookup("regex_patterns/saute_post_fix_pat", within=config)
+TARGET_COLLAPSE_PAT = lookup("regex_patterns/saute_target_pat", within=config)
 
 ## Read Workflow parameters:
 pipeline = lookup("pipeline", within=config)

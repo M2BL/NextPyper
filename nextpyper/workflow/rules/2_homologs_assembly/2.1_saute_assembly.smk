@@ -43,9 +43,20 @@ rule saute_assembly:
         """
 
 
+rule parse_saute_assembly:
+    input:
+        target_vars=outdir / "saute/target_assembly/{sample}/target_vars.fasta",
+    output:
+        normal=outdir / "saute/target_assembly/{sample}/collapsed_vars.fasta",
+    params:
+        pattern=TARGET_COLLAPSE_PAT,
+    script:
+        "../../../src/var_asm_parser.py"
+
+
 rule fix_homologs_header:
     input:
-        outdir / "saute/target_assembly/{sample}/all_vars.fasta",
+        outdir / "saute/target_assembly/{sample}/collapsed_vars.fasta",
     output:
         outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
     params:
