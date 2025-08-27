@@ -3,6 +3,7 @@ nextpyper:
     blosum62: "../../data/blosum62.csv"
     cp_refs_map: "../../data/cps_seqids.csv"
     regex_patterns:
+        seed_pat: '^(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+)$'
         saute_pre_fix_pat: '^Contig_(?P<sample>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$'
         saute_post_fix_pat: '^(?P<sample1>.*?)\|.*?-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):[^ ]+:(?P<kmers>\d+)$'
         saute_target_pat: '^Contig_(?P<seed>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<seed_len>\d+)_cov_(?P<cov>[\w.]+):(?P<comp>\d+):(?P<ctg1>\d+):(?P<ctg2>\d+):(?P<kmers>\d+)$'
