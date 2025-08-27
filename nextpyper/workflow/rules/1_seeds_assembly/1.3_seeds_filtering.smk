@@ -90,8 +90,8 @@ rule seeds_filtering:
         cov_threshold=lookup("cov_threshold", within=seeds_filt_params),
         cov_dynamic_filt=lookup("cov_dynamic_filt", within=seeds_filt_params),
         separate_probes=lambda wildcards: False,
-        tag_scfs=lambda wildcards: True,
-        qpat=lambda wildcards: False,
+        tag_scfs=lambda wildcards: False,
+        qpat=lambda wildcards: SEED_PAT,
         tpat=lambda wildcards: probe_pattern,
     script:
         "../../../src/homolog_filtering.py"

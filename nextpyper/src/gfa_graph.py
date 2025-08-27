@@ -17,7 +17,7 @@ __version__ = "0.1"
 # =======================================================================================
 #               IMPORTS
 # =======================================================================================
-from collections import defaultdict
+from collections import Counter, defaultdict
 from fractions import Fraction
 from operator import attrgetter, itemgetter, add
 from dataclasses import dataclass, field
@@ -34,7 +34,7 @@ from Bio import SeqIO
 from Bio.Align import PairwiseAligner
 import polars as pl
 from intervaltree import IntervalTree, Interval
-from more_itertools import split_at
+from more_itertools import split_at, transpose
 
 from graph_utils import (
     OrientedEdge,
@@ -48,6 +48,14 @@ from graph_utils import (
 # from graph_alns_parser import Read
 from union_find import UnionFind
 from diversity import select_k_paths
+
+# =============================================================================
+#                CONSTANTS
+# =============================================================================
+
+NODE_ID_PAT = r"^NODE_(\d+)_"
+PROBE_PAT = r"-(.*?)_EDGE"
+LOG_COLS = ["orig_name", "ext_name", "comp_id", "probe", "orig_path", "ext_path"]
 
 
 # =============================================================================
@@ -647,6 +655,7 @@ def extend_path(
     max_intron_size: int = 2000,
     key: Optional[Callable[[list[OrientedEdge]], int]] = None,
     allow_gray: bool = False,
+    probe: str | None = None,
 ) -> list[OrientedEdge]:
     """Given an assembly graph and a path, extend the path following the graph topology
     using a Depth First Search. Up to max_ext extensions of the given path are returned.
@@ -674,20 +683,26 @@ def extend_path(
     edges = [graph.edge_dict[edge.id] for edge in path.edges]
     probes = {probe for edge in edges for probe in edge.get_colors()}
 
-    match len(probes):
-        case 0:
-            probe = None
-        case 1:
-            probe = probes.pop()
-        case _:
-            probe_idts = {}
-            for probe in probes:
-                tree = IntervalTree(
-                    inter for edge in edges for inter in edge.matching_exons[probe]
-                )
-                probe_idts[probe] = effective_cov(tree, colored_intervals=True)
+    # A probe was provided to use for the exploration
+    if probe is not None and probe not in probes:
+        raise ValueError(f"path {path.name} is not colored by {probe} but by {probes}.")
 
-            probe = max(probe_idts.items(), key=itemgetter(1))[0]
+    # Probe was not provided but it is going to be discovered for colored exploration
+    elif probe is None:
+        match len(probes):
+            case 0:
+                probe = None
+            case 1:
+                probe = probes.pop()
+            case _:
+                probe_idts = {}
+                for probe in probes:
+                    tree = IntervalTree(
+                        inter for edge in edges for inter in edge.matching_exons[probe]
+                    )
+                    probe_idts[probe] = effective_cov(tree, colored_intervals=True)
+
+                probe = max(probe_idts.items(), key=itemgetter(1))[0]
 
     if not allow_gray and probe is None:
         raise ValueError(f"All edges in path {path.name} are colorless. Exiting.")
@@ -824,17 +839,23 @@ def colored_paths_extension(
     hits_iter = (
         hits.sort(["query", "tlen"], descending=True)
         .group_by("query")
-        .agg(pl.first("tlen"), pl.first("comp_id"), pl.first("theader"))
-        .select(["query", "tlen", "comp_id", "theader"])
-        .sort(["comp_id", "theader", "query"])
+        .agg(
+            pl.first("tlen"),
+            pl.first("comp_id"),
+            pl.first("tprobe"),
+            pl.first("theader"),
+        )
+        .select(["query", "tlen", "comp_id", "tprobe", "theader"])
+        .sort(["comp_id", "tprobe", "query"])
         .iter_rows()
     )
 
-    path_extensions = {}
+    # path_extensions = {}
+    path_extensions = defaultdict(dict)
     for (comp, probe), queries in groupby(hits_iter, key=itemgetter(2, 3)):
         # Compute extensions for all paths
         comp_ext = {}
-        for name, tlen, _, _ in queries:
+        for name, tlen, _, _, probe_ver in queries:
             try:
                 comp_ext[name] = extend_path(
                     graph.paths[name],
@@ -843,9 +864,12 @@ def colored_paths_extension(
                     max_len=get_max_len(tlen),
                     max_ext=max_extensions,
                     max_intron_size=max_intron_size,
+                    probe=probe_ver,
                 )
             except RecursionError as err:
-                err.add_note(f"While extending: path={name}, probe={probe} ({tlen=})")
+                err.add_note(
+                    f"While extending: path={name}, probe={probe_ver} ({tlen=})"
+                )
                 raise
 
         # Remove duplicated paths
@@ -887,9 +911,42 @@ def colored_paths_extension(
         for ext in selected_ext:
             final_comp_ext[path2name[_hash_path(ext)]].append(ext)
 
-        path_extensions.update(final_comp_ext)
+        path_extensions[probe].update(final_comp_ext)
 
     return path_extensions
+
+
+def summarize_extensions(
+    ext_dict: dict[str, list[Path_on_graph]],
+    path2comp: dict[str, int],
+    graph: Assembly_graph,
+) -> pl.DataFrame:
+    """Summarize the final extended paths into a dataframe for logging.
+    Information includes the original and extended names and paths, the component
+    in the graph and the probe used to do the extension."""
+
+    def log_path(path: Path_on_graph) -> str:
+        return ",".join(edge.id for edge in path.edges)
+
+    def extract_info(path: str, ext: Path_on_graph) -> tuple[str, str, int, str, str]:
+        probe = re.search(PROBE_PAT, ext.name)[1]
+        orig_path = log_path(graph.paths[path])
+        ext_path = log_path(ext)
+        return path, ext.name, path2comp[path], probe, orig_path, ext_path
+
+    log_iter = transpose(
+        extract_info(path, ext) for path, exts in ext_dict.items() for ext in exts
+    )
+    log_df = pl.DataFrame(log_iter, orient="col", schema=LOG_COLS)
+
+    return (
+        log_df.with_columns(
+            id=pl.col("orig_name").str.extract(NODE_ID_PAT).cast(pl.Int64)
+        )
+        .sort("id")
+        .drop("id")
+        .insert_column(3, (pl.col("orig_path") != pl.col("ext_path")).alias("extended"))
+    )
 
 
 def snakemake_call(snakemake):
@@ -947,7 +1004,17 @@ def snakemake_call(snakemake):
         newpaths = defaultdict(list)
         if not hasattr(graph, "K"):
             for name, path in graph.paths.items():
-                path.name = f'{out.stem}-{path.name.replace("NODE", "EDGE")}'
+                if not (
+                    colors := Counter(
+                        probe
+                        for edge in path.edges
+                        for probe in graph.edge_dict[edge.id].get_colors()
+                    )
+                ):
+                    continue
+
+                probe = re.search(pat, colors.most_common(1)[0])[1]
+                path.name = f'{out.stem}-{probe}_{path.name.replace("NODE", "EDGE")}'
                 newpaths[name].append(path)
 
         # Explore the colored graph:
@@ -957,20 +1024,24 @@ def snakemake_call(snakemake):
             )
 
             # Make the new paths out of the extensions
-            node_pat = re.compile(r"^NODE_(\d+)_")
+            node_pat = re.compile(NODE_ID_PAT)
             counter = count(1)
-            for path, extensions in sorted(
-                path_extensions.items(), key=lambda x: int(node_pat.match(x[0])[1])
-            ):
-                for extension in extensions:
-                    name = f"{out.stem}-"
-                    name += make_path_name(extension, next(counter), graph)
-                    newpaths[path].append(Path_on_graph(name, extension))
+            for probe, path_ext in path_extensions.items():
+                for path, extensions in sorted(
+                    path_ext.items(), key=lambda x: int(node_pat.match(x[0])[1])
+                ):
+                    for extension in extensions:
+                        name = f"{out.stem}-{probe}_"
+                        name += make_path_name(extension, next(counter), graph)
+                        newpaths[path].append(Path_on_graph(name, extension))
 
         # Log the extensions: old_path -> new_path
-        for path, exts in newpaths.items():
-            for newpath in exts:
-                print(f"{path}\t{newpath.name}")
+        # for path, exts in newpaths.items():
+        #     for newpath in exts:
+        #         print(f"{path}\t{newpath.name}")
+
+        log_df = summarize_extensions(newpaths, path2comp, graph)
+        log_df.write_csv(sys.stdout, separator="\t")
 
         # Finally write the new sequences
         seqs_iter = (
