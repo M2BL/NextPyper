@@ -62,34 +62,103 @@ def query2df(recs: list[SeqRecord], pat: str, schema: dict[str, str]) -> pl.Data
     )
 
 
-def collapse_alleles(recs: list[SeqRecord], df: pl.DataFrame) -> list[SeqRecord]:
+def collapse_alleles_df(df: pl.DataFrame) -> pl.DataFrame:
     """Group the sequences from the same component with the same length and pick the one
     with the highest kmer count. It is assumed that these sequences are different alleles.
 
-    Return a reduced set of records with alleles collapsed."""
+    Return the dataframe with the collapsed alleles."""
 
-    target_vars = df.group_by("probe", "seed", "seed_id", "comp", "len").agg(
+    return df.group_by("probe", "seed", "seed_id", "comp", "len").agg(
         pl.col("query").gather(pl.col("kmers").arg_max()).first(),
         pl.col("kmers").max(),
         count=pl.len(),
     )
 
-    allele_collapsed_set = set(target_vars["query"])
+
+def collapse_variants_df(df: pl.DataFrame) -> pl.DataFrame:
+    """Given a dataframe with already collapsed alleles, further collapse the variants
+    in the same component.
+
+    # ToDo: We might further limit the variants reported per component as Saute does.
+
+    Return a DataFrame with the collapsed variants
+    """
+    return df.group_by("probe", "seed", "seed_id", "comp").agg(
+        pl.first("query", "seed_len", "cov", "len"),
+        var_count=pl.len(),
+        allele_count=pl.sum("count"),
+    )
+
+
+def collapse_alleles(recs: list[SeqRecord], allele_df: pl.DataFrame) -> list[SeqRecord]:
+    """Group the sequences from the same component with the same length and pick the one
+    with the highest kmer count. It is assumed that these sequences are different alleles.
+
+    Return a reduced set of records with the selected alleles."""
+
+    allele_collapsed_set = set(allele_df)["query"]
     return [rec for rec in recs if rec.id in allele_collapsed_set]
 
 
+def split_explosive_probes(
+    recs: list[SeqRecord], allele_df: pl.DataFrame, explosive_limit: int
+) -> tuple[list[SeqRecord], list[SeqRecord]]:
+
+    # allele_df = collapse_alleles_df(query2df(recs))
+    var_df = collapse_variants_df(allele_df)
+    collapsed_recs = collapse_alleles(recs, allele_df)
+
+    explosive_probes = (
+        var_df.filter(pl.col("var_count") >= explosive_limit).select("probe").unique()
+    )
+
+    print(f"Total probes: {var_df["probe"].n_unique()}. Setting {explosive_limit=}")
+    print(f"Normal probes: {var_df["probe"].n_unique() - len(explosive_probes)}")
+    print(f"Explosive probes: {len(explosive_probes)}")
+
+    explosive_set = set(allele_df.join(explosive_probes, on="probe")["query"])
+    normal_recs, explosive_recs = partition(
+        lambda rec: rec.id in explosive_set, collapsed_recs
+    )
+
+    return list(normal_recs), list(explosive_recs)
+
+
 def snakemake_call(snakemake):
-    records_path = Path(snakemake.input[0])
-    out_path = Path(snakemake.output.normal)
-    # expl_out_path = Path(snakemake.output.expl)
+    with open(snakemake.log[0], "w") as outlog:
+        sys.stdout = sys.stderr = outlog
 
-    pattern = snakemake.params.get("pattern", TARGET_PAT)
+        records_path = Path(snakemake.input[0])
+        out_path = Path(snakemake.output.normal)
+        expl_out_path = snakemake.output.get("expl")
 
-    recs = list(SeqIO.parse(records_path, "fasta"))
-    df = query2df(recs, pattern, FIELDS)
-    new_recs = collapse_alleles(recs, df)
+        pattern = snakemake.params.get("pattern", TARGET_PAT)
+        explosive_limit = snakemake.params.get("explosive_limit")
 
-    SeqIO.write(new_recs, out_path, "fasta")
+        recs = list(SeqIO.parse(records_path, "fasta"))
+        df = query2df(recs, pattern, FIELDS)
+        allele_df = collapse_alleles_df(df)
+
+        print(f"Starting sequences: {len(recs)}")
+        print(f"Sequences after allele collapsing: {len(allele_df)}")
+
+        # Only do allele collapsing
+        if expl_out_path is None:
+            new_recs = collapse_alleles(recs, allele_df)
+            SeqIO.write(new_recs, out_path, "fasta")
+
+        # Do normal/explosive probe split for reassembly
+        else:
+            print("Splitting into normal and explosive sequence sets")
+            normal_recs, explosive_recs = split_explosive_probes(
+                recs, allele_df, explosive_limit
+            )
+
+            print(f"Sequences in normal set: {len(normal_recs)}")
+            print(f"Sequences in explosive set: {len(explosive_recs)}")
+
+            SeqIO.write(normal_recs, out_path, "fasta")
+            SeqIO.write(explosive_recs, Path(expl_out_path), "fasta")
 
 
 def main():
