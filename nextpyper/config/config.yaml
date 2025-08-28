@@ -45,6 +45,7 @@ nextpyper:
                 secondary_kmer_threshold: 3
             reassembly:
                 explosive_limit: 30
+                k1_rescaling: 0.7
                 target_cov: 0.5 
                 max_variants: 10
                 secondary_kmer_threshold: 3 

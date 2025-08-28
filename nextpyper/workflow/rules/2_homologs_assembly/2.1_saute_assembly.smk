@@ -1,8 +1,15 @@
 def saute_kmer(wildcards, input):
-    with open(input.kmer_params) as file:
-        kmer_params = json.load(file)
-        k1 = int(kmer_params["k1"])
-        k2 = int(kmer_params["k2"])
+    """Set the Kmer sizes for Saute Assembly and reassembly"""
+
+    k1rescale = float(wildcards.get("k1rescale", False))
+    kmer_params = json.loads(Path(input.kmer_params).read_text())
+    k1 = int(kmer_params["k1"])
+    k2 = int(kmer_params["k2"])
+
+    ## For reassembly, scale the primary kmer
+    if k1rescale:
+        k1 = int(k1 * k1rescale)
+        k1 = k1 - 1 if k1 % 2 == 0 else k1
 
     return f"--kmer {k1} --secondary_kmer {k2}"
 
@@ -111,6 +118,7 @@ use rule saute_assembly as explosive_reassembly with:
         ),
         max_var=lookup("saute/reassembly/max_variants", within=pipeline),
         target_cov=lookup("saute/reassembly/target_cov", within=pipeline),
+        k1rescale=lookup("saute/reassembly/k1_rescaling", within=pipeline),
         kmers=saute_kmer,
     log:
         outdir / "logs/saute/reassembly/assembly/{sample}.log",
