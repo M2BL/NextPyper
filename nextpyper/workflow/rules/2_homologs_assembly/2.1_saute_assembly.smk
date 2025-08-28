@@ -1,10 +1,22 @@
-def saute_kmer(wildcards, input):
-    """Set the Kmer sizes for Saute Assembly and reassembly"""
-
-    k1rescale = float(wildcards.get("k1rescale", False))
-    kmer_params = json.loads(Path(input.kmer_params).read_text())
+def read_kmer_params(kmer_params: Path) -> tuple[int, int]:
+    kmer_params = json.loads(kmer_params.read_text())
     k1 = int(kmer_params["k1"])
     k2 = int(kmer_params["k2"])
+    return k1, k2
+
+
+def saute_kmer(wildcards, input):
+    """Set the Kmer sizes for saute assembly"""
+
+    k1, k2 = read_kmer_params(Path(input.kmer_params))
+    return f"--kmer {k1} --secondary_kmer {k2}"
+
+
+def saute_kmer_expl(wildcards, input):
+    """Set the Kmer sizes for saute reassembly rescaling the primary kmer"""
+
+    k1rescale = lookup("saute/reassembly/k1_rescaling", within=pipeline)
+    k1, k2 = read_kmer_params(Path(input.kmer_params))
 
     ## For reassembly, scale the primary kmer
     if k1rescale:
@@ -119,10 +131,10 @@ use rule saute_assembly as explosive_reassembly with:
         max_var=lookup("saute/reassembly/max_variants", within=pipeline),
         target_cov=lookup("saute/reassembly/target_cov", within=pipeline),
         k1rescale=lookup("saute/reassembly/k1_rescaling", within=pipeline),
-        kmers=saute_kmer,
+        kmers=saute_kmer_expl,
     log:
         outdir / "logs/saute/reassembly/assembly/{sample}.log",
-    threads: 4
+    threads: 8
     conda:
         "../../envs/saute.yaml"
 
