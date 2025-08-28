@@ -181,9 +181,28 @@ rule collect_saute_assemblies:
         "cat {input.normal} {input.expl} > {output}"
 
 
-rule fix_homologs_header:
+rule collapse_variants:
     input:
         outdir / "saute/collected/{sample}.fasta",
+    output:
+        normal=temp(outdir / "saute/collapsed/{sample}.fasta"),
+    params:
+        pattern=TARGET_COLLAPSE_PAT,
+        collapse_vars=lookup("saute/collapse_vars", within=pipeline),
+        max_var=lookup("saute/max_variants", within=pipeline),
+    log:
+        outdir / "logs/saute/variant_collapsing/{sample}.log",
+    script:
+        "../../../src/var_asm_parser.py"
+
+
+rule fix_homologs_header:
+    input:
+        branch(
+            lookup("saute/collapse_vars", within=pipeline),
+            then=outdir / "saute/collected/{sample}.fasta",
+            otherwise=outdir / "saute/collapsed/{sample}.fasta",
+        ),
     output:
         outdir / "saute/merged/{sample}.fasta",
     params:

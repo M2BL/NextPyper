@@ -49,6 +49,8 @@ nextpyper:
                 target_cov: 0.5 
                 max_variants: 10
                 secondary_kmer_threshold: 3 
+            collapse_vars: False
+            max_variants: 10
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
             evalue: 1.000E-6
