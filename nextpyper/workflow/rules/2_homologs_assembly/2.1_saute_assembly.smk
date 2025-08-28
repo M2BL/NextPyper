@@ -43,7 +43,7 @@ rule saute_assembly:
         """
 
 
-rule split_saute_assembly:
+checkpoint split_saute_assembly:
     input:
         outdir / "saute/target_assembly/{sample}/target_vars.fasta",
     output:
@@ -60,14 +60,12 @@ rule split_saute_assembly:
 
 rule collect_explosive_reads:
     input:
-        scfs=outdir / "saute/target_assembly/{sample}/expl_vars.fasta"
+        scfs=outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
         reads1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
         reads2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
     output:
         reads1=outdir / "saute/expl_assembly/{sample}/expl_R1.fastq.gz",
         reads2=outdir / "saute/expl_assembly/{sample}/expl_R2.fastq.gz",
-    params:
-        extra="--proper-pairs-only --exclude-supplementary",
     log:
         outdir / "logs/saute/reassembly/read_collection/{sample}.log",
     threads: 4
@@ -75,8 +73,10 @@ rule collect_explosive_reads:
         "../../envs/preprocessing.yaml"
     shell:
         """minimap2 -t {threads} -ax sr {input.scfs} {input.reads1} {input.reads2} 2> {log} | \
-        samtools sort -n -u -@ {threads} 2>> {log} | samtools fastq -1 {output.reads1} -2 {output.reads2} - 2>> {log}        
-        """ 
+        samtools view -@ {threads} -uhf 2 2>> {log} | samtools sort -n -u -@ {threads} 2>> {log} | \
+        samtools fastq -1 {output.reads1} -2 {output.reads2} - 2>> {log}
+        """
+
 
 rule collect_explosive_seeds:
     input:
@@ -84,17 +84,17 @@ rule collect_explosive_seeds:
         expl=outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
     output:
         seeds=outdir / "saute/expl_assembly/{sample}/expl_seeds.fasta",
+        seqids=temp(outdir / "saute/expl_assembly/{sample}/seqids.txt"),
     log:
         outdir / "logs/saute/reassembly/seed_collection/{sample}.log",
     conda:
         "../../envs/preprocessing.yaml"
     shell:
+        """awk '/>/{{match($0,/-(.*?)_EDGE/, m); print "-"m[1]"_"}}' {input.expl} | sort | uniq > {output.seqids}
+        seqkit grep -rf {output.seqids} {input.seeds} > {output.seeds}
         """
-        awk '/>/{match($0,/-(.*?)_EDGE/, m); print "-"m[1]"_"}' {input.expl} | sort | uniq > seqids_{wildcards.sample}.txt
-        seqkit grep -rf seqids.txt  {input.seeds} > {output.seeds}
-        rm seqids_{wildcards.sample}.txt
-        """
-        
+
+
 use rule saute_assembly as explosive_reassembly with:
     input:
         reads1=outdir / "saute/expl_assembly/{sample}/expl_R1.fastq.gz",
@@ -119,32 +119,63 @@ use rule saute_assembly as explosive_reassembly with:
         "../../envs/saute.yaml"
 
 
-use rule split_saute_assembly as collapse_alleles_explosive with:
+checkpoint collapse_alleles_explosive:
     input:
         outdir / "saute/expl_assembly/{sample}/target_vars.fasta",
     output:
-        normal=outdir / "saute/expl_assembly/{sample}/collapsed_vars.fasta",    
+        normal=outdir / "saute/expl_assembly/{sample}/collapsed_vars.fasta",
+    params:
+        pattern=TARGET_COLLAPSE_PAT,
+        empty_ok=True,
     log:
-        outdir / "logs/saute/reassembly/split/{sample}.log",
-    
+        outdir / "logs/saute/reassembly/expl_collapse_alleles/{sample}.log",
+    script:
+        "../../../src/var_asm_parser.py"
+
+
+rule normal_vars_check:
+    input:
+        outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
+    output:
+        temp(touch(outdir / "saute/expl_assembly/{sample}/all_normal.chkp")),
+
+
+# All probes are normal, no need to do reassembly.
+def all_normal(wildcards):
+    out_expl = checkpoints.split_saute_assembly.get(sample=wildcards.sample).output.expl
+    return Path(out_expl).stat().st_size == 0
+
+
+# Reassembly yield nothing, so take back the original results.
+def empty_explosive_asm(wildcards):
+    out_expl = checkpoints.collapse_alleles_explosive.get(
+        sample=wildcards.sample
+    ).output.normal
+    return Path(out_expl).stat().st_size == 0
+
 
 ## ToDo: Determine if reassembly is optional or not, and make the rule optional accordingly.
-
 rule collect_saute_assemblies:
     input:
-        primary=outdir / "saute/target_assembly/{sample}/collapsed_vars.fasta",
-        expl=outdir / "saute/expl_assembly/{sample}/collapsed_vars.fasta",   
+        normal=outdir / "saute/target_assembly/{sample}/normal_vars.fasta",
+        expl=branch(
+            all_normal,
+            then=outdir / "saute/expl_assembly/{sample}/all_normal.chkp",
+            otherwise=branch(
+                empty_explosive_asm,
+                then=outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
+                otherwise=outdir / "saute/expl_assembly/{sample}/collapsed_vars.fasta",
+            ),
+        ),
     output:
-        temp(outdir / "saute/merged/{sample}_merged.fasta"),
+        temp(outdir / "saute/collected/{sample}.fasta"),
     shell:
-        "cat {input.primary} {input.expl} > {output}"
-
+        "cat {input.normal} {input.expl} > {output}"
 
 
 rule fix_homologs_header:
     input:
-        # outdir / "saute/target_assembly/{sample}/collapsed_vars.fasta",
-        outdir / "saute/merged/{sample}_merged.fasta",
+        outdir / "saute/collected/{sample}.fasta",
     output:
         outdir / "saute/merged/{sample}.fasta",
     params:

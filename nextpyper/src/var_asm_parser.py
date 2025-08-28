@@ -84,7 +84,7 @@ def collapse_variants_df(df: pl.DataFrame) -> pl.DataFrame:
     Return a DataFrame with the collapsed variants
     """
     return df.group_by("probe", "seed", "seed_id", "comp").agg(
-        pl.first("query", "seed_len", "cov", "len"),
+        pl.all().sort_by("kmers", descending=True).first(),
         var_count=pl.len(),
         allele_count=pl.sum("count"),
     )
@@ -96,7 +96,7 @@ def collapse_alleles(recs: list[SeqRecord], allele_df: pl.DataFrame) -> list[Seq
 
     Return a reduced set of records with the selected alleles."""
 
-    allele_collapsed_set = set(allele_df)["query"]
+    allele_collapsed_set = set(allele_df["query"])
     return [rec for rec in recs if rec.id in allele_collapsed_set]
 
 
@@ -134,12 +134,21 @@ def snakemake_call(snakemake):
 
         pattern = snakemake.params.get("pattern", TARGET_PAT)
         explosive_limit = snakemake.params.get("explosive_limit")
+        empty_ok = snakemake.params.get("empty_ok", False)
 
         recs = list(SeqIO.parse(records_path, "fasta"))
+
+        print(f"Starting sequences: {len(recs)}")
+
+        # If the input is empty and we allow for it, just touch the output
+        if empty_ok and len(recs) == 0:
+            print("Exiting without error due to empty input.")
+            out_path.touch()
+            sys.exit(0)
+
         df = query2df(recs, pattern, FIELDS)
         allele_df = collapse_alleles_df(df)
 
-        print(f"Starting sequences: {len(recs)}")
         print(f"Sequences after allele collapsing: {len(allele_df)}")
 
         # Only do allele collapsing
