@@ -84,3 +84,4 @@ nextpyper:
             min_fragment_cov: 0.1
             min_exonic_length: 10
             max_intron_length: 1000
+        mafft_params: '--auto --reorder'

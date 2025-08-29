@@ -104,7 +104,7 @@ rule align_regions:
             outdir / "homolog_prospection/region_separation/alns/{probe}",
         ),
     params:
-        "--auto --reorder",
+        lookup("mafft_params", within=pipeline),
     log:
         outdir / "logs/homolog_prospection/region_separation/alns/{probe}.log",
     threads: 2
