@@ -42,12 +42,16 @@ rule raw_assembly_to_probes_matching:
         """
 
 
+def read_insert_size(stats: Path) -> int:
+    insert_hist = json.loads(stats.read_text())["insert_size"]["histogram"]
+    return last(filter(itemgetter(1), enumerate(insert_hist)))[0]
+
+
 def get_max_intron_size(wildcards, input):
     """Parametrize the maximum intron size that can be bridged during extension
     by taking twice the maximum observed insert size of the data."""
 
-    insert_hist = json.loads(Path(input.stats).read_text())["insert_size"]["histogram"]
-    return last(filter(itemgetter(1), enumerate(insert_hist)))[0] * 2
+    return read_insert_size(Path(input.stats)) * 2
 
 
 rule extend_paths:

@@ -439,8 +439,6 @@ class MiniprotInit:
     ----------
     -probes_fasta: path to the amino acid probes fasta file (multiprobe)
     -scaffold_fasta: path to the nucleotide scaffold fasta file.
-    -min_global_identity_dict: dictionary of thresholds identity over all several fragments.
-    -min_global_identity: identity value to use if sample is not present in min_global_identity_dict
     -threads: for miniprot.
     -min_fragment_cov: fraction of the probe covered by a contig for miniprot.
     -min_exonic_length: minimum length of concatenated exons after trimming used for saving.
@@ -456,8 +454,6 @@ class MiniprotInit:
     probes_fasta: str
     scaffold_fasta: str
     substitution_matrix: str
-    min_global_identity_dict: dict[str:float] = field(default_factory=dict)
-    min_global_identity: float = field(default=0.85)
     threads: int = field(default=8)
     min_fragment_cov: float = field(default=0.05)
     min_exonic_length: int = field(default=200)
@@ -516,7 +512,11 @@ class OverlappingCds(MiniprotInit):
     Attributes
     ----------
     -user_probe: if specified, the probe with the best matching score to the scaffold is not computed with miniprot.
-    -maximum_intron_length: if specified, the maximum allowed intron length to keep a scaffold.
+    -min_global_identity_dict: per sample dictionary of identity thresholds to filter scaffolds, using
+        the global identity found over several fragments.
+    -min_global_identity: identity value to use if sample is not present in min_global_identity_dict
+    -max_intron_dict: dictionary with per sample values for maximum intron length allowed to keep a scaffold.
+    -max_intron_length: max intron length to use if a sample is not present in max_intron_dict.
     #-min_overlapping: proportion of the exon length that is used to find an overlap with another exon.
         The length that is explored on each endpoint of the exon is capped with hard coded boundary.
     Post Init
@@ -528,7 +528,10 @@ class OverlappingCds(MiniprotInit):
     """
 
     user_probe: str = field(default=None)
-    maximum_intron_length: int = field(default=1000)
+    min_global_identity_dict: dict[str:float] = field(default_factory=dict)
+    min_global_identity: float = field(default=0.85)
+    max_intron_length: int = field(default=1000)
+    max_intron_dict: dict[str, int] = field(default_factory=dict)
 
     miniprot_out: Optional[defaultdict[str, dict[str, StringIO]]] = field(
         init=False, repr=False, default_factory=lambda: defaultdict(dict)
@@ -592,7 +595,8 @@ class OverlappingCds(MiniprotInit):
                         >= self.min_global_identity_dict.get(
                             accession, self.min_global_identity
                         )
-                        and cds.get_longest_intron() < self.maximum_intron_length
+                        and cds.get_longest_intron()
+                        < self.max_intron_dict.get(accession, self.max_intron_length)
                     ):
                         self.cds_dict[scaffold].append(cds)
                 print("cds", self.cds_dict.get(scaffold))
@@ -734,7 +738,7 @@ class OverlappingCds(MiniprotInit):
 
             if overlapping_gp.extended_cds_dict:
                 if not overlapping_gp.global_start and not overlapping_gp.global_end:
-                    sys.exit(f"[ERROR] 'global_start' and 'global_end' are undefined")
+                    sys.exit("[ERROR] 'global_start' and 'global_end' are undefined")
                 #  Save exons
                 name = f"{prefix}_exons.fasta"
                 out_path_exon = outdir / name
@@ -870,6 +874,7 @@ def snakemake_call(snakemake):
         scfs = Path(snakemake.input.scfs)
         probes = Path(snakemake.input.probes)
         div_map = json.loads(Path(snakemake.input.div_map).read_bytes())
+        max_intron_map = json.loads(Path(snakemake.input.max_intron_map).read_bytes())
 
         outdir.mkdir(parents=True, exist_ok=True)
         if scfs.stat().st_size > 0:
@@ -877,6 +882,7 @@ def snakemake_call(snakemake):
                 probes,
                 scfs,
                 min_global_identity_dict=div_map,
+                max_intron_dict=max_intron_map,
                 threads=threads,
                 **snakemake.params,
             )

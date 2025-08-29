@@ -1,3 +1,34 @@
+rule estimate_divergence:
+    input:
+        expand(
+            outdir
+            / "homolog_prospection/homologs_filtering/homolog_filt_tables/{sample}.tsv",
+            sample=sample_list,
+        ),
+    output:
+        outdir / "homolog_prospection/region_separation/divergence_thresholds.json",
+    log:
+        outdir / "logs/homolog_prospection/region_separation/divergence_estimates.tsv",
+    params:
+        min_idt=lookup("scf_min_idt", within=homologs_filt_params),
+        min_cov=lookup("divergence_estimation/min_cov", within=pipeline),
+        flattening_prop=lookup("divergence_estimation/flatenning_prop", within=pipeline),
+    script:
+        "../../../src/divergence_estimation.py"
+
+
+rule estimate_intron_ceiling:
+    input:
+        expand(outdir / "logs/preprocessing/fastp/{sample}.json", sample=sample_list),
+    output:
+        outdir / "homolog_prospection/region_separation/intron_ceilings.json",
+    run:
+        max_intron = {
+            file.stem: read_insert_size(file) * 2 for file in map(Path, input)
+        }
+        Path(output[0]).write_text(json.dumps(max_intron, indent=4))
+
+
 use rule distribute_seeds as per_probe_scaffold_grouping with:
     input:
         expand(
@@ -43,6 +74,8 @@ rule separate_cds_by_regions:
         scfs=outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
         div_map=outdir
         / "homolog_prospection/region_separation/divergence_thresholds.json",
+        max_intron_map=outdir
+        / "homolog_prospection/region_separation/intron_ceilings.json",
     output:
         directory(
             outdir
@@ -52,6 +85,7 @@ rule separate_cds_by_regions:
         min_global_identity=lookup("min_global_identity", within=reg_sep),
         min_fragment_cov=lookup("min_fragment_cov", within=reg_sep),
         min_exonic_length=lookup("min_exonic_length", within=reg_sep),
+        max_intron_length=lookup("max_intron_length", within=reg_sep),
         substitution_matrix=blosum62,
     log:
         outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
