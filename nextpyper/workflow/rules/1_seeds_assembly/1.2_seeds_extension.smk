@@ -25,6 +25,8 @@ rule raw_assembly_to_probes_matching:
     log:
         outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
     threads: 4
+    shadow:
+        "shallow"
     conda:
         "../../envs/matching.yaml"
     shell:
@@ -37,7 +39,6 @@ rule raw_assembly_to_probes_matching:
         --min-length {params.min_orf_len} \
         --format-mode 4 --format-output {params.fields} \
         --remove-tmp-files -a > {log} 2>&1
-        rm -r temp_{wildcards.sample}
         """
 
 
