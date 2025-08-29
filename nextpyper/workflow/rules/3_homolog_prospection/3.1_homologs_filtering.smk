@@ -30,7 +30,6 @@ use rule seeds_to_probes_matching as homologs_to_probes_matching with:
     input:
         probes=outdir
         / "homolog_prospection/homologs_filtering/dbs/matching_probes.dmnd",
-        # query=outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
         query=outdir / "saute/merged/{sample}.fasta",
     output:
         outdir / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
@@ -40,7 +39,6 @@ use rule seeds_to_probes_matching as homologs_to_probes_matching with:
 
 use rule seeds_coverage as homologs_coverage with:
     input:
-        # scfs=outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
         scfs=outdir / "saute/merged/{sample}.fasta",
         clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
         clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
@@ -56,7 +54,6 @@ use rule seeds_coverage as homologs_coverage with:
 
 use rule seeds_filtering as homologs_filtering with:
     input:
-        # scfs=outdir / "saute/target_assembly/{sample}/fixed_vars.fasta",
         scfs=outdir / "saute/merged/{sample}.fasta",
         hits=outdir
         / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",

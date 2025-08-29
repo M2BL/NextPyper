@@ -81,10 +81,14 @@ def collapse_variants_df(df: pl.DataFrame, max_vars: int = 1) -> pl.DataFrame:
 
     Return a DataFrame with the collapsed variants
     """
-    return df.group_by("probe", "seed", "seed_id", "comp").agg(
-        pl.all().sort_by("kmers", descending=True).head(max_vars),
-        var_count=pl.len(),
-        allele_count=pl.sum("count"),
+    return (
+        df.group_by("probe", "seed", "seed_id", "comp")
+        .agg(
+            pl.all().sort_by("kmers", descending=True).head(max_vars),
+            var_count=pl.len(),
+            allele_count=pl.sum("count"),
+        )
+        .explode("len", "query", "kmers", "count")
     )
 
 
@@ -137,6 +141,7 @@ def snakemake_call(snakemake):
         recs = list(SeqIO.parse(records_path, "fasta"))
 
         print(f"Starting sequences: {len(recs)}")
+        print(f"{collapse_vars=}, {max_vars=}")
 
         # If the input is empty and we allow for it, just touch the output
         if empty_ok and len(recs) == 0:

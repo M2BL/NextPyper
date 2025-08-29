@@ -41,15 +41,13 @@ nextpyper:
                 k2_floor: 21
             assembly:
                 target_cov: 0.2
-                max_variants: 10
                 secondary_kmer_threshold: 3
             reassembly:
                 explosive_limit: 30
                 k1_rescaling: 0.7
                 target_cov: 0.5 
-                max_variants: 10
                 secondary_kmer_threshold: 3 
-            collapse_vars: False
+            collapse_vars: true
             max_variants: 10
         mmseqs_matching:
             fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch

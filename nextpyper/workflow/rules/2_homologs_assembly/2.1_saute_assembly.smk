@@ -41,7 +41,7 @@ rule saute_assembly:
         kmer_threshold=lookup(
             "saute/assembly/secondary_kmer_threshold", within=pipeline
         ),
-        max_var=lookup("saute/assembly/max_variants", within=pipeline),
+        max_var=lookup("saute/max_variants", within=pipeline),
         target_cov=lookup("saute/assembly/target_cov", within=pipeline),
         kmers=saute_kmer,
     log:
@@ -128,7 +128,7 @@ use rule saute_assembly as explosive_reassembly with:
         kmer_threshold=lookup(
             "saute/reassembly/secondary_kmer_threshold", within=pipeline
         ),
-        max_var=lookup("saute/reassembly/max_variants", within=pipeline),
+        max_var=lookup("saute/max_variants", within=pipeline),
         target_cov=lookup("saute/reassembly/target_cov", within=pipeline),
         k1rescale=lookup("saute/reassembly/k1_rescaling", within=pipeline),
         kmers=saute_kmer_expl,
@@ -212,8 +212,8 @@ rule fix_homologs_header:
     input:
         branch(
             lookup("saute/collapse_vars", within=pipeline),
-            then=outdir / "saute/collected/{sample}.fasta",
-            otherwise=outdir / "saute/collapsed/{sample}.fasta",
+            then=outdir / "saute/collapsed/{sample}.fasta",
+            otherwise=outdir / "saute/collected/{sample}.fasta",
         ),
     output:
         outdir / "saute/merged/{sample}.fasta",
