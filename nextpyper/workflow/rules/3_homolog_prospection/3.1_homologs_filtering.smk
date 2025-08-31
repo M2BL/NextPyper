@@ -7,13 +7,14 @@ rule gather_matching_probes:
         ),
     output:
         outdir / "homolog_prospection/matching_probes.fasta",
+    shadow:
+        "shallow"
     conda:
         "../../envs/preprocessing.yaml"
     shell:
         """
         cat {input.tables} | cut -f 2 | sort | uniq > probe_ids.txt
-        seqkit grep -nf probe_ids.txt {input.probes} > {output}
-        rm probe_ids.txt
+        seqkit grep -f probe_ids.txt {input.probes} > {output}
         """
 
 
@@ -30,7 +31,7 @@ use rule seeds_to_probes_matching as homologs_to_probes_matching with:
     input:
         probes=outdir
         / "homolog_prospection/homologs_filtering/dbs/matching_probes.dmnd",
-        query=outdir / "saute/merged/{sample}.fasta",
+        query=outdir / "saute/final/merged/{sample}.fasta",
     output:
         outdir / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
     log:
@@ -39,7 +40,7 @@ use rule seeds_to_probes_matching as homologs_to_probes_matching with:
 
 use rule seeds_coverage as homologs_coverage with:
     input:
-        scfs=outdir / "saute/merged/{sample}.fasta",
+        scfs=outdir / "saute/final/merged/{sample}.fasta",
         clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
         clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
     output:
@@ -54,7 +55,7 @@ use rule seeds_coverage as homologs_coverage with:
 
 use rule seeds_filtering as homologs_filtering with:
     input:
-        scfs=outdir / "saute/merged/{sample}.fasta",
+        scfs=outdir / "saute/final/merged/{sample}.fasta",
         hits=outdir
         / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
         covs=outdir / "homolog_prospection/homologs_filtering/coverage/{sample}.metabat",

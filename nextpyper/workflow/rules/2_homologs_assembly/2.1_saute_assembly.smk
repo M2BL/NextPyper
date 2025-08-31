@@ -174,7 +174,6 @@ def empty_explosive_asm(wildcards):
     return Path(out_expl).stat().st_size == 0
 
 
-## ToDo: Determine if reassembly is optional or not, and make the rule optional accordingly.
 rule collect_saute_assemblies:
     input:
         normal=outdir / "saute/target_assembly/{sample}/normal_vars.fasta",
@@ -188,16 +187,16 @@ rule collect_saute_assemblies:
             ),
         ),
     output:
-        temp(outdir / "saute/collected/{sample}.fasta"),
+        temp(outdir / "saute/final/collected/{sample}.fasta"),
     shell:
         "cat {input.normal} {input.expl} > {output}"
 
 
 rule collapse_variants:
     input:
-        outdir / "saute/collected/{sample}.fasta",
+        outdir / "saute/final/collected/{sample}.fasta",
     output:
-        normal=temp(outdir / "saute/collapsed/{sample}.fasta"),
+        normal=temp(outdir / "saute/final/collapsed/{sample}.fasta"),
     params:
         pattern=TARGET_COLLAPSE_PAT,
         collapse_vars=lookup("saute/collapse_vars", within=pipeline),
@@ -212,11 +211,11 @@ rule fix_homologs_header:
     input:
         branch(
             lookup("saute/collapse_vars", within=pipeline),
-            then=outdir / "saute/collapsed/{sample}.fasta",
-            otherwise=outdir / "saute/collected/{sample}.fasta",
+            then=outdir / "saute/final/collapsed/{sample}.fasta",
+            otherwise=outdir / "saute/final/collected/{sample}.fasta",
         ),
     output:
-        outdir / "saute/merged/{sample}.fasta",
+        outdir / "saute/final/merged/{sample}.fasta",
     params:
         pattern=SAUTE_PRE_FIX_PAT,
         sample=lambda wildcards: wildcards.sample,
