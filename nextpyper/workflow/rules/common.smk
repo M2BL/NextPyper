@@ -39,6 +39,7 @@ probe_pattern = lookup("args/probe_pattern", within=config)
 multi_probes = lookup("args/multi_probes", within=config)
 max_threads = lookup("args/threads", within=config)
 interseeds_use = lookup("args/interseeds", within=config)
+reasm = lookup("args/reasm", within=config)
 
 use_ref_cps = lookup("args/use_ref_cps", within=config)
 

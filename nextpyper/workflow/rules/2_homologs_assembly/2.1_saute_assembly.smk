@@ -181,7 +181,7 @@ rule collect_saute_assemblies:
             all_normal,
             then=outdir / "saute/expl_assembly/{sample}/all_normal.chkp",
             otherwise=branch(
-                empty_explosive_asm,
+                not reasm or empty_explosive_asm,
                 then=outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
                 otherwise=outdir / "saute/expl_assembly/{sample}/collapsed_vars.fasta",
             ),

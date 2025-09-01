@@ -205,7 +205,7 @@ summarize_run_msg = """
     show_default=True,
 )
 @click.option(
-    "--inter-seeds",
+    "--interseeds",
     "interseeds",
     help="""Which inter-sample seeds to use for Saute assembly. Interseeds 
             help to boost probe recovery at the expense of higher 
@@ -214,6 +214,14 @@ summarize_run_msg = """
             get inter-sample seeds from.""",
     type=click.Choice(("all", "sister", "none")),
     default="sister",
+    show_default=True,
+)
+@click.option(
+    "--reasm-complex-probes/--no-reasm",
+    "reasm",
+    help="""Whether to reassemble the most complex ("explosive") probes found. 
+            This second assembly is tailored to better resolve such complexity.""",
+    default=True,
     show_default=True,
 )
 @click.option(
