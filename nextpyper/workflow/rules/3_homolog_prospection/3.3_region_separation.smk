@@ -159,8 +159,6 @@ use rule seeds_coverage as supercontigs_coverage with:
         / "homolog_prospection/region_separation/consolidated/coverage/{sample}.counts",
         metabat=outdir
         / "homolog_prospection/region_separation/consolidated/coverage/{sample}.metabat",
-        hist=outdir
-        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.hist",
     log:
         outdir
         / "logs/homolog_prospection/region_separation/consolidated/coverage/{sample}.log",

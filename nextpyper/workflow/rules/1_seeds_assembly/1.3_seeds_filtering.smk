@@ -53,7 +53,6 @@ rule seeds_coverage:
     output:
         counts=outdir / "assembled/filtering/coverage/{sample}.counts",
         metabat=outdir / "assembled/filtering/coverage/{sample}.metabat",
-        hist=outdir / "assembled/filtering/coverage/{sample}.hist",
     params:
         extra="--proper-pairs-only --exclude-supplementary",
     log:
@@ -69,7 +68,6 @@ rule seeds_coverage:
         samtools sort -u -@ {threads} > tmp_{wildcards.sample}.bam 2>> {log}
         coverm contig -m count {params.extra} -b tmp_{wildcards.sample}.bam  > {output.counts} 2>> {log}
         coverm contig -m metabat {params.extra} -b tmp_{wildcards.sample}.bam  > {output.metabat} 2>> {log}
-        coverm contig -m coverage_histogram {params.extra} -b tmp_{wildcards.sample}.bam  > {output.hist} 2>> {log}
         """
 
 
