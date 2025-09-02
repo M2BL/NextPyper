@@ -1013,7 +1013,7 @@ def snakemake_call(snakemake):
                 ):
                     continue
 
-                probe = re.search(pat, colors.most_common(1)[0])[1]
+                probe = re.search(pat, colors.most_common(1)[0][0])[1]
                 path.name = f'{out.stem}-{probe}_{path.name.replace("NODE", "EDGE")}'
                 newpaths[name].append(path)
 
