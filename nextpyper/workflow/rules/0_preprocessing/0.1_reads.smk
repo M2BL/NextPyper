@@ -31,37 +31,24 @@ checkpoint prepare_cps:
     output:
         outdir / "preprocessed/ref_cps.fasta",
     log:
-        outdir / "logs/preprocessing/ref_cps.fasta",
+        outdir / "logs/preprocessing/cps.log",
     params:
         cp_refs_map=cp_refs_map,
         custom=lookup("args/custom_cps", within=config),
-        min_probes_cov=lookup("cp_cleaning/min_sp_probes_cov", within=pipeline),
     retries: 5
     run:
         out_cps = Path(output[0])
-        min_probes_cov = params.min_probes_cov
         custom_cps = params.custom
-        cp_refs_map = params.cp_refs_map
 
         with open(log[0], "w") as outlog:
             sys.stdout = sys.stderr = outlog
             cps = []
 
-            if use_ref_cps:
-                kp2seqid = pl.read_csv(cp_refs_map)
-                probe_cov = Counter(probe.split("_")[0] for probe in probes)
-                selected_cps = {
-                    sp for sp, count in probe_cov.items() if count >= min_probes_cov
-                }
-                seqids = kp2seqid.filter(pl.col("1kp").is_in(selected_cps))["seqid"]
-                if not seqids.is_empty():
-                    handle = Entrez.efetch(
-                        db="nuccore",
-                        id=seqids.to_list(),
-                        rettype="fasta",
-                        retmode="text",
-                    )
-                    cps += list(SeqIO.parse(handle, "fasta"))
+            if use_ref_cps and seqids:
+                handle = Entrez.efetch(
+                    db="nuccore", id=seqids, rettype="fasta", retmode="text"
+                )
+                cps += list(SeqIO.parse(handle, "fasta"))
 
             # If custom cps are given add them to the downloaded ones
             if custom_cps:

@@ -41,10 +41,22 @@ max_threads = lookup("args/threads", within=config)
 interseeds_use = lookup("args/interseeds", within=config)
 reasm = lookup("args/reasm", within=config)
 
-use_ref_cps = lookup("args/use_ref_cps", within=config)
-
 blosum62 = Path(workflow.source_path(lookup("blosum62", within=config)))
+
+# Check reference chloroplasts use for Filtering step
 cp_refs_map = Path(workflow.source_path(lookup("cp_refs_map", within=config)))
+use_ref_cps = lookup("args/use_ref_cps", within=config)
+ref_cps = lookup("args/ref_cps", within=config)
+
+if use_ref_cps:
+    kp2seqid = pl.read_csv(cp_refs_map)
+    kps = set(ref_cps.split(","))
+    if len(extra := (set(kps) - set(kp2seqid["1kp"]))) > 0:
+        raise ValueError(
+            f"""Error: cps_seqids db does not contain: {extra}. Make sure to use only valid entries(1kp).
+                Use --no-ref-cps if you do not want to download any cp for filtering"""
+        )
+    seqids = kp2seqid.filter(pl.col("1kp").is_in(kps))["seqid"].to_list()
 
 # Regex Patterns
 SEED_PAT = lookup("regex_patterns/seed_pat", within=config)

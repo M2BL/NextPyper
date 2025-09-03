@@ -219,24 +219,33 @@ summarize_run_msg = """
 @click.option(
     "--reasm-complex-probes/--no-reasm",
     "reasm",
-    help="""Whether to reassemble the most complex ("explosive") probes found. 
-            This second assembly is tailored to better resolve such complexity.""",
+    help="""Whether to reassemble the most complex ("explosive") probes found in
+            each sample. This second assembly is tailored to better resolve such 
+            complexity.""",
     default=True,
     show_default=True,
 )
 @click.option(
     "--use-ref-cps/--no-ref-cps",
     "use_ref_cps",
-    help="""If using kew probes, whether to download reference 
-            chloroplasts for the most frequent species in the 
-            probe set for cpDNA filtering.""",
+    help="""Download reference chloroplasts for cpDNA filtering.""",
     default=True,
+    show_default=True,
+)
+@click.option(
+    "--ref-cps",
+    "ref_cps",
+    help="""Comma separated list of reference chloroplasts to download for
+            cp filtering. Check cps_seqids.csv for a full list of values.""",
+    type=str,
+    default="Ambtr,Arath,Orysa,UMUL,RQNK",
     show_default=True,
 )
 @click.option(
     "--custom-cps",
     "custom_cps",
-    help="Custom cps to use for cpDNA filtering (fasta)",
+    help="""Custom cps to use for cpDNA filtering (fasta). 
+            These cps are used in addition to the ref cps.""",
     type=click.Path(readable=True, exists=True),
     required=False,
     default=None,
