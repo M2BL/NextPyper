@@ -48,7 +48,6 @@ use rule seeds_coverage as homologs_coverage with:
         / "homolog_prospection/homologs_filtering/coverage/{sample}.counts",
         metabat=outdir
         / "homolog_prospection/homologs_filtering/coverage/{sample}.metabat",
-        hist=outdir / "homolog_prospection/homologs_filtering/coverage/{sample}.hist",
     log:
         outdir / "logs/homolog_prospection/homologs_filtering/coverage/{sample}.log",
 
