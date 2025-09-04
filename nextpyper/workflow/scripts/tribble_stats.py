@@ -34,14 +34,18 @@ from var_asm_parser import collapse_alleles_df, collapse_variants_df, query2df
 from var_asm_parser import TARGET_PAT, FIELDS
 
 TRIBBLE_LIM_DPATH = "nextpyper/pipeline/saute/reassembly/explosive_limit"
+MERGED_ASM_PAT = r"^.*?\|(?P<seed>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<seed_len>\d+)_cov_(?P<cov>[\w.]+):(?P<comp>\d+):(?P<ctg1>\d+):(?P<ctg2>\d+):(?P<kmers>\d+)$"
+
 
 # =============================================================================
 #                FUNCTIONS
 # =============================================================================
 
 
-def read_target_vars(vars: Path, tribble_lim: int) -> pl.DataFrame:
-    df = query2df(SeqIO.parse(vars, "fasta"), TARGET_PAT, FIELDS)
+def read_target_vars(
+    vars: Path, tribble_lim: int, header_pat: str = TARGET_PAT
+) -> pl.DataFrame:
+    df = query2df(SeqIO.parse(vars, "fasta"), header_pat, FIELDS)
     return (
         collapse_variants_df(collapse_alleles_df(df))
         .with_columns(pl.col("probe").cast(pl.String))
@@ -55,12 +59,12 @@ def find_tribbles(run_dir: Path, sample: str, tribble_lim: int = 30) -> pl.DataF
     """Compute the tribbles for a single sample"""
 
     before_vars = run_dir / f"saute/target_assembly/{sample}/target_vars.fasta"
-    after_vars = run_dir / f"saute/expl_assembly/{sample}/target_vars.fasta"
+    after_vars = run_dir / f"saute/final/merged/{sample}.fasta"
 
     tribble_df = read_target_vars(before_vars, tribble_lim)
 
     if after_vars.exists():
-        tribble_df2 = read_target_vars(after_vars, tribble_lim)
+        tribble_df2 = read_target_vars(after_vars, tribble_lim, MERGED_ASM_PAT)
     else:
         tribble_df2 = pl.DataFrame(schema={"probe": pl.String, "tribble": pl.UInt32})
 
