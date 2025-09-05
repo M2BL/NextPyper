@@ -64,16 +64,19 @@ def find_tribbles(run_dir: Path, sample: str, tribble_lim: int = 30) -> pl.DataF
 
     if after_vars.exists():
         tribble_df2 = read_target_vars(after_vars, tribble_lim)
+        merged = tribble_df.join(tribble_df2, on="probe", how="left", suffix="_2nd")
+        merged = merged.select(
+            pl.col("probe").len(),
+            pl.sum("tribble"),
+            (pl.col("tribble_2nd") > 0).sum().alias("probe_2nd"),
+            pl.sum("tribble_2nd"),
+        )
     else:
-        tribble_df2 = pl.DataFrame(schema={"probe": pl.String, "tribble": pl.UInt32})
+        merged = tribble_df.select(
+            pl.col("probe").len(), pl.sum("tribble")
+        ).with_columns(probe_2nd=None, tribble_2nd=None)
 
-    merged = tribble_df.join(tribble_df2, on="probe", how="left", suffix="_2nd")
-    return merged.select(
-        pl.col("probe").len(),
-        pl.sum("tribble"),
-        (pl.col("tribble_2nd") > 0).sum().alias("probe_2nd"),
-        pl.sum("tribble_2nd"),
-    ).insert_column(0, pl.lit(sample).alias("sample"))
+    return merged.insert_column(0, pl.lit(sample).alias("sample"))
 
 
 def summarize_tribbles(run_dir: Path, tribble_lim: int | None = None) -> None:
