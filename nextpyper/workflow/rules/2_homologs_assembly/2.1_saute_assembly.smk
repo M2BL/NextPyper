@@ -157,7 +157,7 @@ rule normal_vars_check:
     input:
         outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
     output:
-        temp(touch(outdir / "saute/expl_assembly/{sample}/all_normal.chkp")),
+        touch(outdir / "saute/expl_assembly/{sample}/all_normal.chkp"),
 
 
 # All probes are normal, no need to do reassembly.
@@ -187,7 +187,7 @@ rule collect_saute_assemblies:
             ),
         ),
     output:
-        temp(outdir / "saute/final/collected/{sample}.fasta"),
+        outdir / "saute/final/collected/{sample}.fasta",
     shell:
         "cat {input.normal} {input.expl} > {output}"
 
@@ -196,7 +196,7 @@ rule collapse_variants:
     input:
         outdir / "saute/final/collected/{sample}.fasta",
     output:
-        normal=temp(outdir / "saute/final/collapsed/{sample}.fasta"),
+        normal=outdir / "saute/final/collapsed/{sample}.fasta",
     params:
         pattern=TARGET_COLLAPSE_PAT,
         collapse_vars=lookup("saute/collapse_vars", within=pipeline),
