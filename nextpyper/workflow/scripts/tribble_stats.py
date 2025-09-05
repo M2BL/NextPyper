@@ -100,7 +100,7 @@ def summarize_tribbles(run_dir: Path, tribble_lim: int | None = None) -> None:
     )
 
     print(f"# {tribble_lim=}, {reasm=}")
-    df.sort("sample").write_csv(sys.stdout, separator="\t")
+    df.sort("sample").write_csv(sys.stdout, separator="\t", null_value="null")
 
 
 def parse_args():
