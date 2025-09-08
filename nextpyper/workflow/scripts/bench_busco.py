@@ -229,6 +229,21 @@ def find_busco_category(
     return 3
 
 
+def compute_target_covs(target_trees: dict[str, IntervalTree]) -> pl.DataFrame:
+    """Compute the covered bases of the targets based on their interval trees."""
+
+    def tcov(tree: IntervalTree) -> int:
+        t = tree.copy()
+        t.merge_overlaps()
+        return sum(inter.length() for inter in t)
+
+    return pl.DataFrame(
+        [(probe, tcov(tree)) for probe, tree in target_trees.items()],
+        {"target": str, "cov": int},
+        orient="row",
+    )
+
+
 def categorize_sample(
     hits: pl.DataFrame,
     chimera_df: pl.DataFrame,
@@ -324,7 +339,13 @@ def categorize_sample(
 
     final_cat = {target: no_chim_cat_dict.get(target, 4) for target in targets}
 
-    return final_cat, n_chimeras, noise
+    cov_df = compute_target_covs(no_chim_trees)
+    final_cov_df = target_lens.join(cov_df, on="target", how="left").fill_null(0)
+    final_cov_df = final_cov_df.select(pl.sum("tlen"), pl.sum("cov")).with_columns(
+        tcov=pl.col("cov") / pl.col("tlen")
+    )
+
+    return final_cat, n_chimeras, noise, final_cov_df
 
 
 def parse_args():
@@ -334,7 +355,9 @@ def parse_args():
         "chimeras", type=Path, help="Path to vsearch chimera table (.tsv)"
     )
     parser.add_argument("targets", type=Path, help="Path to targets (.fasta)")
-    parser.add_argument("output", type=Path, help="Path to output table (.tsv)")
+    parser.add_argument(
+        "prefix", type=Path, help="Prefix for output tables (categories and coverages)"
+    )
     parser.add_argument(
         "--min_tcov",
         type=float,
@@ -373,7 +396,10 @@ def main():
     hits_path = args.hits
     chimera_path = args.chimeras
     targets_path = args.targets
-    output_path = args.output
+    prefix = args.prefix
+
+    output_path = prefix.with_stem(f"{prefix.stem}_cat.tsv")
+    cov_path = prefix.with_stem(f"{prefix.stem}_cov.tsv")
 
     min_tcov = args.min_tcov
     min_tot_cov = args.min_tot_cov
@@ -432,7 +458,7 @@ def main():
             print("One or more input paths are not directories.")
             sys.exit(1)
 
-        with open(output_path, "w") as out_file:
+        with open(output_path, "w") as out_file, open(cov_path, "w") as cov_out:
             for targets_file in sorted(targets_path.glob("*.fasta")):
                 sample_name = targets_file.stem
                 hits_file = hits_path / f"{sample_name}.tsv"
@@ -452,7 +478,7 @@ def main():
                 )
                 chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
                 targets = SeqIO.to_dict(SeqIO.parse(targets_file, "fasta"))
-                categories, n_chimeras, noise = categorize_sample(
+                categories, n_chimeras, noise, cov_df = categorize_sample(
                     df,
                     chimera_df,
                     targets,
@@ -480,6 +506,11 @@ def main():
                     for i in range(max(category_counts) + 1)
                 )
                 out_file.write(f"{sample_name}\t{categories}\n")
+
+                # If requested, write also the length based recovery
+                cov_df.insert_column(0, pl.lit(sample_name)).write_csv(
+                    cov_out, separator="\t", include_header=False, float_precision=5
+                )
 
 
 if __name__ == "__main__":
