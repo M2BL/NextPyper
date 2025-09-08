@@ -114,7 +114,7 @@ rule collect_explosive_seeds:
         """
 
 
-use rule saute_assembly as explosive_reassembly with:
+rule explosive_reassembly:
     input:
         reads1=outdir / "saute/expl_assembly/{sample}/expl_R1.fastq.gz",
         reads2=outdir / "saute/expl_assembly/{sample}/expl_R2.fastq.gz",
@@ -125,6 +125,7 @@ use rule saute_assembly as explosive_reassembly with:
         target_vars=outdir / "saute/expl_assembly/{sample}/target_vars.fasta",
         graph=outdir / "saute/expl_assembly/{sample}/graph.gfa",
     params:
+        extra="--extend_ends --remove_homopolymer_indels ",
         kmer_threshold=lookup(
             "saute/reassembly/secondary_kmer_threshold", within=pipeline
         ),
@@ -137,6 +138,18 @@ use rule saute_assembly as explosive_reassembly with:
     threads: 8
     conda:
         "../../envs/saute.yaml"
+    shell:
+        """saute --cores {threads} {params.extra} {params.kmers} \
+        --target_coverage {params.target_cov} \
+        --max_variants {params.max_var} \
+        --secondary_kmer_threshold {params.kmer_threshold} \
+        --reads {input.reads1},{input.reads2} \
+        --targets {input.seeds} \
+        --gfa {output.graph} \
+        --all_variants {output.all_vars} \
+        --selected_variants {output.target_vars} > {log} 2>&1 || \
+        touch {output.all_vars} {output.graph} {output.target_vars}
+        """
 
 
 checkpoint collapse_alleles_explosive:
