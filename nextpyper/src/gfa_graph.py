@@ -601,7 +601,7 @@ def dfs_track_paths(
             return
 
         # Maximum len size check (avoids long recursions)
-        if get_path_len(current_path, graph) > max_len:
+        if max_len is not None and get_path_len(current_path, graph) > max_len:
             extensions.add(current_path[:])
             return
 
@@ -706,6 +706,10 @@ def extend_path(
 
     if not allow_gray and probe is None:
         raise ValueError(f"All edges in path {path.name} are colorless. Exiting.")
+
+    # In case of colored extension, deactivate the max_len filter.
+    if probe is not None:
+        max_len = None
 
     *edges, tail = path.edges
     extensions = dfs_track_paths(
