@@ -91,4 +91,4 @@ fi
 
 parallel --jobs "${jobs}" magicblast_match "${targets_dir}/{/.} {} ${tables_dir}/matches/{/.}.tsv 4" ::: "${queries_dir}"/*.fasta
 parallel --jobs "${jobs}" vsearch_chimera {} "${orig_targets_dir}/{/} ${tables_dir}/vsearch/{/.}.tsv 4" ::: "${queries_dir}"/*.fasta
-python "$(dirname $0)/bench_busco.py" --batch "${tables_dir}/matches" "${tables_dir}/vsearch" "${orig_targets_dir}" "${tables_dir}/categories.tsv"
+python "$(dirname $0)/bench_busco.py" --batch "${tables_dir}/matches" "${tables_dir}/vsearch" "${orig_targets_dir}" "${tables_dir}/results"
