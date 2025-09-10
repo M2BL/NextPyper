@@ -12,7 +12,7 @@ the results from being organized per probe to being organized per sample."""
 CAPTUS_HEADER = r"\[query=(.*)\]\s\[hit=(\d+)\]"
 
 
-def parse_nextpyper(results_path: Path, parsed_dir: Path):
+def parse_nextpyper(results_path: Path, parsed_dir: Path, kind: str = "supercontigs"):
     """
     Parse the end recs from the NextPyper results_path (separation_output folder) structured
     per probe, restructure them per sample and save them in parsed_dir, in a file per sample.
@@ -25,7 +25,7 @@ def parse_nextpyper(results_path: Path, parsed_dir: Path):
         raise NotADirectoryError(f"Results path {results_path} is not a directory.")
 
     sample_recs = defaultdict(list)
-    for file in results_path.rglob("*supercontigs.fasta"):
+    for file in results_path.rglob(f"*{kind}.fasta"):
         for rec in SeqIO.parse(file, "fasta"):
             sample = rec.id.split("|")[0]
             sample_recs[sample].append(rec)
@@ -94,7 +94,7 @@ def parse_args():
         description="Parse NextPyper final output structure from per probe to per sample."
     )
     parser.add_argument(
-        "pipeline_results", type=Path, help="Path to region_separation output"
+        "pipeline_results", type=Path, help="Path to per probe sequence output."
     )
     parser.add_argument(
         "output_folder", type=Path, help="Path where to write the parsed results."
@@ -104,6 +104,15 @@ def parse_args():
         type=str,
         choices=["nextpyper", "captus", "hybpiper"],
         help="Pipelined used (affects the expected file structure).",
+    )
+
+    parser.add_argument(
+        "-k",
+        "--kind",
+        type=str,
+        default="supercontigs",
+        choices=["supercontigs", "genotigs", "exons"],
+        help="For NextPyper, which kind of sequences to retrieve.",
     )
     return parser.parse_args()
 
@@ -124,7 +133,7 @@ def main():
 
     match args.pipeline:
         case "nextpyper":
-            parse_nextpyper(args.pipeline_results, args.output_folder)
+            parse_nextpyper(args.pipeline_results, args.output_folder, args.kind)
         case "captus":
             parse_captus(args.pipeline_results, args.output_folder)
         case "hybpiper":
