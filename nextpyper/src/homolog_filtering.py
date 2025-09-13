@@ -179,23 +179,28 @@ def compute_hits(
 
     df.replace_column(8, df["theader"].str.split(" ").list.first())
 
+    # Diamond adds the gaps to the mismatches, so we have to correct that.
+    pre_df = df.with_columns(
+        pl.col("tstart") - 1,
+        tprobe=pl.col("theader").str.extract(tpat, 1),
+        cis=pl.col("qend") > pl.col("qstart"),
+        # mismatch=(pl.col("mismatch") - pl.col("gaps")),
+    )
+
     # If query comes with probe information, filter to keep only matches of that probe.
     if qpat:
-        pre_df = df.with_columns(
-            pl.col("tstart") - 1,
-            qprobe=pl.col("query").str.extract(qpat, 2),
-            tprobe=pl.col("theader").str.extract(tpat, 1),
-            cis=pl.col("qend") > pl.col("qstart"),
+        pre_df = pre_df.with_columns(
+            qprobe=pl.col("query").str.extract(qpat, 2)
         ).filter(pl.col("qprobe") == pl.col("tprobe"))
 
-    # Otherwise Determine the best probe.
-    else:
-        pre_df = df.with_columns(
-            pl.col("tstart") - 1,
-            tprobe=pl.col("theader").str.extract(tpat, 1),
-            cis=pl.col("qend") > pl.col("qstart"),
-        )
+    # else:
+    #     pre_df = df.with_columns(
+    #         pl.col("tstart") - 1,
+    #         tprobe=pl.col("theader").str.extract(tpat, 1),
+    #         cis=pl.col("qend") > pl.col("qstart"),
+    #     )
 
+    # We determine the best probe.
     probe_trees = build_probe_trees(pre_df, min_idt)
     pre_df = filt_probe_hits(pre_df, probe_trees)
 

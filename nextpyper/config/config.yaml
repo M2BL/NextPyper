@@ -56,9 +56,10 @@ nextpyper:
             fields: 'qseqid evalue qstart qend qlen sstart send slen sseqid gapopen nident mismatch'
             sensitivity: '--ultra-sensitive'
             evalue: 1.000E-6
-            max_hsps: 10
+            max_hsps: 20
             min_orf_len: 15
             gapopen: 13
+            frameshift: 15
         homolog_filtering:
             seeds:
                 max_gc: 0.6

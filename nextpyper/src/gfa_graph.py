@@ -56,7 +56,20 @@ from diversity import select_k_paths
 NODE_ID_PAT = r"^NODE_(\d+)_"
 PROBE_PAT = r"-(.*?)_EDGE"
 LOG_COLS = ["orig_name", "ext_name", "comp_id", "probe", "orig_path", "ext_path"]
-
+DMND_COLS = [
+    "query",
+    "evalue",
+    "qstart",
+    "qend",
+    "qlen",
+    "tstart",
+    "tend",
+    "tlen",
+    "theader",
+    "gapopen",
+    "nident",
+    "mismatch",
+]
 
 # =============================================================================
 #                CLASSES
@@ -978,7 +991,9 @@ def snakemake_call(snakemake):
         max_extensions = snakemake.params.max_extensions
 
         # Load the matches
-        df = pl.read_csv(table_path, separator="\t", has_header=True)
+        df = pl.read_csv(
+            table_path, separator="\t", has_header=False, new_columns=DMND_COLS
+        )
 
         # Load the graph and a dictionary edge -> components
         graph = Assembly_graph(graph_path)

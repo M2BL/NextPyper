@@ -1,45 +1,97 @@
-rule make_mmseqs_probes_db:
+rule make_diamond_probes_db:
     input:
         outdir / "translated_probes/longest_cds.fasta",
     output:
-        outdir / "assembled/filtering/dbs/probes",
+        db=outdir / "assembled/filtering/dbs/probes.dmnd",
     log:
-        outdir / "logs/assembled/filtering/dbs/probes.log",
+        outdir / "logs/assembled/filtering/dbs/diamond.log",
+    params:
+        db=subpath(output.db, strip_suffix=".dmnd"),
     conda:
         "../../envs/matching.yaml"
     shell:
-        "mmseqs createdb --dbtype 1 {input} {output} > {log} 2>&1 "
+        "diamond makedb --db {params.db} --in {input} > {log} 2>&1"
+
+
+# rule make_mmseqs_probes_db:
+#     input:
+#         outdir / "translated_probes/longest_cds.fasta",
+#     output:
+#         outdir / "assembled/filtering/dbs/probes",
+#     log:
+#         outdir / "logs/assembled/filtering/dbs/probes.log",
+#     conda:
+#         "../../envs/matching.yaml"
+#     shell:
+#         "mmseqs createdb --dbtype 1 {input} {output} > {log} 2>&1 "
 
 
 rule raw_assembly_to_probes_matching:
     input:
-        probes=outdir / "assembled/filtering/dbs/probes",
+        probes=outdir / "assembled/filtering/dbs/probes.dmnd",
+        # query=outdir / "assembled/extension/{sample}.fasta",
         query=outdir / "assembled/scaffolds/{sample}.fasta",
     output:
+        # outdir / "assembled/filtering/matching_tables/{sample}.tsv",
         outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
     params:
-        fields=lookup("mmseqs_matching/fields", within=pipeline),
-        evalue=lookup("mmseqs_matching/evalue", within=pipeline),
-        min_orf_len=lookup("mmseqs_matching/min_orf_len", within=pipeline),
-        sensitivity=lookup("mmseqs_matching/sensitivity", within=pipeline),
+        fields=lookup("diamond_matching/fields", within=pipeline),
+        sensitivity=lookup("diamond_matching/sensitivity", within=pipeline),
+        evalue=lookup("diamond_matching/evalue", within=pipeline),
+        max_hsps=lookup("diamond_matching/max_hsps", within=pipeline),
+        gapopen=lookup("diamond_matching/gapopen", within=pipeline),
+        frameshift=lookup("diamond_matching/frameshift", within=pipeline),
+        min_orf_len=lookup("diamond_matching/min_orf_len", within=pipeline),
     log:
+        # outdir / "logs/assembled/filtering/diamond/{sample}.log",
         outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
     threads: 4
-    shadow:
-        "shallow"
     conda:
         "../../envs/matching.yaml"
     shell:
         """
-        mkdir -p temp_{wildcards.sample}
-        mmseqs easy-search {input.query} {input.probes} {output} temp_{wildcards.sample} \
+        diamond blastx \
         --threads {threads} \
-        -s {params.sensitivity} \
-        -e {params.evalue} \
-        --min-length {params.min_orf_len} \
-        --format-mode 4 --format-output {params.fields} \
-        --remove-tmp-files -a > {log} 2>&1
+        --db {input.probes} --query {input.query} --out {output} \
+        {params.sensitivity} \
+        --evalue {params.evalue} \
+        --max-hsps {params.max_hsps} \
+        --min-orf {params.min_orf_len} \
+        --gapopen {params.gapopen} \
+        --frameshift {params.frameshift} \
+        --outfmt 6 {params.fields} > {log} 2>&1
         """
+
+
+# rule raw_assembly_to_probes_matching:
+#     input:
+#         probes=outdir / "assembled/filtering/dbs/probes",
+#         query=outdir / "assembled/scaffolds/{sample}.fasta",
+#     output:
+#         outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
+#     params:
+#         fields=lookup("mmseqs_matching/fields", within=pipeline),
+#         evalue=lookup("mmseqs_matching/evalue", within=pipeline),
+#         min_orf_len=lookup("mmseqs_matching/min_orf_len", within=pipeline),
+#         sensitivity=lookup("mmseqs_matching/sensitivity", within=pipeline),
+#     log:
+#         outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
+#     threads: 4
+#     shadow:
+#         "shallow"
+#     conda:
+#         "../../envs/matching.yaml"
+#     shell:
+#         """
+#         mkdir -p temp_{wildcards.sample}
+#         mmseqs easy-search {input.query} {input.probes} {output} temp_{wildcards.sample} \
+#         --threads {threads} \
+#         -s {params.sensitivity} \
+#         -e {params.evalue} \
+#         --min-length {params.min_orf_len} \
+#         --format-mode 4 --format-output {params.fields} \
+#         --remove-tmp-files -a > {log} 2>&1
+#         """
 
 
 def read_insert_size(stats: Path) -> int:

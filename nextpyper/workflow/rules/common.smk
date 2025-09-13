@@ -49,7 +49,7 @@ use_ref_cps = lookup("args/use_ref_cps", within=config)
 ref_cps = lookup("args/ref_cps", within=config)
 
 if use_ref_cps:
-    kp2seqid = pl.read_csv(cp_refs_map)
+    kp2seqid = pl.read_csv(cp_refs_map, glob=False)
     kps = set(ref_cps.split(","))
     if len(extra := (set(kps) - set(kp2seqid["1kp"]))) > 0:
         raise ValueError(
