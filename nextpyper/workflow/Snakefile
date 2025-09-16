@@ -32,8 +32,9 @@ targets.append(
 targets.append(
     expand(
         outdir
-        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.metabat",
+        / "homolog_prospection/region_separation/consolidated/coverage/{kind}/{sample}.metabat",
         sample=sample_list,
+        kind=("exons", "genetigs", "supercontigs"),
     )
 )
 
@@ -42,3 +43,13 @@ targets.append(
 rule all:
     input:
         targets,
+
+
+onsuccess:
+    print("Workflow finished, without error")
+    shell(f"cp {{log}} {outdir/ 'workflow.log'}")
+
+
+onerror:
+    print("An error occurred")
+    shell(f"cp {{log}} {outdir/ 'workflow.log'}")

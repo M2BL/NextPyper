@@ -128,37 +128,60 @@ rule align_regions:
         """
 
 
-use rule per_probe_scaffold_grouping as collect_supercontigs with:
-    input:
-        expand(
-            outdir
-            / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
-            probe=probes_list,
-        ),
-    output:
-        expand(
-            outdir
-            / "homolog_prospection/region_separation/consolidated/supercontigs_per_sample/{sample}.fasta",
-            sample=sample_list,
-        ),
-    log:
-        outdir
-        / "logs/homolog_prospection/region_separation/consolidated/supercontigs_grouping.log",
-    params:
-        mode="supercontigs",
+for kind in ("exons", "genetigs", "supercontigs"):
 
+    rule:
+        name:
+            f"collect_{kind}"
+        input:
+            expand(
+                outdir
+                / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
+                probe=probes_list,
+            ),
+        output:
+            expand(
+                outdir
+                / f"homolog_prospection/region_separation/consolidated/per_sample/{kind}/{{sample}}.fasta",
+                sample=sample_list,
+            ),
+        log:
+            outdir
+            / f"logs/homolog_prospection/region_separation/consolidated/grouping/{kind}.log",
+        params:
+            pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
+            probes=probes_list,
+            mode=kind,
+        script:
+            "../../../src/multi_seq_probes.py"
 
-use rule seeds_coverage as supercontigs_coverage with:
-    input:
-        scfs=outdir
-        / "homolog_prospection/region_separation/consolidated/supercontigs_per_sample/{sample}.fasta",
-        clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
-        clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
-    output:
-        counts=outdir
-        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.counts",
-        metabat=outdir
-        / "homolog_prospection/region_separation/consolidated/coverage/{sample}.metabat",
-    log:
-        outdir
-        / "logs/homolog_prospection/region_separation/consolidated/coverage/{sample}.log",
+    rule:
+        name:
+            f"{kind}_coverage"
+        input:
+            scfs=outdir
+            / f"homolog_prospection/region_separation/consolidated/per_sample/{kind}/{{sample}}.fasta",
+            clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
+            clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
+        output:
+            counts=outdir
+            / f"homolog_prospection/region_separation/consolidated/coverage/{kind}/{{sample}}.counts",
+            metabat=outdir
+            / f"homolog_prospection/region_separation/consolidated/coverage/{kind}/{{sample}}.metabat",
+        params:
+            extra="--proper-pairs-only --exclude-supplementary",
+        log:
+            outdir
+            / f"logs/homolog_prospection/region_separation/consolidated/coverage/{kind}/{{sample}}.log",
+        threads: 4
+        shadow:
+            "shallow"
+        conda:
+            "../../envs/preprocessing.yaml"
+        shell:
+            """
+            minimap2 -t {threads} -ax sr {input.scfs} {input.clean1} {input.clean2} 2> {log} | \
+            samtools sort -u -@ {threads} > tmp_{wildcards.sample}.bam 2>> {log}
+            coverm contig -m count {params.extra} -b tmp_{wildcards.sample}.bam  > {output.counts} 2>> {log}
+            coverm contig -m metabat {params.extra} -b tmp_{wildcards.sample}.bam  > {output.metabat} 2>> {log}
+            """

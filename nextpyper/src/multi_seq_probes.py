@@ -166,10 +166,10 @@ def snakemake_call(snakemake):
 
         # Todo: Refactor this block as a function
         match mode:
-            case "supercontigs":
+            case "exons" | "genetigs" | "supercontigs":
                 all_recs = [
                     rec
-                    for file in Path(inputs[0]).parent.rglob("*supercontigs.fasta")
+                    for file in Path(inputs[0]).parent.rglob(f"*_{mode}.fasta")
                     for rec in SeqIO.parse(file, "fasta")
                 ]
                 grouped_recs = group_probes(all_recs, pat, match_group="sample1")
@@ -212,7 +212,7 @@ def snakemake_call(snakemake):
         # In all cases, we may have missing probes, so we need to at least touch them
         # In supercontigs mode this is not needed, because the outputs are per sample,
         # which are guaranteed to exist.
-        if mode != "supercontigs":
+        if mode in ("scfs", "single_probes", "multi_probes"):
             for probe in probes_list:
                 (outfolder / f"{probe}.fasta").touch(exist_ok=True)
 

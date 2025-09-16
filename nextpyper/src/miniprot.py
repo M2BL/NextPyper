@@ -726,7 +726,7 @@ class OverlappingCds(MiniprotInit):
 
     def save_records(self, outdir: Path, min_exon_size: int) -> None:
         """
-        Save exonic regions, supercontigs (the whole scaffold), and genotigs that include the sequence
+        Save exonic regions, supercontigs (the whole scaffold), and genetigs that include the sequence
         within the probe boundaries.
         """
         stem_name = self.probes_path.stem
@@ -804,10 +804,10 @@ class OverlappingCds(MiniprotInit):
                         out_path_supercontigs,
                         "fasta",
                     )
-                # save genotigs
-                genotigs_name = f"{prefix}_genotigs.fasta"
-                out_path_genotigs = outdir / genotigs_name
-                genotigs_records = []
+                # save genetigs
+                genetigs_name = f"{prefix}_genetigs.fasta"
+                out_path_genetigs = outdir / genetigs_name
+                genetigs_records = []
 
                 for (
                     scaffold_name,
@@ -841,7 +841,7 @@ class OverlappingCds(MiniprotInit):
                                 break
                     new_scaffold += seq[scaffold_start:scaffold_end]
                     if len(new_scaffold) > min_exon_size:
-                        genotigs_records.append(
+                        genetigs_records.append(
                             SeqRecord(
                                 Seq(new_scaffold),
                                 name="",
@@ -850,10 +850,10 @@ class OverlappingCds(MiniprotInit):
                             )
                         )
 
-                if genotigs_records:
+                if genetigs_records:
                     SeqIO.write(
-                        sorted(genotigs_records, key=lambda x: x.id),
-                        out_path_genotigs,
+                        sorted(genetigs_records, key=lambda x: x.id),
+                        out_path_genetigs,
                         "fasta",
                     )
 
