@@ -22,15 +22,14 @@ use rule make_diamond_probes_db as make_diamond_matching_probes_db with:
     input:
         outdir / "homolog_prospection/matching_probes.fasta",
     output:
-        db=outdir / "homolog_prospection/homologs_filtering/dbs/matching_probes.dmnd",
+        db=outdir / "homolog_prospection/homologs_filtering/matching_probes.dmnd",
     log:
         outdir / "logs/homolog_prospection/homologs_filtering/make_probes_db.log",
 
 
 use rule raw_assembly_to_probes_matching as homologs_to_probes_matching with:
     input:
-        probes=outdir
-        / "homolog_prospection/homologs_filtering/dbs/matching_probes.dmnd",
+        probes=outdir / "homolog_prospection/homologs_filtering/matching_probes.dmnd",
         query=outdir / "saute/final/merged/{sample}.fasta",
     output:
         outdir / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
