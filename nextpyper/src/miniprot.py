@@ -897,9 +897,9 @@ def snakemake_call(snakemake):
 
 def main():
 
-    if len(sys.argv) != 7:
+    if len(sys.argv) != 8:
         print(
-            "Usage: python miniprot.py <probes.fasta> <scfs.fasta> <matrix.csv> <div_map.json> <outdir> <miniprot.log>"
+            "Usage: python miniprot.py <probes.fasta> <scfs.fasta> <matrix.csv> <div_map.json> <intron_map.json> <outdir> <miniprot.log>"
         )
         sys.exit(1)
 
@@ -917,17 +917,19 @@ def main():
 
     # Mock the snakemake object
     div_map = json.loads(Path(sys.argv[4]).read_bytes())
+    intron_map = json.loads(Path(sys.argv[5]).read_bytes())
 
     snakemake = Run(
         input=Run(probes=sys.argv[1], scfs=sys.argv[2]),
-        output=[sys.argv[5]],
-        log=[sys.argv[6]],
+        output=[sys.argv[6]],
+        log=[sys.argv[7]],
         threads=1,
         params=Run(
             substitution_matrix=sys.argv[3],
             min_fragment_cov=0.1,
             min_exonic_length=10,
             min_global_identity_dict=div_map,
+            max_intron_dict=intron_map,
         ),
     )
 
