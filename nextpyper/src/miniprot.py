@@ -928,8 +928,8 @@ def main():
             substitution_matrix=sys.argv[3],
             min_fragment_cov=0.1,
             min_exonic_length=10,
-            min_global_identity_dict=div_map,
-            max_intron_dict=intron_map,
+            div_map=div_map,
+            max_intron_map=intron_map,
         ),
     )
 
