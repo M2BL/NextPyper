@@ -920,7 +920,12 @@ def main():
     intron_map = json.loads(Path(sys.argv[5]).read_bytes())
 
     snakemake = Run(
-        input=Run(probes=sys.argv[1], scfs=sys.argv[2]),
+        input=Run(
+            probes=sys.argv[1],
+            scfs=sys.argv[2],
+            div_map=div_map,
+            max_intron_map=intron_map,
+        ),
         output=[sys.argv[6]],
         log=[sys.argv[7]],
         threads=1,
@@ -928,8 +933,6 @@ def main():
             substitution_matrix=sys.argv[3],
             min_fragment_cov=0.1,
             min_exonic_length=10,
-            div_map=div_map,
-            max_intron_map=intron_map,
         ),
     )
 
