@@ -916,15 +916,12 @@ def main():
             return self._dict[key]
 
     # Mock the snakemake object
-    div_map = json.loads(Path(sys.argv[4]).read_bytes())
-    intron_map = json.loads(Path(sys.argv[5]).read_bytes())
-
     snakemake = Run(
         input=Run(
             probes=sys.argv[1],
             scfs=sys.argv[2],
-            div_map=div_map,
-            max_intron_map=intron_map,
+            div_map=sys.argv[4],
+            max_intron_map=sys.argv[5],
         ),
         output=[sys.argv[6]],
         log=[sys.argv[7]],
