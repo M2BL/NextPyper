@@ -328,7 +328,7 @@ def snakemake_call(snakemake):
     # This is a clusters centric approach, where we take the seeds from the current sample
     # and then we add the centroids of the clusters its sister samples matched as extra seeds.
     sample_seeds = defaultdict(list)
-    for probe, table in probe_tables.items():
+    for probe, probe_table in probe_tables.items():
         for sample in sample_recs:
             # First, add the seeds from the current sample
             sample_seeds[sample].extend(sample_recs[sample].get(probe, {}).values())
@@ -337,11 +337,13 @@ def snakemake_call(snakemake):
             if interseeds_use == "sister":
                 # Find the clusters that sister samples matched
                 clusters = (
-                    table.filter(pl.col("sample").is_in(sister_samples[sample]))
+                    probe_table.filter(pl.col("sample").is_in(sister_samples[sample]))
                     .select("cluster_id")
                     .unique()
                 )
-                table = table.join(clusters, on="cluster_id", how="inner")
+                table = probe_table.join(clusters, on="cluster_id", how="inner")
+            else:
+                table = probe_table
 
             # Then, add the centroids of the clusters as extra seeds (inter-seeds)
             if interseeds_use != "none":
