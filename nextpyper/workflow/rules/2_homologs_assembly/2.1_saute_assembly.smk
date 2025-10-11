@@ -69,8 +69,9 @@ checkpoint split_saute_assembly:
         normal=outdir / "saute/target_assembly/{sample}/normal_vars.fasta",
         expl=outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
     params:
+        mode="split",
         pattern=TARGET_COLLAPSE_PAT,
-        explosive_limit=lookup("saute/reassembly/explosive_limit", within=pipeline),
+        max_vars=lookup("saute/max_variants", within=pipeline),
     log:
         outdir / "logs/saute/reassembly/split/{sample}.log",
     script:
@@ -114,7 +115,7 @@ rule collect_explosive_seeds:
         """
 
 
-rule explosive_reassembly:
+checkpoint explosive_reassembly:
     input:
         reads1=outdir / "saute/expl_assembly/{sample}/expl_R1.fastq.gz",
         reads2=outdir / "saute/expl_assembly/{sample}/expl_R2.fastq.gz",
@@ -152,20 +153,6 @@ rule explosive_reassembly:
         """
 
 
-checkpoint collapse_alleles_explosive:
-    input:
-        outdir / "saute/expl_assembly/{sample}/target_vars.fasta",
-    output:
-        normal=outdir / "saute/expl_assembly/{sample}/collapsed_vars.fasta",
-    params:
-        pattern=TARGET_COLLAPSE_PAT,
-        empty_ok=True,
-    log:
-        outdir / "logs/saute/reassembly/expl_collapse_alleles/{sample}.log",
-    script:
-        "../../../src/var_asm_parser.py"
-
-
 rule normal_vars_check:
     input:
         outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
@@ -181,9 +168,9 @@ def all_normal(wildcards):
 
 # Reassembly yield nothing, so take back the original results.
 def empty_explosive_asm(wildcards):
-    out_expl = checkpoints.collapse_alleles_explosive.get(
+    out_expl = checkpoints.explosive_reassembly.get(
         sample=wildcards.sample
-    ).output.normal
+    ).output.target_vars
     return Path(out_expl).stat().st_size == 0
 
 
@@ -196,7 +183,7 @@ rule collect_saute_assemblies:
             otherwise=branch(
                 not reasm or empty_explosive_asm,
                 then=outdir / "saute/target_assembly/{sample}/expl_vars.fasta",
-                otherwise=outdir / "saute/expl_assembly/{sample}/collapsed_vars.fasta",
+                otherwise=outdir / "saute/expl_assembly/{sample}/target_vars.fasta",
             ),
         ),
     output:
@@ -205,28 +192,24 @@ rule collect_saute_assemblies:
         "cat {input.normal} {input.expl} > {output}"
 
 
-rule collapse_variants:
+rule cap_explosive_variants:
     input:
         outdir / "saute/final/collected/{sample}.fasta",
     output:
-        normal=outdir / "saute/final/collapsed/{sample}.fasta",
+        normal=outdir / "saute/final/capped/{sample}.fasta",
     params:
-        pattern=TARGET_COLLAPSE_PAT,
-        collapse_vars=lookup("saute/collapse_vars", within=pipeline),
+        mode="cap",
         max_var=lookup("saute/max_variants", within=pipeline),
+        pattern=TARGET_COLLAPSE_PAT,
     log:
-        outdir / "logs/saute/variant_collapsing/{sample}.log",
+        outdir / "logs/saute/capping/{sample}.log",
     script:
         "../../../src/var_asm_parser.py"
 
 
 rule fix_homologs_header:
     input:
-        branch(
-            lookup("saute/collapse_vars", within=pipeline),
-            then=outdir / "saute/final/collapsed/{sample}.fasta",
-            otherwise=outdir / "saute/final/collected/{sample}.fasta",
-        ),
+        outdir / "saute/final/capped/{sample}.fasta",
     output:
         outdir / "saute/final/merged/{sample}.fasta",
     params:
