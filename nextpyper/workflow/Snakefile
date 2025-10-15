@@ -15,8 +15,8 @@ include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.2_seeds_extension.sm
 include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.3_seeds_filtering.smk"
 include: Path(workflow.basedir) / "rules/1_seeds_assembly/1.4_seeds_clustering.smk"
 include: Path(workflow.basedir) / "rules/2_homologs_assembly/2.1_saute_assembly.smk"
-include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.1_homologs_filtering.smk"
-include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.2_allele_collapsing.smk"
+include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.1_allele_collapsing.smk"
+include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.2_homologs_filtering.smk"
 include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.3_region_separation.smk"
 
 
