@@ -30,7 +30,7 @@ use rule make_diamond_probes_db as make_diamond_matching_probes_db with:
 use rule raw_assembly_to_probes_matching as homologs_to_probes_matching with:
     input:
         probes=outdir / "homolog_prospection/homologs_filtering/matching_probes.dmnd",
-        query=outdir / "saute/final/merged/{sample}.fasta",
+        query=outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
     output:
         outdir / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
     log:
@@ -39,7 +39,7 @@ use rule raw_assembly_to_probes_matching as homologs_to_probes_matching with:
 
 use rule seeds_coverage as homologs_coverage with:
     input:
-        scfs=outdir / "saute/final/merged/{sample}.fasta",
+        scfs=outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
         clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
         clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
     output:
@@ -53,7 +53,7 @@ use rule seeds_coverage as homologs_coverage with:
 
 use rule seeds_filtering as homologs_filtering with:
     input:
-        scfs=outdir / "saute/final/merged/{sample}.fasta",
+        scfs=outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
         hits=outdir
         / "homolog_prospection/homologs_filtering/matching_tables/{sample}.tsv",
         covs=outdir / "homolog_prospection/homologs_filtering/coverage/{sample}.metabat",
