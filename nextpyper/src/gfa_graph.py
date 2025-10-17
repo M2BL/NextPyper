@@ -525,13 +525,25 @@ class OptimalExtension:
         while len(self) > self.size:
             self.extensions.pop()
 
-    def add(self, path: list[OrientedEdge]) -> None:
+    def __contains__(self, _other: OrientedEdge) -> bool:
+        if not isinstance(_other, OrientedEdge):
+            return False
+
+        return any(_other == path for path in self.extensions)
+
+    def add(self, path: list[OrientedEdge]) -> Self:
+        if path in self:
+            return Self
         self.extensions.append(path)
         self.extensions.sort(reverse=True, key=self.key)
         self._purge()
         return Self
 
-    def extend(self, paths: list[list[OrientedEdge]]) -> None:
+    def extend(self, paths: list[list[OrientedEdge]]) -> Self:
+        dedup_paths = [path for path in paths if path not in self]
+        if len(dedup_paths) == 0:
+            return Self
+
         self.extensions.extend(paths)
         self.extensions.sort(reverse=True, key=self.key)
         self._purge()
@@ -594,6 +606,24 @@ def dfs_track_paths(
         gaps = (local_gap(graph.edge_dict[edge.id], probe) for edge in path)
         return max(map(sum, split_at(gaps, lambda gap: gap == 0)))
 
+    def _trim_path(
+        path: list[OrientedEdge], graph: Assembly_graph, probe: str = None
+    ) -> list[OrientedEdge]:
+        """Given a proposed path extension and a color, trim such extension
+        to the last colored Edge."""
+
+        # If we have no color, we can not trim.
+        if probe is None:
+            return path
+
+        # Where is the last time we see a colored Edge?
+        last_color_idx = 0
+        for idx, edge in enumerate(path):
+            if probe in graph.edge_dict[edge.id].get_colors():
+                last_color_idx = idx
+
+        return path[: last_color_idx + 1]
+
     def dfs_helper(
         edge: OrientedEdge,
         current_path: list[OrientedEdge],
@@ -610,12 +640,12 @@ def dfs_track_paths(
 
         # If we reach the goal, add the path
         if goal is not None and edge == goal:
-            extensions.add(current_path[:])
+            extensions.add(trim_path(current_path[:]))
             return
 
         # Maximum len size check (avoids long recursions)
         if max_len is not None and get_path_len(current_path, graph) > max_len:
-            extensions.add(current_path[:])
+            extensions.add(trim_path(current_path[:]))
             return
 
         # Colored graph exploration
@@ -624,7 +654,7 @@ def dfs_track_paths(
             if (
                 edge_colors := set(graph.edge_dict[edge.id].get_colors())
             ) and probe not in edge_colors:
-                extensions.add(current_path[:-1])
+                extensions.add(trim_path(current_path[:-1]))
                 return
 
             # Gap size is bigger than the limit
@@ -632,12 +662,12 @@ def dfs_track_paths(
                 max_intron_size
                 and exons_gap(current_path, probe, graph) > max_intron_size
             ):
-                extensions.add(current_path[:])
+                extensions.add(trim_path(current_path[:]))
                 return
 
         # Reached a dead-end
         if not (neighbors := graph.graph[edge]):
-            extensions.add(current_path[:])
+            extensions.add(trim_path(current_path[:]))
             return
 
         # Explore neighbors
@@ -646,7 +676,7 @@ def dfs_track_paths(
                 dfs_helper(neighbor, current_path[:], extensions)
             # Avoid getting stuck in loops and reversing your steps.
             else:
-                extensions.add(current_path[:])
+                extensions.add(trim_path(current_path[:]))
                 return
 
     if key is None:
@@ -654,6 +684,7 @@ def dfs_track_paths(
 
     current_path = []
     extensions = OptimalExtension(size=max_extensions, key=key)
+    trim_path = partial(_trim_path, probe=probe, graph=graph)
 
     dfs_helper(start, current_path, extensions)
 

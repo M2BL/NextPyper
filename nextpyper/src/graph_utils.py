@@ -38,6 +38,12 @@ class OrientedEdge(NamedTuple):
     orientation: Literal["+", "-"]
     jump: bool = False
 
+    def __eq__(self, _other: "OrientedEdge"):
+        if not isinstance(_other, OrientedEdge):
+            return False
+
+        return self.id == _other.id and self.orientation == _other.orientation
+
     @classmethod
     def from_seg(cls, seg: str) -> "OrientedEdge":
         if match := re.match(r",|;", seg):
