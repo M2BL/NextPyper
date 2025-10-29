@@ -8,15 +8,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="93b89ca7-6639-4ee6-8833-a71ce74f1afc" name="Changes" comment="cleaning miniprot.py">
-      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/.gitkeep" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/gene_3_all.fasta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/gene_8631_node3.fasta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/gene_8631_node3.gff" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/probe_3_aa.fasta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/probe_8631_aa.fasta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nextpyper/data/test_data/test_clustering/test_8631_node3_rc.gff" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nextpyper/src/union_find.py" beforeDir="false" afterPath="$PROJECT_DIR$/nextpyper/src/union_find.py" afterDir="false" />
+    <list default="true" id="93b89ca7-6639-4ee6-8833-a71ce74f1afc" name="Changes" comment="in miniprot.py and gff_parser.py we added a method for computing the length of the longest intron within a scaffold. This method could be used to filter out spurious sequences, likely originated from paralogs">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_12_4_24__4_05PM__Changes_.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_4_23_25__4_22PM__Changes_.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/nextpyper/src/miniprot.py" beforeDir="false" afterPath="$PROJECT_DIR$/nextpyper/src/miniprot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,15 +23,15 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Jupyter Notebook" />
         <option value="Python Script" />
+        <option value="Jupyter Notebook" />
       </list>
     </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="coloring" />
+        <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -73,8 +70,9 @@
     "Python.union_find.executor": "Run",
     "Python.vsearch.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "cleaning",
-    "last_opened_file_path": "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/src",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "git-widget-placeholder": "trim-ext",
+    "last_opened_file_path": "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/test_data/miniprot",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -87,10 +85,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/nextpyper/data/test_data/miniprot" />
       <recent name="$PROJECT_DIR$/nextpyper/src" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.diversity">
+  <component name="RunManager" selected="Python.miniprot">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="projects_test" />
       <option name="ENV_FILES" value="" />
@@ -211,8 +210,8 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="miniprot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="projects_test" />
+    <configuration name="gff_parser" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Nextpyper" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -223,6 +222,30 @@
       <option name="SDK_NAME" value="nextpiper" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
       <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/gff_parser.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="miniprot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="projects_test" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="nextpiper (2)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
@@ -298,30 +321,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/run_orfipy.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="projects_test" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="SDK_NAME" value="nextpiper" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nextpyper/src" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/nextpyper/src/test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -335,24 +334,24 @@
       <item itemvalue="Python.diversity" />
       <item itemvalue="Python.exon_discovery" />
       <item itemvalue="Python.exon_intron" />
+      <item itemvalue="Python.gff_parser" />
       <item itemvalue="Python.miniprot" />
-      <item itemvalue="Python.test" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.diversity" />
         <item itemvalue="Python.miniprot" />
-        <item itemvalue="Python.exon_discovery" />
+        <item itemvalue="Python.gff_parser" />
         <item itemvalue="Python.exon_intron" />
-        <item itemvalue="Python.test" />
+        <item itemvalue="Python.exon_discovery" />
+        <item itemvalue="Python.diversity" />
       </list>
     </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-PY-243.26053.29" />
-        <option value="bundled-python-sdk-b1dbf8ef85a6-4df51de95216-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.26053.29" />
+        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-PY-252.27397.106" />
+        <option value="bundled-python-sdk-4e2b1448bda8-9a97661f3031-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.27397.106" />
       </set>
     </attachedChunks>
   </component>
@@ -430,14 +429,20 @@
       <workItem from="1745313525425" duration="33773000" />
       <workItem from="1745418308818" duration="359000" />
       <workItem from="1745418678118" duration="2119000" />
-    </task>
-    <task id="LOCAL-00003" summary="vsearch consensus functions in paralogs.py">
-      <option name="closed" value="true" />
-      <created>1724770177493</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1724770177493</updated>
+      <workItem from="1755790428152" duration="25584000" />
+      <workItem from="1756462278336" duration="2342000" />
+      <workItem from="1756733868195" duration="622000" />
+      <workItem from="1757679900722" duration="3658000" />
+      <workItem from="1758046490874" duration="390000" />
+      <workItem from="1758183482696" duration="315000" />
+      <workItem from="1758623398014" duration="12862000" />
+      <workItem from="1759323893673" duration="2274000" />
+      <workItem from="1760010922937" duration="208000" />
+      <workItem from="1760106107869" duration="12494000" />
+      <workItem from="1760523128423" duration="611000" />
+      <workItem from="1761316030720" duration="924000" />
+      <workItem from="1761317646960" duration="5399000" />
+      <workItem from="1761736340396" duration="2864000" />
     </task>
     <task id="LOCAL-00004" summary="fixing bug in matched_edges_from_hmm">
       <option name="closed" value="true" />
@@ -823,7 +828,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745419307196</updated>
     </task>
-    <option name="localTasksCounter" value="52" />
+    <task id="LOCAL-00052" summary="in miniprot.py and gff_parser.py we added a method for computing the length of the longest intron within a scaffold. This method could be used to filter out spurious sequences, likely originated from paralogs">
+      <option name="closed" value="true" />
+      <created>1755612558600</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1755612558600</updated>
+    </task>
+    <option name="localTasksCounter" value="53" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -892,7 +905,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value=" merge_intervals modification, do not merge interval that have a single nucleotide overlap" />
     <MESSAGE value="new algorithm for translating the sequences based upon orfipy" />
     <MESSAGE value="change in Cds repr string&#10;modifications in the ranking procedure of probes. Probes that do not match a scaffold get penalized" />
     <MESSAGE value="modify find_common_exon() by adding a graph search for the longest continuous path of exons" />
@@ -917,24 +929,25 @@
     <MESSAGE value="coloring with queue" />
     <MESSAGE value="functions to sample as much edge diversity out of colored paths" />
     <MESSAGE value="cleaning miniprot.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="cleaning miniprot.py" />
+    <MESSAGE value="in miniprot.py and gff_parser.py we added a method for computing the length of the longest intron within a scaffold. This method could be used to filter out spurious sequences, likely originated from paralogs" />
+    <option name="LAST_COMMIT_MESSAGE" value="in miniprot.py and gff_parser.py we added a method for computing the length of the longest intron within a scaffold. This method could be used to filter out spurious sequences, likely originated from paralogs" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/Nextpyper$scaffold_cluster.coverage" NAME="scaffold_cluster Coverage Results" MODIFIED="1725030959688" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$gff_parser.coverage" NAME="gff_parser Coverage Results" MODIFIED="1755612294295" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$test.coverage" NAME="test Coverage Results" MODIFIED="1736419935445" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
-    <SUITE FILE_PATH="coverage/Nextpyper$interval_tree.coverage" NAME="interval_tree Coverage Results" MODIFIED="1736259546446" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
-    <SUITE FILE_PATH="coverage/Nextpyper$vsearch.coverage" NAME="vsearch Coverage Results" MODIFIED="1726675323821" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$exon_discovery.coverage" NAME="exon_discovery Coverage Results" MODIFIED="1737055308170" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$outgroup_cluster.coverage" NAME="outgroup_cluster Coverage Results" MODIFIED="1727091022792" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$paralogs.coverage" NAME="paralogs Coverage Results" MODIFIED="1733923206465" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$alignment.coverage" NAME="alignment Coverage Results" MODIFIED="1726846099731" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
-    <SUITE FILE_PATH="coverage/Nextpyper$gff_parser.coverage" NAME="gff_parser Coverage Results" MODIFIED="1726241399734" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
-    <SUITE FILE_PATH="coverage/Nextpyper$union_find.coverage" NAME="union_find Coverage Results" MODIFIED="1736273623437" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$run_orfipy.coverage" NAME="run_orfipy Coverage Results" MODIFIED="1729001853306" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
-    <SUITE FILE_PATH="coverage/Nextpyper$miniprot.coverage" NAME="miniprot Coverage Results" MODIFIED="1741820952779" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$mmseqs.coverage" NAME="mmseqs Coverage Results" MODIFIED="1725964553001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$scaffold_cluster.coverage" NAME="scaffold_cluster Coverage Results" MODIFIED="1725030959688" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$vsearch.coverage" NAME="vsearch Coverage Results" MODIFIED="1726675323821" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$union_find.coverage" NAME="union_find Coverage Results" MODIFIED="1736273623437" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$diversity.coverage" NAME="diversity Coverage Results" MODIFIED="1744722196326" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$exon_intron.coverage" NAME="exon_intron Coverage Results" MODIFIED="1736766788917" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
-    <SUITE FILE_PATH="coverage/Nextpyper$mmseqs.coverage" NAME="mmseqs Coverage Results" MODIFIED="1725964553001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
-    <SUITE FILE_PATH="coverage/Nextpyper$paralogs.coverage" NAME="paralogs Coverage Results" MODIFIED="1733923206465" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$miniprot.coverage" NAME="miniprot Coverage Results" MODIFIED="1761752328823" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
+    <SUITE FILE_PATH="coverage/Nextpyper$interval_tree.coverage" NAME="interval_tree Coverage Results" MODIFIED="1736259546446" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
     <SUITE FILE_PATH="coverage/Nextpyper$exon_intron_faulty.coverage" NAME="exon_intron_faulty Coverage Results" MODIFIED="1736343664425" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/nextpyper/src" />
   </component>
 </project>

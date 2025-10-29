@@ -48,14 +48,12 @@ __version__ = "0.1"
 from dataclasses import dataclass, field
 from collections import defaultdict, namedtuple
 from io import StringIO
-from itertools import chain
 import json
 from operator import attrgetter, add
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
-import textwrap
 from typing import Optional, Self, Literal
 
 from Bio.SeqRecord import SeqRecord
@@ -230,6 +228,8 @@ def run_miniprot_boundary_scorer(
 class RankCoverage:
     """
     Container for keeping track of the rank of a given probe out of all probes ranks.
+    Probes are ranked by similarity to the scaffolds. The most similar is ranked first, the second most similar
+    second, etc. The sum of ranks over all scaffolds gives the final rank.
     Attributes
     ----------
     -rank_score: list of ranks. Each int represents how a well given probe aligns to a scaffolds
@@ -501,6 +501,7 @@ class MiniprotInit:
             self.threads,
             self.min_fragment_cov,
         )
+        #print(list(miniprot_out))
         return miniprot_out
 
 
@@ -739,12 +740,29 @@ class OverlappingCds(MiniprotInit):
             if overlapping_gp.extended_cds_dict:
                 if not overlapping_gp.global_start and not overlapping_gp.global_end:
                     sys.exit("[ERROR] 'global_start' and 'global_end' are undefined")
+
+                def _build_description()->dict:
+                    """
+                    Building the description part of the header, inspired by the way captus reports the information.
+                    """
+                    name_description_dict = {}
+                    for scaffold_name, extended_cds in overlapping_gp.extended_cds_dict.items():
+                        probe_cov = sum([frag.query_end -frag.query_start for frag in extended_cds.fragments])
+                        probe_length = len(self.probes_dict[self.best_probe].seq)
+                        identity=extended_cds.global_identity
+                        score=extended_cds.get_global_score()
+                        description = f"[query={self.best_probe}] [cover={probe_cov/probe_length:.2f}] [ident={identity}] [score={score}]"
+                        print(f"{scaffold_name},  {probe_cov/probe_length} {identity} {score}")
+                        name_description_dict[scaffold_name] = description
+                    return name_description_dict
+
                 #  Save exons
                 name = f"{prefix}_exons.fasta"
                 out_path_exon = outdir / name
                 global_start = overlapping_gp.global_start
                 global_end = overlapping_gp.global_end
                 exon_records: list[SeqRecord] = []
+                description_dict = _build_description()
 
                 for (
                     scaffold_name,
@@ -782,7 +800,7 @@ class OverlappingCds(MiniprotInit):
                             SeqRecord(
                                 Seq(new_seq),
                                 name="",
-                                description="",
+                                description=description_dict[scaffold_name] + f" [length={len(new_seq)}]",
                                 id=scaffold_name,
                             )
                         )
@@ -794,10 +812,12 @@ class OverlappingCds(MiniprotInit):
                 #  Save supercontigs
                 super_name = f"{prefix}_supercontigs.fasta"
                 out_path_supercontigs = outdir / super_name
-                super_records = [
-                    self.scaffold_dict[scaffold_name]
-                    for scaffold_name in overlapping_gp.extended_cds_dict
-                ]
+                super_records = []
+                for scaffold_name in overlapping_gp.extended_cds_dict:
+                    record = self.scaffold_dict[scaffold_name]
+                    record.description = description_dict[scaffold_name] + f" [length={len(record.seq)}]"
+                    super_records.append(record)
+
                 if super_records:
                     SeqIO.write(
                         sorted(super_records, key=lambda x: x.id),
@@ -845,7 +865,7 @@ class OverlappingCds(MiniprotInit):
                             SeqRecord(
                                 Seq(new_scaffold),
                                 name="",
-                                description="",
+                                description=description_dict[scaffold_name] + f" [length={len(new_scaffold)}]",
                                 id=scaffold_name,
                             )
                         )
@@ -946,13 +966,16 @@ def debug():
     matrix = (
         "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/blosum62.csv"
     )
-    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/5168_probe.fasta"
-    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/5168_scfs2.fasta"
+    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/refactor_7_30_25/tmp_multi/6544_probe.fasta"
+    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/refactor_7_30_25/tmp_multi/6544_scfs.fasta"
     parameters = [
-        mk_threshold_dict(scfs),
+
         8,
         0.1,
         10,
+        None,
+        mk_threshold_dict(scfs),
+        0.5
     ]
     olc = OverlappingCds(probe_file, scfs, matrix, *parameters)
     print("overlapping:", olc)
@@ -963,8 +986,8 @@ def debug():
 
 
 if __name__ == "__main__":
-    # debug()
-    if "snakemake" in globals():
-        snakemake_call(snakemake)
-    else:
-        main()
+    debug()
+    # if "snakemake" in globals():
+    #     snakemake_call(snakemake)
+    # else:
+    #     main()
