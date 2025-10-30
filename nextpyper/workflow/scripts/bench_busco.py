@@ -431,9 +431,11 @@ def main():
             schema_overrides={"% identity": pl.Float64},
             infer_schema_length=10000,
         )
-        chimera_df = pl.read_csv(chimera_path, separator="\t", has_header=False)
+        chimera_df = pl.read_csv(
+            chimera_path, separator="\t", has_header=False, infer_schema_length=10000
+        )
         targets = SeqIO.to_dict(SeqIO.parse(targets_path, "fasta"))
-        categories, noise = categorize_sample(
+        categories, n_chimeras, noise, cov_df = categorize_sample(
             df,
             chimera_df,
             targets,
@@ -476,7 +478,12 @@ def main():
                     schema_overrides={"% identity": pl.Float64},
                     infer_schema_length=10000,
                 )
-                chimera_df = pl.read_csv(chimera_file, separator="\t", has_header=False)
+                chimera_df = pl.read_csv(
+                    chimera_file,
+                    separator="\t",
+                    has_header=False,
+                    infer_schema_length=10000,
+                )
                 targets = SeqIO.to_dict(SeqIO.parse(targets_file, "fasta"))
                 categories, n_chimeras, noise, cov_df = categorize_sample(
                     df,
