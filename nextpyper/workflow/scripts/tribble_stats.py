@@ -34,7 +34,7 @@ from var_asm_parser import collapse_alleles_df, collapse_variants_df, query2df
 from var_asm_parser import TARGET_PAT, FIELDS
 
 TRIBBLE_LIM_DPATH = "nextpyper/pipeline/saute/reassembly/explosive_limit"
-
+NEW_TRIBBLE_LIM_DPATH = "nextpyper/pipeline/saute/max_variants"
 
 # =============================================================================
 #                FUNCTIONS
@@ -92,7 +92,10 @@ def summarize_tribbles(run_dir: Path, tribble_lim: int | None = None) -> None:
             reasm = True
 
     if tribble_lim is None:
-        tribble_lim = int(dpath.get(config, TRIBBLE_LIM_DPATH))
+        try:
+            tribble_lim = int(dpath.get(config, TRIBBLE_LIM_DPATH))
+        except KeyError:
+            tribble_lim = int(dpath.get(config, NEW_TRIBBLE_LIM_DPATH))
 
     df = pl.concat(
         find_tribbles(run_dir, sample.stem, tribble_lim)
