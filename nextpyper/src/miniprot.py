@@ -501,7 +501,6 @@ class MiniprotInit:
             self.threads,
             self.min_fragment_cov,
         )
-        #print(list(miniprot_out))
         return miniprot_out
 
 
@@ -741,18 +740,28 @@ class OverlappingCds(MiniprotInit):
                 if not overlapping_gp.global_start and not overlapping_gp.global_end:
                     sys.exit("[ERROR] 'global_start' and 'global_end' are undefined")
 
-                def _build_description()->dict:
+                def _build_description() -> dict:
                     """
                     Building the description part of the header, inspired by the way captus reports the information.
                     """
                     name_description_dict = {}
-                    for scaffold_name, extended_cds in overlapping_gp.extended_cds_dict.items():
-                        probe_cov = sum([frag.query_end -frag.query_start for frag in extended_cds.fragments])
+                    for (
+                        scaffold_name,
+                        extended_cds,
+                    ) in overlapping_gp.extended_cds_dict.items():
+                        probe_cov = sum(
+                            [
+                                frag.query_end - frag.query_start
+                                for frag in extended_cds.fragments
+                            ]
+                        )
                         probe_length = len(self.probes_dict[self.best_probe].seq)
-                        identity=extended_cds.global_identity
-                        score=extended_cds.get_global_score()
+                        identity = extended_cds.global_identity
+                        score = extended_cds.get_global_score()
                         description = f"[query={self.best_probe}] [cover={probe_cov/probe_length:.2f}] [ident={identity}] [score={score}]"
-                        print(f"{scaffold_name},  {probe_cov/probe_length} {identity} {score}")
+                        print(
+                            f"{scaffold_name},  {probe_cov/probe_length} {identity} {score}"
+                        )
                         name_description_dict[scaffold_name] = description
                     return name_description_dict
 
@@ -800,7 +809,8 @@ class OverlappingCds(MiniprotInit):
                             SeqRecord(
                                 Seq(new_seq),
                                 name="",
-                                description=description_dict[scaffold_name] + f" [length={len(new_seq)}]",
+                                description=description_dict[scaffold_name]
+                                + f" [length={len(new_seq)}]",
                                 id=scaffold_name,
                             )
                         )
@@ -815,7 +825,9 @@ class OverlappingCds(MiniprotInit):
                 super_records = []
                 for scaffold_name in overlapping_gp.extended_cds_dict:
                     record = self.scaffold_dict[scaffold_name]
-                    record.description = description_dict[scaffold_name] + f" [length={len(record.seq)}]"
+                    record.description = (
+                        description_dict[scaffold_name] + f" [length={len(record.seq)}]"
+                    )
                     super_records.append(record)
 
                 if super_records:
@@ -865,7 +877,8 @@ class OverlappingCds(MiniprotInit):
                             SeqRecord(
                                 Seq(new_scaffold),
                                 name="",
-                                description=description_dict[scaffold_name] + f" [length={len(new_scaffold)}]",
+                                description=description_dict[scaffold_name]
+                                + f" [length={len(new_scaffold)}]",
                                 id=scaffold_name,
                             )
                         )
@@ -956,38 +969,8 @@ def main():
     snakemake_call(snakemake)
 
 
-def debug():
-    from random import uniform
-
-    def mk_threshold_dict(fasta: str):
-        records = SeqIO.parse(fasta, "fasta")
-        return {rec.id.split("|")[0]: uniform(0.6, 1) for rec in records}
-
-    matrix = (
-        "/home/yjkbertrand/Documents/projects/Nextpyper/nextpyper/data/blosum62.csv"
-    )
-    probe_file = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/refactor_7_30_25/tmp_multi/6544_probe.fasta"
-    scfs = "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/refactor_7_30_25/tmp_multi/6544_scfs.fasta"
-    parameters = [
-
-        8,
-        0.1,
-        10,
-        None,
-        mk_threshold_dict(scfs),
-        0.5
-    ]
-    olc = OverlappingCds(probe_file, scfs, matrix, *parameters)
-    print("overlapping:", olc)
-    outdir = Path(
-        "/home/yjkbertrand/Documents/projects/nextpiper/debug/miniprot/key_error/outdir"
-    )
-    olc.save_records(outdir, 10)
-
-
 if __name__ == "__main__":
-    debug()
-    # if "snakemake" in globals():
-    #     snakemake_call(snakemake)
-    # else:
-    #     main()
+    if "snakemake" in globals():
+        snakemake_call(snakemake)
+    else:
+        main()
