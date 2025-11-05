@@ -71,6 +71,7 @@ rule extend_paths:
         ceil_len=lookup("ceiling_len_extension", within=scf_ext),
         plen_scaling=lookup("probe_len_scaling", within=scf_ext),
         max_extensions=lookup("max_extensions", within=scf_ext),
+        min_idt=lookup("scf_min_idt", within=seeds_filt_params),
         max_intron_size=(
             get_max_intron_size
             if (size := lookup("max_intron_size", within=scf_ext)) == "auto"

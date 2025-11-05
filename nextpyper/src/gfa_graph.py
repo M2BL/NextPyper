@@ -1014,6 +1014,7 @@ def snakemake_call(snakemake):
         plen_scaling = (
             snakemake.params.plen_scaling
         )  # float that multiplies the length of the probe for an alternative extension
+        min_idt = snakemake.params.min_idt  # For probe hits
         # The selected extension is the max of these two thresholds.
         max_intron_size = snakemake.params.max_intron_size
         pat = snakemake.params.probe_pattern
@@ -1048,7 +1049,7 @@ def snakemake_call(snakemake):
 
         # Find which probe is best for each component and color the graph
         final_hits = find_best_probe_hits(pre_comp)
-        graph.color_edges(final_hits)
+        graph.color_edges(final_hits, min_idt=min_idt)
 
         # If there are no connections in the graph, there is nothing to extend.
         newpaths = defaultdict(list)
@@ -1084,11 +1085,6 @@ def snakemake_call(snakemake):
                         name = f"{out.stem}-{probe}_"
                         name += make_path_name(extension, next(counter), graph)
                         newpaths[path].append(Path_on_graph(name, extension))
-
-        # Log the extensions: old_path -> new_path
-        # for path, exts in newpaths.items():
-        #     for newpath in exts:
-        #         print(f"{path}\t{newpath.name}")
 
         log_df = summarize_extensions(newpaths, path2comp, graph)
         log_df.write_csv(sys.stdout, separator="\t")
