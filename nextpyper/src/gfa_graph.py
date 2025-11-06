@@ -1048,8 +1048,8 @@ def snakemake_call(snakemake):
         )
 
         # Find which probe is best for each component and color the graph
-        final_hits = find_best_probe_hits(pre_comp)
-        graph.color_edges(final_hits, min_idt=min_idt)
+        final_hits = find_best_probe_hits(pre_comp, min_idt)
+        graph.color_edges(final_hits, min_idt)
 
         # If there are no connections in the graph, there is nothing to extend.
         newpaths = defaultdict(list)
