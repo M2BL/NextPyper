@@ -48,7 +48,7 @@ def get_histogram_data(df: DataFrame, mmseqs_idt_threshold: float) -> tuple[list
     data = df.filter((pl.col("idt") >= mmseqs_idt_threshold) & (pl.col("idt") <= 1))[
         "idt"
     ].to_numpy()
-    counts, bins = np.histogram(data, bins="fd", range=(mmseqs_idt_threshold, 1))
+    counts, bins = np.histogram(data, bins="auto", range=(mmseqs_idt_threshold, 1))
 
     return (bins, counts)
 
