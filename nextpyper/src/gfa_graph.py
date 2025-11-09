@@ -122,6 +122,7 @@ class Edge:
     -id: edge number.
     -raw_seq: nucleotide sequence including k-mer overlap.
     -coverage: k-mer coverage.
+    -kc: kmer count.
 
     Post init
     ----------
@@ -132,6 +133,7 @@ class Edge:
     id: str
     raw_seq: str = field(repr=False)
     coverage: float
+    kc: float = field(default=None)
     seq: Seq = field(init=False)
     matching_exons: dict[str, int] = field(
         init=False, default_factory=lambda: defaultdict(list)
@@ -184,15 +186,17 @@ class Assembly_graph:
 
     gfa_filename: str
     K: int = field(init=False)
-    edge_dict: dict[str, Edge] = field(default_factory=dict, init=False)
+    edge_dict: dict[str, Edge] = field(default_factory=dict, init=False, repr=False)
     graph: dict[OrientedEdge, list[OrientedEdge]] = field(
-        default_factory=lambda: defaultdict(list), init=False
+        default_factory=lambda: defaultdict(list), init=False, repr=False
     )
     linked_edges: LinkSupport = field(
-        default_factory=lambda: defaultdict(int), init=False
+        default_factory=lambda: defaultdict(int), init=False, repr=False
     )
-    paths: dict[str, Path_on_graph] = field(default_factory=dict, init=False)
-    components: list[set[str]] = field(default_factory=list, init=False)
+    paths: dict[str, Path_on_graph] = field(
+        default_factory=dict, init=False, repr=False
+    )
+    components: list[set[str]] = field(default_factory=list, init=False, repr=False)
     rev = {"+": "-", "-": "+"}
 
     def __post_init__(self):
@@ -208,16 +212,19 @@ class Assembly_graph:
                     case "H":
                         pass
                     case "S":
-                        edge_line = line.strip().split("\t")[1:]
-                        node_id, seq, _kc = edge_line[0], edge_line[1], edge_line[-1]
-                        coverage = float(_kc[len("KC:i:") :]) / len(seq)
-                        self.edge_dict[node_id] = Edge(node_id, seq, coverage)
+                        node_id, seq, _dp, _kc = line.strip().split("\t")[1:]
+                        dp = float(_dp.removeprefix("DP:f:"))
+                        kc = int(_kc.removeprefix("KC:i:"))
 
+                        if not hasattr(self, "K"):
+                            self.K = round(len(seq) - kc / dp)
+
+                        coverage = kc / (len(seq) - self.K)
+                        self.edge_dict[node_id] = Edge(node_id, seq, coverage, kc=kc)
                     case "L":
                         _, node_id1, pos1, node_id2, pos2, _match = line.strip().split(
                             "\t"
                         )
-                        self.K = int(_match[:-1])
                         self.graph[OrientedEdge(node_id1, pos1)].append(
                             OrientedEdge(node_id2, pos2)
                         )
@@ -488,6 +495,13 @@ class Assembly_graph:
                         tree = IntervalTree(intervals)
                         tree.merge_overlaps(data_reducer=add, strict=False)
                         edge.matching_exons[probe] = sorted(tree)
+
+    def remove_colors(self) -> Self:
+        "Remove the colors (probe hit information) of all the edges of the graph, making it colorless."
+
+        for edge in self.edge_dict.values():
+            edge.matching_exons.clear()
+        return self
 
 
 @dataclass(slots=True)
@@ -769,9 +783,7 @@ def get_seq_atts(path: list[OrientedEdge], graph: Assembly_graph) -> tuple[int, 
 
     edges = [graph.edge_dict[edge.id] for edge in path]
     path_length = sum(len(edge) for edge in edges) - (graph.K * (len(path) - 1))
-    path_cov = sum(edge.coverage * len(edge) for edge in edges) / (
-        path_length - graph.K
-    )
+    path_cov = sum(edge.kc for edge in edges) / (path_length - graph.K)
 
     return path_length, path_cov
 
@@ -1050,6 +1062,48 @@ def snakemake_call(snakemake):
         # Find which probe is best for each component and color the graph
         final_hits = find_best_probe_hits(pre_comp, min_idt)
         graph.color_edges(final_hits, min_idt)
+
+        covs = [
+            (edge.coverage, bool(edge.has_match())) for edge in graph.edge_dict.values()
+        ]
+
+        # Find a Coverage threshold to filter noise components.
+        dp_thr = (
+            pl.DataFrame(covs, {"cov": pl.Float64, "target": pl.Boolean}, orient="row")
+            .group_by("target")
+            .agg(
+                pl.median("cov"),
+                std90=pl.col("cov")
+                .filter(
+                    (pl.col("cov") < pl.quantile("cov", 0.95))
+                    & (pl.col("cov") > pl.quantile("cov", 0.05))
+                )
+                .std(),
+            )
+            .with_columns(dp_thr=pl.col("cov") + 2 * pl.col("std90"))
+            .filter(~pl.col("target"))
+        )["dp_thr"][0]
+
+        # Find and keep the components with enough coverage
+        colored_comps = {
+            comp_ids[edge_id]
+            for edge_id, edge in graph.edge_dict.items()
+            if edge.has_match()
+        }
+        high_dp_colored_comps = {
+            comp
+            for comp in colored_comps
+            if any(
+                graph.edge_dict[edge_id].coverage > dp_thr
+                for edge_id in graph.components[comp]
+            )
+        }
+
+        # Filter the hits from the filtered componenets and recompute the hits and coloring
+        dp_filt_hits = pre_comp.filter(pl.col("comp_id").is_in(high_dp_colored_comps))
+        final_hits = find_best_probe_hits(dp_filt_hits, 0.7)
+        graph.remove_colors()
+        graph.color_edges(final_hits, 0.7)
 
         # If there are no connections in the graph, there is nothing to extend.
         newpaths = defaultdict(list)
