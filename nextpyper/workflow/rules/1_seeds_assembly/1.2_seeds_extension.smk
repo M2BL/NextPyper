@@ -67,6 +67,7 @@ rule extend_paths:
     output:
         outdir / "assembled/extension/{sample}.fasta",
     params:
+        filter_low_dp_comps=lookup("filter_low_dp_comps", within=scf_ext),
         floor_len=lookup("floor_len_extension", within=scf_ext),
         ceil_len=lookup("ceiling_len_extension", within=scf_ext),
         plen_scaling=lookup("probe_len_scaling", within=scf_ext),

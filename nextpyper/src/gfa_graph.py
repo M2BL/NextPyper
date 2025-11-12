@@ -855,6 +855,27 @@ def find_best_probe_hits(
     return clean_hits.sort(by="theader")
 
 
+def compute_comp_dp_threshold(graph: Assembly_graph, q: float = 0.25) -> float:
+    """Given a colored graph, determine a good depth threshold to separate
+    noisy components from real ones.
+
+    Simply use the quantile q (0.25 by default) of the on-target edges' depths.
+    """
+
+    covs = [
+        (edge.coverage, bool(edge.has_match())) for edge in graph.edge_dict.values()
+    ]
+
+    cov_stats = (
+        pl.DataFrame(covs, {"cov": pl.Float64, "target": pl.Boolean}, orient="row")
+        .group_by("target")
+        .agg(dp_thr=pl.quantile("cov", q))
+        .filter(pl.col("target"))
+    )
+
+    return cov_stats["dp_thr"][0]
+
+
 def colored_paths_extension(
     graph: Assembly_graph,
     hits: pl.DataFrame,
@@ -1017,6 +1038,7 @@ def snakemake_call(snakemake):
         graph_path = Path(snakemake.input.graph)
         table_path = Path(snakemake.input.table)
         out = Path(snakemake.output[0])
+        filter_low_dp_comps = snakemake.params.get("filter_low_dp_comps", True)
         floor_len = (
             snakemake.params.floor_len
         )  # maximum extension of a path in nucleotide
@@ -1063,47 +1085,34 @@ def snakemake_call(snakemake):
         final_hits = find_best_probe_hits(pre_comp, min_idt)
         graph.color_edges(final_hits, min_idt)
 
-        covs = [
-            (edge.coverage, bool(edge.has_match())) for edge in graph.edge_dict.values()
-        ]
+        # Activate the component-level low coverage heuristic
+        if filter_low_dp_comps:
 
-        # Find a Coverage threshold to filter noise components.
-        dp_thr = (
-            pl.DataFrame(covs, {"cov": pl.Float64, "target": pl.Boolean}, orient="row")
-            .group_by("target")
-            .agg(
-                pl.median("cov"),
-                std90=pl.col("cov")
-                .filter(
-                    (pl.col("cov") < pl.quantile("cov", 0.95))
-                    & (pl.col("cov") > pl.quantile("cov", 0.05))
+            # Find a Coverage threshold to filter noisy components.
+            dp_thr = compute_comp_dp_threshold(graph)
+
+            # Find and keep the components with enough depth of coverage
+            colored_comps = {
+                comp_ids[edge_id]
+                for edge_id, edge in graph.edge_dict.items()
+                if edge.has_match()
+            }
+            high_dp_colored_comps = {
+                comp
+                for comp in colored_comps
+                if any(
+                    graph.edge_dict[edge_id].coverage > dp_thr
+                    for edge_id in graph.components[comp]
                 )
-                .std(),
-            )
-            .with_columns(dp_thr=pl.col("cov") + 2 * pl.col("std90"))
-            .filter(~pl.col("target"))
-        )["dp_thr"][0]
+            }
 
-        # Find and keep the components with enough coverage
-        colored_comps = {
-            comp_ids[edge_id]
-            for edge_id, edge in graph.edge_dict.items()
-            if edge.has_match()
-        }
-        high_dp_colored_comps = {
-            comp
-            for comp in colored_comps
-            if any(
-                graph.edge_dict[edge_id].coverage > dp_thr
-                for edge_id in graph.components[comp]
+            # Filter the hits from the filtered components and recompute the best hits and coloring
+            dp_filt_hits = pre_comp.filter(
+                pl.col("comp_id").is_in(high_dp_colored_comps)
             )
-        }
-
-        # Filter the hits from the filtered componenets and recompute the hits and coloring
-        dp_filt_hits = pre_comp.filter(pl.col("comp_id").is_in(high_dp_colored_comps))
-        final_hits = find_best_probe_hits(dp_filt_hits, 0.7)
-        graph.remove_colors()
-        graph.color_edges(final_hits, 0.7)
+            final_hits = find_best_probe_hits(dp_filt_hits, min_idt)
+            graph.remove_colors()
+            graph.color_edges(final_hits, min_idt)
 
         # If there are no connections in the graph, there is nothing to extend.
         newpaths = defaultdict(list)

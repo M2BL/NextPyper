@@ -19,6 +19,7 @@ nextpyper:
         spades:
             k: auto
         scaffolds_extension:
+            filter_low_dp_comps: true
             floor_len_extension: 3000
             ceiling_len_extension: 6000
             probe_len_scaling: 3
