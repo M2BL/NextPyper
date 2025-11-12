@@ -65,7 +65,8 @@ rule extend_paths:
         table=outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
         stats=outdir / "logs/preprocessing/fastp/{sample}.json",
     output:
-        outdir / "assembled/extension/{sample}.fasta",
+        ext_seqs=outdir / "assembled/extension/{sample}.fasta",
+        ext_table=outdir / "logs/assembled/extension/{sample}.tsv",
     params:
         filter_low_dp_comps=lookup("filter_low_dp_comps", within=scf_ext),
         floor_len=lookup("floor_len_extension", within=scf_ext),

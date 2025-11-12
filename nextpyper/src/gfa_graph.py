@@ -184,7 +184,7 @@ class Assembly_graph:
     ----------
     """
 
-    gfa_filename: str
+    gfa_filename: str = field(repr=False)
     K: int = field(init=False)
     edge_dict: dict[str, Edge] = field(default_factory=dict, init=False, repr=False)
     graph: dict[OrientedEdge, list[OrientedEdge]] = field(
@@ -198,6 +198,9 @@ class Assembly_graph:
     )
     components: list[set[str]] = field(default_factory=list, init=False, repr=False)
     rev = {"+": "-", "-": "+"}
+
+    def __repr__(self):
+        return f"Assembly_graph(K={self.K}, components={len(self.components)}, paths={len(self.paths)}, edges={len(self.edge_dict)}, colored={self.is_colored()})"
 
     def __post_init__(self):
         self._parse_graph()
@@ -495,6 +498,11 @@ class Assembly_graph:
                         tree = IntervalTree(intervals)
                         tree.merge_overlaps(data_reducer=add, strict=False)
                         edge.matching_exons[probe] = sorted(tree)
+
+    def is_colored(self) -> bool:
+        "Return whether the graph is currently colored or not"
+
+        return any(edge.has_match() for edge in self.edge_dict.values())
 
     def remove_colors(self) -> Self:
         "Remove the colors (probe hit information) of all the edges of the graph, making it colorless."
@@ -855,25 +863,29 @@ def find_best_probe_hits(
     return clean_hits.sort(by="theader")
 
 
-def compute_comp_dp_threshold(graph: Assembly_graph, q: float = 0.25) -> float:
-    """Given a colored graph, determine a good depth threshold to separate
-    noisy components from real ones.
-
-    Simply use the quantile q (0.25 by default) of the on-target edges' depths.
-    """
+def compute_dp_stats(graph: Assembly_graph) -> pl.DataFrame:
+    """Given a colored graph, compute basic statitistics about the depth distribution
+    of on-target and off-target edges on the graph."""
 
     covs = [
         (edge.coverage, bool(edge.has_match())) for edge in graph.edge_dict.values()
     ]
 
-    cov_stats = (
+    return (
         pl.DataFrame(covs, {"cov": pl.Float64, "target": pl.Boolean}, orient="row")
         .group_by("target")
-        .agg(dp_thr=pl.quantile("cov", q))
-        .filter(pl.col("target"))
+        .agg(
+            q25=pl.quantile("cov", 0.25),
+            q50=pl.median("cov"),
+            q75=pl.quantile("cov", 0.75),
+            std90=pl.col("cov")
+            .filter(
+                (pl.col("cov") < pl.quantile("cov", 0.95))
+                & (pl.col("cov") > pl.quantile("cov", 0.05))
+            )
+            .std(),
+        )
     )
-
-    return cov_stats["dp_thr"][0]
 
 
 def colored_paths_extension(
@@ -1037,7 +1049,9 @@ def snakemake_call(snakemake):
 
         graph_path = Path(snakemake.input.graph)
         table_path = Path(snakemake.input.table)
-        out = Path(snakemake.output[0])
+        out = Path(snakemake.output.ext_seqs)
+        ext_table = Path(snakemake.output.ext_table)
+
         filter_low_dp_comps = snakemake.params.get("filter_low_dp_comps", True)
         floor_len = (
             snakemake.params.floor_len
@@ -1063,6 +1077,7 @@ def snakemake_call(snakemake):
 
         # Load the graph and a dictionary edge -> components
         graph = Assembly_graph(graph_path)
+        print(f"Graph at the start: {graph}")
         comp_ids = {
             edge: comp_id
             for comp_id, edges in graph.components.items()
@@ -1081,15 +1096,35 @@ def snakemake_call(snakemake):
             tprobe=pl.col("theader").str.extract(pat),
         )
 
+        print(
+            f"Initial number of components with hits: {len(pre_comp["comp_id"].unique())}"
+        )
+
         # Find which probe is best for each component and color the graph
         final_hits = find_best_probe_hits(pre_comp, min_idt)
+        print(
+            f"Number of components with hits after processing the best hits: {len(final_hits["comp_id"].unique())}"
+        )
+        print("Coloring the graph")
+
         graph.color_edges(final_hits, min_idt)
 
         # Activate the component-level low coverage heuristic
+        print(f"Filtering low depth components: {filter_low_dp_comps}")
         if filter_low_dp_comps:
 
             # Find a Coverage threshold to filter noisy components.
-            dp_thr = compute_comp_dp_threshold(graph)
+            cov_stats = compute_dp_stats(graph)
+            print("On/off target edges stats \n")
+            cov_stats.with_columns(
+                pl.col("target").replace_strict({False: "off", True: "on"})
+            ).write_csv(sys.stdout, separator="\t", float_precision=4)
+
+            # Current heuristic is to choose the max between the q25 on-target and the median off-target
+            on_q25 = cov_stats.filter(pl.col("target"))["q25"][0]
+            off_q50 = cov_stats.filter(~pl.col("target"))["q50"][0]
+            dp_thr = max(on_q25, off_q50)
+            print(f"Depth threshold selected: {dp_thr}")
 
             # Find and keep the components with enough depth of coverage
             colored_comps = {
@@ -1111,6 +1146,12 @@ def snakemake_call(snakemake):
                 pl.col("comp_id").is_in(high_dp_colored_comps)
             )
             final_hits = find_best_probe_hits(dp_filt_hits, min_idt)
+
+            print(
+                f"Number of components with hits after depth filtering: {len(final_hits["comp_id"].unique())}"
+            )
+            print("Coloring the graph")
+
             graph.remove_colors()
             graph.color_edges(final_hits, min_idt)
 
@@ -1133,6 +1174,7 @@ def snakemake_call(snakemake):
 
         # Explore the colored graph:
         else:
+            print("Computing path extensions")
             path_extensions = colored_paths_extension(
                 graph, final_hits, max_extensions, max_intron_size, extension_limits
             )
@@ -1149,8 +1191,13 @@ def snakemake_call(snakemake):
                         name += make_path_name(extension, next(counter), graph)
                         newpaths[path].append(Path_on_graph(name, extension))
 
+        print(f"Number of starting paths for extension: {len(newpaths)}")
+        print(
+            f"Number of extensions obtained: {sum(len(exts) for exts in newpaths.values())}"
+        )
+
         log_df = summarize_extensions(newpaths, path2comp, graph)
-        log_df.write_csv(sys.stdout, separator="\t")
+        log_df.write_csv(ext_table, separator="\t")
 
         # Finally write the new sequences
         seqs_iter = (
@@ -1176,8 +1223,8 @@ def main():
     # Mock the snakemake object
     snakemake = Run(
         input=Run(graph=sys.argv[1], table=sys.argv[2]),
-        output=[sys.argv[3]],
-        log=[sys.argv[4]],
+        output=Run(ext_seqs=sys.argv[3], ext_table=sys.argv[4]),
+        log=[sys.stdout],
         params=Run(
             floor_len=3000,
             ceil_len=7000,
