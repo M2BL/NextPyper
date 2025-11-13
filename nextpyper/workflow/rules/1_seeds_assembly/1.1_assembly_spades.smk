@@ -19,18 +19,20 @@ rule spades_assembly:
         in2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
         json=outdir / "logs/preprocessing/fastp/{sample}.json",
     output:
-        out_dir=directory(outdir / "assembled/spades/{sample}"),
         graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
     params:
         k=select_asm_kmer,
+        out_dir=subpath(output.graph, parent=True),
         extra="--meta --only-assembler",
     log:
         outdir / "logs/assembled/spades/{sample}.log",
     threads: 4
+    shadow:
+        "minimal"
     conda:
         "../../envs/assembly_spades.yaml"
     shell:
-        "spades.py -t {threads} {params.extra} -k {params.k} -1 {input.in1} -2 {input.in2} -o {output.out_dir} > {log} 2>&1"
+        "spades.py -t {threads} {params.extra} -k {params.k} -1 {input.in1} -2 {input.in2} -o {params.out_dir} > {log} 2>&1"
 
 
 rule make_assembly_scaffolds:

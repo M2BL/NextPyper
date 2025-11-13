@@ -42,7 +42,10 @@ rule seeds_collection:
             outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
             sample=sample_list,
         ),
-        spades_folders=expand(outdir / "assembled/spades/{sample}", sample=sample_list),
+        spades_graphs=expand(
+            outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
+            sample=sample_list,
+        ),
         covs=expand(
             outdir / "assembled/filtering/coverage/{sample}.metabat",
             sample=sample_list,

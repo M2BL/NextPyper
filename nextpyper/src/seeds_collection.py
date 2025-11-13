@@ -88,10 +88,17 @@ class KmerParams(TypedDict):
 # =============================================================================
 
 
-def get_spades_kmer_size(spades_folder: Path) -> int:
-    """Get the kmer size used by spades."""
-    kspades = one(spades_folder.glob("K*/final_contigs.paths")).parent.name[1:]
-    return int(kspades)
+def get_spades_kmer_size(spades_graph: Path) -> int:
+    """Get the kmer size used by spades from the assembly graph."""
+
+    with spades_graph.open() as gfa:
+        for line in gfa:
+            if line.startswith("S"):
+                _, seq, _dp, _kc = line.strip().split("\t")[1:]
+                dp = float(_dp.removeprefix("DP:f:"))
+                kc = int(_kc.removeprefix("KC:i:"))
+
+                return round(len(seq) - kc / dp)
 
 
 def get_map_coverage(cov_table: Path) -> float:
@@ -207,7 +214,7 @@ def snakemake_call(snakemake):
     probes_path = snakemake.input.probes
 
     # Read inputs for saute kmer size computation
-    spades_folders = snakemake.input.spades_folders
+    spades_graphs = snakemake.input.spades_graphs
     read_stats = snakemake.input.read_stats
     cov_paths = snakemake.input.covs
 
@@ -238,7 +245,7 @@ def snakemake_call(snakemake):
 
     ## Kmer size parameters computation
     # Organize the Spades folders and fastp reports to make them accessible by sample
-    spades_folders = {folder.name: folder for folder in map(Path, spades_folders)}
+    spades_graphs = {graph.parent.name: graph for graph in map(Path, spades_graphs)}
     read_covs = {file.stem: get_map_coverage(file) for file in map(Path, cov_paths)}
     read_lengths = {file.stem: get_read_length(file) for file in map(Path, read_stats)}
     kmer_params_out = {file.stem: file for file in map(Path, saute_params)}
@@ -256,7 +263,7 @@ def snakemake_call(snakemake):
 
         # By spades assembly
         else:
-            kspades = get_spades_kmer_size(spades_folders[sample])
+            kspades = get_spades_kmer_size(spades_graphs[sample])
             med_cov = np.median(
                 [
                     float(pat.search(rec)[3])
