@@ -32,7 +32,8 @@ rule estimate_intron_ceiling:
 use rule distribute_seeds as per_probe_scaffold_grouping with:
     input:
         expand(
-            outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
+            outdir
+            / "homolog_prospection/homologs_filtering/filtered_scfs/{sample}.fasta",
             sample=sample_list,
         ),
     output:
