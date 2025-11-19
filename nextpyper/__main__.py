@@ -205,6 +205,15 @@ summarize_run_msg = """
     show_default=True,
 )
 @click.option(
+    "--use-ploidy/--no-ploidy",
+    "use_ploidy",
+    help="""Whether to use the ploidy information from the samples. An extra
+            ploidy column is expected in the input sample table. Ploidy is 
+            used to inform the expected number of homologs.""",
+    default=False,
+    show_default=True,
+)
+@click.option(
     "--interseeds",
     "interseeds",
     help="""Which inter-sample seeds to use for Saute assembly. Interseeds 
@@ -278,13 +287,6 @@ def citation(**kwargs):
     print_citation()
 
 
-@click.option(
-    "--extra",
-    help="extra info to add to all samples",
-    type=str,
-    default="targeted",
-    show_default=True,
-)
 @click.option(
     "--output",
     help="Output sample table",

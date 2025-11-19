@@ -18,10 +18,10 @@ properties:
     description: path to fastq(compressed) file containing forward reads.
     pattern: ".*(.fastq.gz|.fq.gz|.fastq|.fq)$"
   ploidy:
-    type: string
-    format: uri
+    type: integer
+    default: 0 
+    minimum: 0
     description: ploidy level of the sample (optional).
-    pattern: "[0-9]+"
 
 required:
   - sample

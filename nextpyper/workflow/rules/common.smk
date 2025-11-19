@@ -8,10 +8,12 @@ from snakemake.utils import validate
 from pathlib import Path
 from collections import Counter, defaultdict
 from operator import itemgetter
+import yaml
 import json
 import sys
 import os
 import re
+import numpy as np
 import pandas as pd
 import polars as pl
 from more_itertools import last, one
@@ -40,6 +42,7 @@ multi_probes = lookup("args/multi_probes", within=config)
 max_threads = lookup("args/threads", within=config)
 interseeds_use = lookup("args/interseeds", within=config)
 reasm = lookup("args/reasm", within=config)
+use_ploidy = lookup("args/use_ploidy", within=config)
 
 blosum62 = Path(workflow.source_path(lookup("blosum62", within=config)))
 
@@ -71,17 +74,40 @@ seeds_filt_params = lookup("homolog_filtering/seeds", within=pipeline)
 homologs_filt_params = lookup("homolog_filtering/homologs", within=pipeline)
 reg_sep = lookup("region_separation", within=pipeline)
 
-# Validate Sample table
-cols = ["sample", "path_forward", "path_reverse", "type"]
-sample_table = pd.read_csv(path_samples, sep="\t", names=cols)
-validate(sample_table, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
-sample_list = sample_table["sample"].to_list()
-
 # Validate probes
 probes = SeqIO.to_dict(SeqIO.parse(probes_path, "fasta"))
 probes_list = list(probes.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
 validate(PROBES, schema=(SCHEMES_DIR / "probes.yaml").resolve())
+
+# Validate Sample table
+with open(SCHEMES_DIR / "sample_table.yaml") as file:
+    sample_schema = yaml.safe_load(file)
+
+# Build dtypes from the sample schema
+dtype_map = {"string": str, "integer": "Int64", "number": float}
+dtypes = {
+    col: dtype_map.get(spec.get("type", "string"), str)
+    for col, spec in sample_schema["properties"].items()
+}
+sample_table = pd.read_csv(path_samples, sep="\t", dtype=dtypes)
+validate(sample_table, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
+has_ploidy = sample_table.eval("ploidy > 0").any()
+if use_ploidy and not has_ploidy:
+    raise WorkflowError(
+        "Ploidy information is expected but no valid ploidy column found in the sample table."
+    )
+sample_list = sample_table["sample"].to_list()
+
+# Compute number of homologs expected according to ploidy information
+copies_per_ploidy = lookup("saute/expected_homologs_per_ploidy", within=pipeline) 
+homologs = np.where(
+    sample_table["ploidy"] % 2 == 0,
+    sample_table["ploidy"] * copies_per_ploidy / 2,
+    sample_table["ploidy"] * copies_per_ploidy,
+).astype(int)
+homologs[homologs == 0] = lookup("saute/max_variants", within=pipeline)
+sample_table["homologs"] = homologs
 
 # Check grouping of the probe set
 # Multi-seq probe set

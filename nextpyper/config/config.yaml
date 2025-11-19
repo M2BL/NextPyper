@@ -14,8 +14,6 @@ nextpyper:
             translated_prop: 0.95
             stop_per_1Kbp: 2 
             min_exon_length: 20
-        multi_probe_clustering:
-            mmseq2_min_seq_id: 0.8
         spades:
             k: auto
         scaffolds_extension:
@@ -45,13 +43,8 @@ nextpyper:
                 k1_rescaling: 0.7
                 target_cov: 0.5 
                 secondary_kmer_threshold: 3 
-            collapse_vars: true
-            max_variants: 20
-        mmseqs_matching:
-            fields: query,evalue,qstart,qend,qlen,tstart,tend,tlen,theader,gapopen,nident,mismatch
-            evalue: 1.000E-6
-            min_orf_len: 15
-            sensitivity: 7.5
+            max_variants: 10
+            expected_homologs_per_ploidy: 1
         diamond_matching:
             fields: 'qseqid evalue qstart qend qlen sstart send slen sseqid gapopen nident mismatch'
             sensitivity: '--ultra-sensitive'

@@ -21,10 +21,15 @@ import os
 #                FUNCTIONS
 # =============================================================================
 
+COLS = ["sample", "path_forward", "path_reverse", "ploidy"]
 
-def make_table(
-    data_dir: Path, out_table: Path, extra: str | None = None, sep: str = "\t"
-) -> None:
+
+# =============================================================================
+#                FUNCTIONS
+# =============================================================================
+
+
+def make_table(data_dir: Path, out_table: Path, sep: str = "\t") -> None:
     """Parse the directory with paired-end reads data and write a sample table
     specifying paths for each sample. The sample name is inferred from the common
     prefix of each pair of reads.
@@ -41,6 +46,9 @@ def make_table(
                 f"There is an odd number of files in {data_dir}. All samples must have forward and reverse files."
             )
 
+        # Add the header to the table
+        table.write(f"{sep.join(COLS)}\n")
+
         for file1, file2 in zip(files[::2], files[1::2]):
             # Get sample name
             sample = os.path.commonprefix([file1.name, file2.name])
@@ -51,6 +59,5 @@ def make_table(
             sample = sample.rstrip("._-")
             sample = sample.replace("-", "_")
 
-            row = f"{sample}{sep}{file1.resolve()}{sep}{file2.resolve()}"
-            row += f"\t{extra}\n" if extra else "\n"
+            row = f"{sample}{sep}{file1.resolve()}{sep}{file2.resolve()}{sep}0\n"
             table.write(row)

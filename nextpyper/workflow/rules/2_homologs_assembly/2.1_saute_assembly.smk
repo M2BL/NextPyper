@@ -41,7 +41,7 @@ rule saute_assembly:
         kmer_threshold=lookup(
             "saute/assembly/secondary_kmer_threshold", within=pipeline
         ),
-        max_var=lookup("saute/max_variants", within=pipeline),
+        max_var=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),
         target_cov=lookup("saute/assembly/target_cov", within=pipeline),
         kmers=saute_kmer,
     log:
@@ -71,7 +71,7 @@ checkpoint split_saute_assembly:
     params:
         mode="split",
         pattern=TARGET_COLLAPSE_PAT,
-        max_vars=lookup("saute/max_variants", within=pipeline),
+        max_vars=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),
     log:
         outdir / "logs/saute/reassembly/split/{sample}.log",
     script:
@@ -130,7 +130,7 @@ checkpoint explosive_reassembly:
         kmer_threshold=lookup(
             "saute/reassembly/secondary_kmer_threshold", within=pipeline
         ),
-        max_var=lookup("saute/max_variants", within=pipeline),
+        max_var=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),
         target_cov=lookup("saute/reassembly/target_cov", within=pipeline),
         k1rescale=lookup("saute/reassembly/k1_rescaling", within=pipeline),
         kmers=saute_kmer_expl,
@@ -199,7 +199,7 @@ rule cap_explosive_variants:
         normal=outdir / "saute/final/capped/{sample}.fasta",
     params:
         mode="cap",
-        max_var=lookup("saute/max_variants", within=pipeline),
+        max_var=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),
         pattern=TARGET_COLLAPSE_PAT,
     log:
         outdir / "logs/saute/capping/{sample}.log",

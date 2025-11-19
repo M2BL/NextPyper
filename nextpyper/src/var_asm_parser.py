@@ -25,7 +25,7 @@ import sys
 import polars as pl
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
-from more_itertools import partition
+from more_itertools import one
 
 
 # =======================================================================================
@@ -134,9 +134,9 @@ def snakemake_call(snakemake):
         mode = snakemake.params.get("mode", "collapse")
 
         # Optional parameters (required according to mode)
-        collapse_vars = snakemake.params.get("collapse_vars", False)
-        max_vars = snakemake.params.get("max_vars", 20)
         empty_ok = snakemake.params.get("empty_ok", False)
+        collapse_vars = snakemake.params.get("collapse_vars", False)
+        max_vars = one(snakemake.params.get("max_vars", [10]))
 
         recs = list(SeqIO.parse(records_path, "fasta"))
 
@@ -170,7 +170,7 @@ def snakemake_call(snakemake):
                 if mode == "split" and expl_out_path is None:
                     raise ValueError(f"For {mode=}, two outputs have to be specified.")
 
-                print("Splitting into normal and explosive sequence sets")
+                print("Splitting into normal and explosive sequence sets ({max_vars})")
                 normal_df, explosive_df = split_explosive_probes(df, max_vars)
 
                 print(f"Sequences in normal set: {len(normal_df)}")
