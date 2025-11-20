@@ -307,9 +307,8 @@ def make_sample_table(**kwargs):
 
     datadir = Path(kwargs["input"])
     outfile = Path(kwargs["output"])
-    extra = kwargs["extra"]
 
-    make_table(datadir, outfile, extra=extra)
+    make_table(datadir, outfile)
 
 
 @click.option(
