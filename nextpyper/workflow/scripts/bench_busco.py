@@ -339,11 +339,8 @@ def categorize_sample(
         )
     )
 
-    df2 = (
-        predf.filter(pl.col("tcov") >= min_hit_tcov)
-        .sort(["query", "score"], descending=True)
-        .group_by("query")
-        .agg(pl.all().first())
+    df2 = predf.filter(pl.col("tcov") >= min_hit_tcov).filter(
+        pl.col("score") == pl.col("score").max().over("query")
     )
     chimera_subset_df = chimera_df.select(
         pl.col("column_2"), pl.col("column_18")
