@@ -30,8 +30,8 @@ An additional pseudo-category is computed as:
 
 
 from collections import Counter
-from dataclasses import dataclass
-from itertools import groupby
+from dataclasses import dataclass, field
+from itertools import chain, groupby, pairwise
 from operator import itemgetter
 from pathlib import Path
 import sys
@@ -86,11 +86,45 @@ class QueryHit(NamedTuple):
     tcov: float
 
 
-@dataclass
 class LongestPath:
     """Result of the get_longest_path recursion"""
 
-    path: int
+    path: list[Interval]
+
+    def __init__(self, *args: Interval):
+        self.path = list(args)
+
+    def __getitem__(self, index):
+        match index:
+            case int():
+                return self.path[index]
+            case slice():
+                return LongestPath(*self.path[index])
+            case [*idxs] if all(isinstance(idx, (int, slice)) for idx in idxs):
+                return LongestPath(chain.from_iterable(self.path[sli] for sli in idxs))
+            case _:
+                raise NotImplementedError(f"Given {index}")
+
+    def append(self, inter: Interval):
+        self.path.append(inter)
+
+    @property
+    def path_length(self) -> int:
+        return sum(inter.length() for inter in self.path) - sum(
+            left.overlap_size(right) for left, right in pairwise(self.path)
+        )
+
+    @property
+    def global_idt(self) -> float:
+        """Calculate weighted average identity based on interval coverage."""  # ToDo: Correct for the idt of overlaps
+
+        if not self.path:
+            return 0.0
+
+        return (
+            sum(inter.data.idt * inter.length() for inter in self.path)
+            / self.path_length
+        )
 
 
 # =======================================================================================
@@ -123,7 +157,7 @@ def build_target_trees(
     return target_trees
 
 
-def get_longest_path(itree: IntervalTree, max_ovlp: int) -> int:
+def get_longest_path(itree: IntervalTree, max_ovlp: int, min_idt: float = 0.0) -> int:
     """
     Perform a dfs on the interval in order to find the combination that yields the longest path
     Parameters
@@ -135,22 +169,24 @@ def get_longest_path(itree: IntervalTree, max_ovlp: int) -> int:
     -------
 
     """
-    longest_path = LongestPath(0)
+    longest_path = LongestPath()
 
     def dfs_util(
         current_fragment: Interval,
         remaining_fragments: list[Interval],
         longest_path: LongestPath,
-        current_length: int = 0,
+        current_path: LongestPath,
     ) -> None:
-        if not remaining_fragments:
-            if current_length > longest_path.path:
-                longest_path.path = current_length
-            return
+
+        if (
+            current_path.path_length > longest_path.path_length
+            and current_path.global_idt >= min_idt
+        ):
+            longest_path.path = current_path.path
 
         for next_fragment in remaining_fragments:
-            if (overlap := current_fragment.overlap_size(next_fragment)) <= max_ovlp:
-                current_length += next_fragment.length() - overlap
+            if current_fragment.overlap_size(next_fragment) <= max_ovlp:
+                current_path.append(next_fragment)
 
             no_ovlp_fragments = sorted(
                 set(itree)
@@ -161,7 +197,7 @@ def get_longest_path(itree: IntervalTree, max_ovlp: int) -> int:
                 next_fragment,
                 no_ovlp_fragments,
                 longest_path,
-                current_length,
+                current_path[:],
             )
 
     for start_frg in sorted(itree):
@@ -173,14 +209,17 @@ def get_longest_path(itree: IntervalTree, max_ovlp: int) -> int:
             start_frg,
             remaining_fragments,
             longest_path,
-            start_frg.length(),
+            LongestPath(start_frg),
         )
 
-    return longest_path.path
+    return longest_path.path_length
 
 
 def find_busco_category(
-    itree: IntervalTree, min_length_percent: float, max_overlap_percent: float = 0
+    itree: IntervalTree,
+    min_length_percent: float,
+    max_overlap_percent: float = 0,
+    min_idt: float = 0.0,
 ) -> int:
     """
     Category codes are defined as:
@@ -218,12 +257,12 @@ def find_busco_category(
     # Case either complete single copy or multiple copies
     if longest.data.tcov >= min_length_percent:
         itree.remove(longest)
-        if get_longest_path(itree, overlap_threshold) >= length_threshold:
+        if get_longest_path(itree, overlap_threshold, min_idt) >= length_threshold:
             return 1
         return 0
 
     # Case check for fragmented
-    if get_longest_path(itree, overlap_threshold) >= length_threshold:
+    if get_longest_path(itree, overlap_threshold, min_idt) >= length_threshold:
         return 2
 
     return 3
@@ -323,17 +362,17 @@ def categorize_sample(
     n_chimeras = len(final_chimera_df)
 
     # Build target trees with and without chimeras
-    no_chim_trees = build_target_trees(df3, min_idt)
+    no_chim_trees = build_target_trees(df3, 0.0)
 
     # Compute the number of "noise" sequences
     # All unaligned sequences count
     noise = len(hits[:, 0].unique()) - len(predf["query"].unique())
     # Add sequences that won't be assigned to any target tree
-    noise += len(df3.filter(pl.col("fident") < min_idt))
+    noise += len(df3.filter(pl.col("fident") < 0.0))
 
     # Compute the categories from the trees
     no_chim_cat_dict = {
-        target: find_busco_category(tree, min_length_cov, 0)
+        target: find_busco_category(tree, min_length_cov, 0, min_idt)
         for target, tree in no_chim_trees.items()
     }
 
