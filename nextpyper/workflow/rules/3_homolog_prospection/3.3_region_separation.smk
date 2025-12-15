@@ -135,10 +135,18 @@ for kind in ("exons", "genetigs", "supercontigs"):
         name:
             f"collect_{kind}"
         input:
-            expand(
+            scfs=expand(
                 outdir
                 / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
                 probe=probes_list,
+            ),
+            chimera_tags=expand(
+                outdir
+                / "homolog_prospection/homologs_filtering/chimera_tagging/{sample}.tsv",
+                sample=sample_list,
+            ),
+            tribbles=expand(
+                outdir / "logs/saute/tribbles/{sample}.tsv", sample=sample_list
             ),
         output:
             expand(
@@ -150,7 +158,7 @@ for kind in ("exons", "genetigs", "supercontigs"):
             outdir
             / f"logs/homolog_prospection/region_separation/consolidated/grouping/{kind}.log",
         params:
-            pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
+            pattern=lambda wildcards: COMP_FINAL_PAT,
             probes=probes_list,
             mode=kind,
         script:

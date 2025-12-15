@@ -74,3 +74,20 @@ use rule seeds_filtering as homologs_filtering with:
         cov_dynamic_filt=lookup("cov_dynamic_filt", within=homologs_filt_params),
         tag_scfs=lambda wildcards: False,
         qpat=lambda wildcards: SAUTE_POST_FIX_PAT,
+
+
+rule chimera_tagging:
+    input:
+        outdir / "homolog_prospection/homologs_filtering/filtered_scfs/{sample}.fasta",
+    output:
+        outdir / "homolog_prospection/homologs_filtering/chimera_tagging/{sample}.tsv",
+    log:
+        outdir
+        / "logs/homolog_prospection/homologs_filtering/chimera_tagging/{sample}.log",
+    conda:
+        "../../envs/clustering.yaml"
+    shell:
+        """
+        vsearch --chimeras_denovo {input} \
+            --tabbedout {output} 2> {log}
+        """

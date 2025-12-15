@@ -128,6 +128,7 @@ def snakemake_call(snakemake):
         records_path = Path(snakemake.input[0])
         out_path = Path(snakemake.output.normal)
         expl_out_path = snakemake.output.get("expl")
+        tribbles_path = snakemake.output.get("tribbles")
 
         # Mandatory parameters
         pattern = snakemake.params.get("pattern", TARGET_PAT)
@@ -170,7 +171,9 @@ def snakemake_call(snakemake):
                 if mode == "split" and expl_out_path is None:
                     raise ValueError(f"For {mode=}, two outputs have to be specified.")
 
-                print("Splitting into normal and explosive sequence sets ({max_vars})")
+                print(
+                    f"Splitting into normal and explosive sequence sets ({max_vars=})"
+                )
                 normal_df, explosive_df = split_explosive_probes(df, max_vars)
 
                 print(f"Sequences in normal set: {len(normal_df)}")
@@ -185,6 +188,10 @@ def snakemake_call(snakemake):
                     print(
                         f"Sequences in explosive set (after capping to {max_vars=}): {len(expl_var_df)}"
                     )
+                    if tribbles_path is not None:
+                        expl_allele_df.select(
+                            "probe", "seed", "seed_id", "comp"
+                        ).unique().write_csv(tribbles_path, separator="\t")
 
                     final_df = normal_df.select("query").vstack(
                         expl_var_df.select("query")

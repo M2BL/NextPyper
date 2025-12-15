@@ -15,6 +15,7 @@ __version__ = "0.1"
 # =======================================================================================
 
 from pathlib import Path
+from operator import itemgetter
 from itertools import groupby
 from functools import partial
 import re
@@ -23,6 +24,7 @@ import sys
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from snakemake.utils import validate
+import polars as pl
 import pandas as pd
 
 # =============================================================================
@@ -152,6 +154,32 @@ def check_probes(
         write_hierarchy(probes_hier, out_hierarchy)
 
 
+def add_chim_tag(
+    rec: SeqRecord,
+    chimera_set: set[str],
+    tribble_set: set[tuple[str]],
+    pat: re.Pattern,
+):
+    """Add chimera tag to the record based on the Vsearch de novo detection and tribble provenance.
+    If the record comes from a tribble it is tagged as 'putative'. If it is additionally detected as
+    chimeric by vsearch it is tagged as 'chimeric'. Otherwise, the record is considered normal.
+    """
+
+    get_comp = itemgetter("probe", "sample2", "seed_id", "comp")
+
+    in_tribble = get_comp(pat.match(rec.id)) in tribble_set
+    in_chimeras = rec.id in chimera_set
+
+    if in_tribble and in_chimeras:
+        tag = "chimeric"
+    elif in_tribble:
+        tag = "putative"
+    else:
+        tag = "normal"
+
+    rec.description += f" [chimeric={tag}]"
+
+
 # Main execution for rule "per_probe_scaffold_grouping" in workflow
 def snakemake_call(snakemake):
     with open(snakemake.log[0], "w") as outlog:
@@ -169,10 +197,34 @@ def snakemake_call(snakemake):
             case "exons" | "genetigs" | "supercontigs":
                 all_recs = [
                     rec
-                    for file in Path(inputs[0]).parent.rglob(f"*_{mode}.fasta")
+                    for file in Path(inputs.scfs[0]).parent.rglob(f"*_{mode}.fasta")
                     for rec in SeqIO.parse(file, "fasta")
                 ]
                 grouped_recs = group_probes(all_recs, pat, match_group="sample1")
+
+                if inputs.get("chimera_tags"):
+                    tag_sets = {
+                        table.stem: set(
+                            pl.read_csv(table, separator="\t", has_header=False)[
+                                "column_2"
+                            ]
+                        )
+                        for table in map(Path, inputs.chimera_tags)
+                    }
+
+                    tribble_sets = {
+                        tribble.stem: set(
+                            pl.read_csv(tribble, separator="\t").iter_rows()
+                        )
+                        for tribble in map(Path, inputs.tribbles)
+                    }
+
+                    for sample, recs in grouped_recs.items():
+                        for rec in recs:
+                            add_chim_tag(
+                                rec, tag_sets[sample], tribble_sets[sample], pat
+                            )
+
             case "scfs":
                 all_recs = [
                     rec for file in inputs for rec in SeqIO.parse(file, "fasta")

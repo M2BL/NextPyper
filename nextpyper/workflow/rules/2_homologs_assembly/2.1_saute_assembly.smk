@@ -71,7 +71,9 @@ checkpoint split_saute_assembly:
     params:
         mode="split",
         pattern=TARGET_COLLAPSE_PAT,
-        max_vars=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),
+        max_vars=lookup(
+            query="sample=='{sample}'", cols="homologs", within=sample_table
+        ),
     log:
         outdir / "logs/saute/reassembly/split/{sample}.log",
     script:
@@ -197,6 +199,7 @@ rule cap_explosive_variants:
         outdir / "saute/final/collected/{sample}.fasta",
     output:
         normal=outdir / "saute/final/capped/{sample}.fasta",
+        tribbles=outdir / "logs/saute/tribbles/{sample}.tsv",
     params:
         mode="cap",
         max_var=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),

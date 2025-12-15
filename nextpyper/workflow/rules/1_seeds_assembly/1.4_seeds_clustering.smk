@@ -20,16 +20,23 @@ rule distribute_seeds:
 
 rule vsearch_clustering:
     input:
-        cluster_fast=outdir / "clustering/sample_merged_input/{probe}.fasta",
+        outdir / "clustering/sample_merged_input/{probe}.fasta",
     output:
-        uc=outdir / "clustering/cluster_tables/{probe}.tsv",
+        outdir / "clustering/cluster_tables/{probe}.tsv",
     log:
         outdir / "logs/clustering/vsearch/{probe}.log",
     params:
-        extra="--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both",
+        "--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both    ",
     threads: 4
-    wrapper:
-        "v4.3.0/bio/vsearch"
+    conda:
+        "../../envs/clustering.yaml"
+    shell:
+        """
+        vsearch --threads {threads} {params} \
+            --cluster_fast {input} \
+            --uc {output} \
+            2> {log}
+        """
 
 
 rule seeds_collection:

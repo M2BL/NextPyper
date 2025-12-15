@@ -6,3 +6,4 @@ channels:
 dependencies:
     - miniprot=0.13
     - miniprot-boundary-scorer=1
+    - vsearch=2.30.2

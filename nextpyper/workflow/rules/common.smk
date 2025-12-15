@@ -65,6 +65,7 @@ if use_ref_cps:
 SEED_PAT = lookup("regex_patterns/seed_pat", within=config)
 SAUTE_PRE_FIX_PAT = lookup("regex_patterns/saute_pre_fix_pat", within=config)
 SAUTE_POST_FIX_PAT = lookup("regex_patterns/saute_post_fix_pat", within=config)
+COMP_FINAL_PAT = lookup("regex_patterns/comp_final_pat", within=config)
 TARGET_COLLAPSE_PAT = lookup("regex_patterns/saute_target_pat", within=config)
 
 ## Read Workflow parameters:
@@ -95,16 +96,16 @@ validate(sample_table, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
 has_ploidy = sample_table.eval("ploidy > 0").any()
 if use_ploidy and not has_ploidy:
     raise WorkflowError(
-        "Ploidy information is expected but no valid ploidy column found in the sample table."
+        "Ploidy information is expected but no useful ploidy information was found in the sample table."
     )
 sample_list = sample_table["sample"].to_list()
 
 # Compute number of homologs expected according to ploidy information
-copies_per_ploidy = lookup("saute/expected_homologs_per_ploidy", within=pipeline) 
+copies_per_ploidy = lookup("saute/expected_homologs_per_ploidy", within=pipeline)
 homologs = np.where(
     sample_table["ploidy"] % 2 == 0,
     sample_table["ploidy"] * copies_per_ploidy / 2,
-    sample_table["ploidy"] * copies_per_ploidy,
+    (sample_table["ploidy"] + 1) * copies_per_ploidy / 2,
 ).astype(int)
 homologs[homologs == 0] = lookup("saute/max_variants", within=pipeline)
 sample_table["homologs"] = homologs
