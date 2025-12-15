@@ -17,6 +17,7 @@ __version__ = "0.1"
 from pathlib import Path
 from operator import itemgetter
 from itertools import groupby
+from collections import defaultdict
 from functools import partial
 import re
 import sys
@@ -25,6 +26,7 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from snakemake.utils import validate
 import polars as pl
+from polars.exceptions import NoDataError
 import pandas as pd
 
 # =============================================================================
@@ -203,15 +205,19 @@ def snakemake_call(snakemake):
                 grouped_recs = group_probes(all_recs, pat, match_group="sample1")
 
                 if inputs.get("chimera_tags"):
-                    tag_sets = {
-                        table.stem: set(
-                            pl.read_csv(table, separator="\t", has_header=False)[
-                                "column_2"
-                            ]
-                        )
-                        for table in map(Path, inputs.chimera_tags)
-                    }
+                    # Load de novo chimera detection results by vsearch
+                    tag_sets = defaultdict(set)
+                    for table in map(Path, inputs.chimera_tags):
+                        try:
+                            tag_sets[table.stem].update(
+                                pl.read_csv(table, separator="\t", has_header=False)[
+                                    "column_2"
+                                ]
+                            )
+                        except NoDataError:
+                            pass
 
+                    # Load tribble tables
                     tribble_sets = {
                         tribble.stem: set(
                             pl.read_csv(tribble, separator="\t").iter_rows()
@@ -219,6 +225,7 @@ def snakemake_call(snakemake):
                         for tribble in map(Path, inputs.tribbles)
                     }
 
+                    # Add chimera tags to the sequences
                     for sample, recs in grouped_recs.items():
                         for rec in recs:
                             add_chim_tag(
