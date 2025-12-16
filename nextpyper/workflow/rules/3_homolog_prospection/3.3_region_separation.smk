@@ -140,14 +140,15 @@ for kind in ("exons", "genetigs", "supercontigs"):
                 / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
                 probe=probes_list,
             ),
-            chimera_tags=expand(
-                outdir
-                / "homolog_prospection/homologs_filtering/chimera_tagging/{sample}.tsv",
-                sample=sample_list,
-            ),
             tribbles=expand(
                 outdir / "logs/saute/tribbles/{sample}.tsv", sample=sample_list
             ),
+            ## Disabled temporarily. See chimera_tagging rule in 3.2 for details.
+            # chimera_tags=expand(
+            #     outdir
+            #     / "homolog_prospection/homologs_filtering/chimera_tagging/{sample}.tsv",
+            #     sample=sample_list,
+            # ),
         output:
             expand(
                 outdir

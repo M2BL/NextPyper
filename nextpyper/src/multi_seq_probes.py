@@ -8,6 +8,7 @@
 #
 #       All rights reserved.
 
+
 __version__ = "0.1"
 
 # =======================================================================================
@@ -19,6 +20,7 @@ from operator import itemgetter
 from itertools import groupby
 from collections import defaultdict
 from functools import partial
+from typing import TextIO
 import re
 import sys
 
@@ -89,7 +91,7 @@ def group_probes(
     return probe_recs
 
 
-def write_summary(probe_counts: dict[str, int], output: Path) -> None:
+def write_summary(probe_counts: dict[str, int], output: Path | TextIO) -> None:
     if isinstance(output, Path):
         with output.open("w") as out:
             for probe, count in probe_counts.items():
@@ -204,19 +206,23 @@ def snakemake_call(snakemake):
                 ]
                 grouped_recs = group_probes(all_recs, pat, match_group="sample1")
 
-                if inputs.get("chimera_tags"):
-                    # Load de novo chimera detection results by vsearch
-                    tag_sets = defaultdict(set)
-                    for table in map(Path, inputs.chimera_tags):
-                        try:
-                            tag_sets[table.stem].update(
-                                pl.read_csv(table, separator="\t", has_header=False)[
-                                    "column_2"
-                                ]
-                            )
-                        except NoDataError:
-                            pass
+                ## Chimera tagging
+                tag_sets = defaultdict(set)
+                tribble_sets = defaultdict(set)
 
+                # Load de novo chimera detection results by vsearch
+                # if inputs.get("chimera_tags"):
+                #     for table in map(Path, inputs.chimera_tags):
+                #         try:
+                #             tag_sets[table.stem].update(
+                #                 pl.read_csv(table, separator="\t", has_header=False)[
+                #                     "column_2"
+                #                 ]
+                #             )
+                #         except NoDataError:
+                #             pass
+
+                if inputs.get("tribbles"):
                     # Load tribble tables
                     tribble_sets = {
                         tribble.stem: set(
@@ -225,7 +231,8 @@ def snakemake_call(snakemake):
                         for tribble in map(Path, inputs.tribbles)
                     }
 
-                    # Add chimera tags to the sequences
+                # Add chimera tags to the sequences
+                if inputs.get("tribbles") or inputs.get("chimera_tags"):
                     for sample, recs in grouped_recs.items():
                         for rec in recs:
                             add_chim_tag(

@@ -76,18 +76,20 @@ use rule seeds_filtering as homologs_filtering with:
         qpat=lambda wildcards: SAUTE_POST_FIX_PAT,
 
 
-rule chimera_tagging:
-    input:
-        outdir / "homolog_prospection/homologs_filtering/filtered_scfs/{sample}.fasta",
-    output:
-        outdir / "homolog_prospection/homologs_filtering/chimera_tagging/{sample}.tsv",
-    log:
-        outdir
-        / "logs/homolog_prospection/homologs_filtering/chimera_tagging/{sample}.log",
-    conda:
-        "../../envs/clustering.yaml"
-    shell:
-        """
-        vsearch --chimeras_denovo {input} \
-            --tabbedout {output} 2> {log}
-        """
+## As of v2.30.2, vsearch segfaults unpredictably with some inputs, crashing the whole pipeline.
+## This feature is disabled until a fix is available.
+# rule chimera_tagging:
+#     input:
+#         outdir / "homolog_prospection/homologs_filtering/filtered_scfs/{sample}.fasta",
+#     output:
+#         outdir / "homolog_prospection/homologs_filtering/chimera_tagging/{sample}.tsv",
+#     log:
+#         outdir
+#         / "logs/homolog_prospection/homologs_filtering/chimera_tagging/{sample}.log",
+#     conda:
+#         "../../envs/clustering.yaml"
+#     shell:
+#         """
+#         vsearch --chimeras_denovo {input} \
+#             --tabbedout {output} 2> {log}
+#         """

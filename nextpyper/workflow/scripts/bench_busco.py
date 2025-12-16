@@ -28,9 +28,8 @@ An additional pseudo-category is computed as:
 #               IMPORTS
 # =======================================================================================
 
-
+from __future__ import annotations
 from collections import Counter
-from dataclasses import dataclass, field
 from itertools import chain, groupby, pairwise
 from operator import itemgetter
 from pathlib import Path
@@ -41,6 +40,7 @@ import argparse
 from intervaltree import Interval, IntervalTree
 import polars as pl
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 
 # =======================================================================================
 #               CONSTANTS
@@ -94,18 +94,20 @@ class LongestPath:
     def __init__(self, *args: Interval):
         self.path = list(args)
 
-    def __getitem__(self, index):
+    def __getitem__(
+        self, index: int | slice | list[int | slice]
+    ) -> Interval | LongestPath:
         match index:
             case int():
                 return self.path[index]
             case slice():
                 return LongestPath(*self.path[index])
             case [*idxs] if all(isinstance(idx, (int, slice)) for idx in idxs):
-                return LongestPath(chain.from_iterable(self.path[sli] for sli in idxs))
+                return LongestPath(*chain.from_iterable(self.path[sli] for sli in idxs))
             case _:
                 raise NotImplementedError(f"Given {index}")
 
-    def append(self, inter: Interval):
+    def append(self, inter: Interval) -> None:
         self.path.append(inter)
 
     @property
@@ -286,12 +288,12 @@ def compute_target_covs(target_trees: dict[str, IntervalTree]) -> pl.DataFrame:
 def categorize_sample(
     hits: pl.DataFrame,
     chimera_df: pl.DataFrame,
-    targets: list[str],
+    targets: dict[str, SeqRecord],
     min_hit_tcov: float = 0.0,
     min_length_cov: float = 0.7,
     min_idt: float = 0.99,
     include_borderline: bool = False,
-) -> tuple[dict[str, int], int, int]:
+) -> tuple[dict[str, int], int, int, pl.DataFrame]:
     """
     Computes target-centric categories for a sample based on magicblast hits from a given assembly
     and the reference targets.
