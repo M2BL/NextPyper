@@ -112,7 +112,7 @@ class AsmLoc:
 
 
 ASM_PATHS = {
-    "seeds": AsmLoc("seeds", Path("assembled/filtering/filtered_scfs"), "spreaded"),
+    "seeds": AsmLoc("seeds", Path("assembled/filtering/filtered_scfs"), "flat"),
     "assembly": AsmLoc(
         "assembly", Path("saute/target_assembly"), "nested", "fixed_vars.fasta"
     ),
