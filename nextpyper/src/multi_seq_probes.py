@@ -35,7 +35,7 @@ import pandas as pd
 #                FUNCTIONS
 # =============================================================================
 
-PROBE_SCHEMA = (Path(__file__).parent / "../schemes/probes.yaml").resolve()
+PROBE_SCHEMA = (Path(__file__).parent / "../workflow/schemes/probes.yaml").resolve()
 
 
 class NoGrouping(Exception):
@@ -138,7 +138,7 @@ def check_probes(
     except NoGrouping as err:
         print(err, file=sys.stderr)
         print(
-            "Either this is a single-probe set or the pattern is not appropiate for the multi-probe",
+            "Either this is a single-probe set or the pattern is not appropiate for multi-probe mode",
             file=sys.stderr,
         )
         return
@@ -146,7 +146,7 @@ def check_probes(
     probes_counts = {probe: len(recs) for probe, recs in probes_dict.items()}
 
     print("The probes have the following number of members: \n", file=sys.stderr)
-    write_summary(probes_counts, sys.stdout)
+    # write_summary(probes_counts, sys.stdout)
 
     if out_summary:
         write_summary(probes_counts, out_summary)

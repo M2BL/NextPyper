@@ -1,5 +1,85 @@
 # NextPyper
-Recovery of homologous genes from targeted sequence capture data in higher ploidy samples.
+Recovery of homoeologous loci from targeted capture data in higher ploidy samples.
+
+## Table of contents
+
+
+## Installation
+
+
+
+## Basic usage 
+
+### 1. Preparing your probes
+
+NextPyper expects a nucleotide fasta file with the sequences of the targeted loci, what we call the probe set. Probe sets can be divided in two categories:
+
+- **Multi probe sets**: Contains multiple sequences per locus/gene (*e.g.* Angiosperms353).
+- **Single probe sets**: Contains a single sequence per locus. Usually, custom probe sets designed from a single reference genome are in this category.
+
+Sequence names in the probe set are required to be simple (letters, numbers and underscore, characters only). Additionally no duplicated names are allowed.
+
+Currently, only coding regions are supported.
+
+#### Single-probe sets
+
+If you are using a single-probe set, only need to worry sticking to the naming conventions described above. To check that your probes you can use `nextpyper validate`:
+
+```bash
+$ nextpyper validate --probes probes.fasta 
+
+# Probe sequence names comply with naming convention.
+# Pattern (.*) yielded no grouping of the sequences.
+# Either this is a single-probe set or the pattern is not appropiate for multi-probe mode
+```
+
+If you get the above message your probe set is well formatted to run in single-probes mode.
+
+#### Multi-probe sets
+
+If using a multi-probe set, NextPyper needs to know which sequences target the same locus. The option `--pattern` expects a RegEx (with one capture group) that will inform about that hierarchy based on the name of the probes. For instance, for the Angiosperms353 probe set with sequence names:
+
+```
+AJFN_probe4471
+Ambtr_probe4471
+BERS_probe4527
+ZENX_probe4527
+Arath_probe4691
+QUTB_probe4691
+```
+
+We can use `--pattern "(\d+)$"`, which will group the sequences by the number at the end of the sequence name (which is the LocusID).
+
+
+
+### 2. Preparing your samples
+
+### 3. Running
+
+
+## Output
+
+
+## Pipeline structure
+
+
+#### Toggle example
+
+<details>
+<summary>Overview of the functions of the class TreeNode: (Click to expand)</summary>
+
+| Function                                   | Description                                            |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `attributes()`                             | generator for the node attributes                      |
+| `add_child(child_node)`                    | add `child_node` as a child                            |
+| `add_child_right_of(child_node, right_of)` | add `child_node` as a child to the right of `right_of` |
+| `remove_child(child_node)`                 | remove the child `child_node`                          |
+| `detach()`                                 | remove the node from its parent's children             |
+| `is_leaf()`                                | check if the node is a leaf                            |
+| `child_subsequence(left_node, right_node)` | list of children between `left_node` and `right_node`  |
+
+</details>
+
 
 ---
 # Dependencies

@@ -8,7 +8,7 @@
 #
 #       All rights reserved.
 
-"""Basic stats computation tribbles in a nextpyper run."""
+"""Basic tribbles' stats computation in a nextpyper run."""
 
 # =======================================================================================
 #               IMPORTS

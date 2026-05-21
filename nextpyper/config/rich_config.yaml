@@ -1,0 +1,53 @@
+# Styling
+THEME: solarized-box
+STYLE_OPTION: "yellow"  # Uncomment this to use magenta for flags
+
+# ALIGN_OPTIONS_PANEL: true
+STYLE_OPTIONS_TABLE_COLUMN_WIDTH_RATIO: [1, 2]
+# MAX_WIDTH: 150
+OPTION_WIDTH: 40
+# MIN_OPTION_WIDTH: 40
+# Add this to the YAML
+USE_RICH_MARKUP: true
+
+# Command Layout
+COMMAND_GROUPS:
+  nextpyper:
+    - name: "Commands"
+      commands:
+        - run
+        - gather
+        - validate
+        - summarize
+        - config
+        - citation
+
+# Option Layout for the 'run' command
+OPTION_GROUPS:
+  nextpyper run:
+    - name: "Basic usage"
+      options:
+        - "--input"
+        - "--probes"
+        - "--output"
+        - "--multi-probes"
+        - "--pattern"
+        
+    - name: "Chloroplast filtering"
+      options:
+        - "--use-ref-cps"
+        - "--ref-cps"
+        - "--custom-cps"
+        
+    - name: "Advanced usage"
+      options:
+        - "--interseeds"
+        - "--reasm-complex-probes"
+        - "--use-ploidy"
+        
+    - name: "Snakemake options"
+      options:
+        - "--use-conda"
+        - "--conda-prefix"
+        - "--snake-default"
+        - "--threads"

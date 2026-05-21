@@ -54,6 +54,7 @@ setup(
         "snakemake>=9.3.1",
         "pyyaml>=6.0",
         "Click>=8.1.3",
+        "rich-click>=1.9.7",
         "pandas>=2.2",
         "biopython>=1.83",
         "numpy>=1.26",

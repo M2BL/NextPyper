@@ -1,21 +1,13 @@
 """
 Entrypoint for NextPyper
-
-Check out the wiki for a detailed look at customising this file:
-https://github.com/beardymcjohnface/Snaketool/wiki/Customising-your-Snaketool
 """
 
 from pathlib import Path
-import os
-import click
 import sys
 
-from snaketool_utils.cli_utils import (
-    OrderedCommands,
-    run_snakemake,
-    copy_config,
-    echo_click,
-)
+import yaml
+import rich_click as click
+from snaketool_utils.cli_utils import run_snakemake, copy_config, echo_click
 
 sys.path.append(str((Path(__file__).parent / "workflow/scripts").resolve()))
 sys.path.append(str((Path(__file__).parent / "src").resolve()))
@@ -27,7 +19,7 @@ from summarize_results import summarize_workflow
 
 def snake_base(rel_path):
     """Get the filepath to a Snaketool system file (relative to __main__.py)"""
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), rel_path)
+    return Path(__file__).resolve().parent / rel_path
 
 
 def get_version():
@@ -47,8 +39,18 @@ def print_citation():
 def default_to_output(ctx, param, value):
     """Callback for click options; places value in output directory unless specified"""
     if param.default == value:
-        return os.path.join(ctx.params["output"], value)
+        return Path(ctx.params["output"]) / value
     return value
+
+
+# Load CLI configuration.
+config_path = Path(__file__).parent / "config/rich_config.yaml"
+if config_path.exists():
+    # click.rich_click.__dict__.update(yaml.safe_load(config_path.read_text()))
+    config_data = yaml.safe_load(config_path.read_text())
+    for key, value in config_data.items():
+        # Version 1.9.x uses uppercase for global variables
+        setattr(click.rich_click, key.upper(), value)
 
 
 def common_options(func):
@@ -56,13 +58,6 @@ def common_options(func):
     Define common command line args here, and include them with the @common_options decorator below.
     """
     options = [
-        click.option(
-            "--output",
-            help="Output directory",
-            type=click.Path(dir_okay=True, writable=True, readable=True),
-            default="nextpyper.out",
-            show_default=True,
-        ),
         click.option(
             "--configfile",
             default="config.yaml",
@@ -74,12 +69,6 @@ def common_options(func):
             "--threads", help="Number of threads to use", default=1, show_default=True
         ),
         click.option(
-            "--profile",
-            default=None,
-            help="Snakemake profile to use",
-            show_default=False,
-        ),
-        click.option(
             "--use-conda/--no-use-conda",
             default=True,
             help="Use conda for Snakemake rules",
@@ -87,7 +76,7 @@ def common_options(func):
         ),
         click.option(
             "--conda-prefix",
-            default=snake_base(os.path.join("workflow", "conda")),
+            default=snake_base(Path("workflow") / "conda"),
             help="Custom conda env directory",
             type=click.Path(),
             show_default=False,
@@ -111,7 +100,7 @@ def common_options(func):
         ),
         click.option(
             "--system-config",
-            default=snake_base(os.path.join("config", "config.yaml")),
+            default=snake_base(Path("config/config.yaml")),
             hidden=True,
         ),
         click.argument("snake_args", nargs=-1),
@@ -122,55 +111,55 @@ def common_options(func):
 
 
 @click.group(
-    cls=OrderedCommands, context_settings=dict(help_option_names=["-h", "--help"])
+    cls=click.RichGroup, context_settings=dict(help_option_names=["-h", "--help"])
 )
 @click.version_option(get_version(), "-v", "--version", is_flag=True)
 def cli():
-    """Recovery of homologous genes from targeted sequence capture data for higher ploidy samples
-    \b
+    """Recovery of homoeologous loci from targeted capture data in higher ploidy samples.
+    \n
     For more options, run:
     nextpyper command --help"""
     pass
 
 
-help_msg_extra = """
-\b
-CLUSTER EXECUTION:
-nextpyper run ... --profile [profile]
-For information on Snakemake profiles see:
-https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles
-\b
-RUN EXAMPLES:
-Required:           nextpyper run --input [file]
-Specify threads:    nextpyper run ... --threads [threads]
-Disable conda:      nextpyper run ... --no-use-conda 
-Change defaults:    nextpyper run ... --snake-default="-k --nolock"
-Add Snakemake args: nextpyper run ... --dry-run --keep-going --touch
-Specify targets:    nextpyper run ... all print_targets
-Available targets:
-    all             Run everything (default)
-    print_targets   List available targets
-"""
+# help_msg_extra = """
+# \b
+# CLUSTER EXECUTION:
+# nextpyper run ... --profile [profile]
+# For information on Snakemake profiles see:
+# https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles
+# \b
+# RUN EXAMPLES:
+# Required:           nextpyper run --input [file]
+# Specify threads:    nextpyper run ... --threads [threads]
+# Disable conda:      nextpyper run ... --no-use-conda
+# Change defaults:    nextpyper run ... --snake-default="-k --nolock"
+# Add Snakemake args: nextpyper run ... --dry-run --keep-going --touch
+# Specify targets:    nextpyper run ... all print_targets
+# Available targets:
+#     all             Run everything (default)
+#     print_targets   List available targets
+# """
 
 # ToDo: Refine this help message
-sample_table_msg = """
+gather_msg = """
 The data directory is expected to have raw paired reads
 files per each sample (forward, reverse).
 """
 
 # ToDo: Refine this help message
-validate_probes_msg = """
+validate_msg = """
 
 """
 
 # ToDo: Refine this help message
-summarize_run_msg = """
+summarize_msg = """
 
 """
 
 
 @click.command(
-    epilog=help_msg_extra,
+    # epilog=help_msg_extra,
     context_settings=dict(
         help_option_names=["-h", "--help"], ignore_unknown_options=True
     ),
@@ -183,6 +172,13 @@ summarize_run_msg = """
     required=True,
 )
 @click.option(
+    "--output",
+    help="Output directory",
+    type=click.Path(dir_okay=True, writable=True, readable=True),
+    default="nextpyper.out",
+    show_default=True,
+)
+@click.option(
     "--probes",
     "probes",
     help="Probes used in the experiment (fasta)",
@@ -190,18 +186,18 @@ summarize_run_msg = """
     required=True,
 )
 @click.option(
+    "--pattern",
+    "probe_pattern",
+    help="For multi-probes, pattern used to group the probe sequences (RegEx). It needs one capture group.",
+    type=str,
+    default=r"(.*)",
+    show_default=True,
+)
+@click.option(
     "--multi-probes/--single-probes",
     "multi_probes",
     help="Whether the probe set has multiple or a single sequence per probe ",
     default=True,
-    show_default=True,
-)
-@click.option(
-    "--pattern",
-    "probe_pattern",
-    help="Pattern used to group the probe sequences (RegEx)",
-    type=str,
-    default=r"(.*)",
     show_default=True,
 )
 @click.option(
@@ -216,10 +212,10 @@ summarize_run_msg = """
 @click.option(
     "--interseeds",
     "interseeds",
-    help="""Which inter-sample seeds to use for Saute assembly. Interseeds 
+    help="""Which inter-sample seeds to use for SAUTE assembly. Interseeds 
             help to boost probe recovery at the expense of higher 
             computation time during assembly. The default 'sister' infers 
-            sister-samples that are likely to be the most informative to 
+            sister-samples that are likely the most informative to 
             get inter-sample seeds from.""",
     type=click.Choice(("all", "sister", "none")),
     default="sister",
@@ -268,14 +264,21 @@ def run(**kwargs):
     # run!
     run_snakemake(
         # Full path to Snakefile
-        snakefile_path=snake_base(os.path.join("workflow", "Snakefile")),
+        snakefile_path=snake_base(Path("workflow/Snakefile")),
         merge_config=merge_config,
         **kwargs
     )
 
 
 @click.command()
-@common_options
+@click.option(
+    "--output",
+    help="Output directory",
+    type=click.Path(dir_okay=True, writable=True, readable=True),
+    default="nextpyper.out",
+    show_default=True,
+)
+# @common_options
 def config(configfile, system_config, **kwargs):
     """Copy the system default config file"""
     copy_config(configfile, system_config=system_config)
@@ -301,8 +304,8 @@ def citation(**kwargs):
     type=click.Path(readable=True, exists=True),
     required=True,
 )
-@click.command(epilog=sample_table_msg)
-def make_sample_table(**kwargs):
+@click.command(epilog=gather_msg)
+def gather(**kwargs):
     """Generate a sample table given a data directory"""
 
     datadir = Path(kwargs["input"])
@@ -331,7 +334,7 @@ def make_sample_table(**kwargs):
     "--pattern",
     help="Pattern used to group the probes (RegEx)",
     type=str,
-    default=r"(\d{4})$",
+    default=r"(.*)",
     show_default=True,
 )
 @click.option(
@@ -341,8 +344,8 @@ def make_sample_table(**kwargs):
     type=click.Path(readable=True, exists=True),
     required=True,
 )
-@click.command(epilog=validate_probes_msg)
-def validate_probes(**kwargs):
+@click.command(epilog=validate_msg)
+def validate(**kwargs):
     """Validate a probes file for running NextPyper"""
 
     probes_path = Path(kwargs["probes"])
@@ -353,18 +356,18 @@ def validate_probes(**kwargs):
     check_probes(probes_path, pattern, outsummary, outhierarchy)
 
 
-@click.option(
-    "--seqs_per_probe",
-    "seqs_per_probe",
-    help="Output sample table",
-    type=click.Path(writable=True, path_type=Path),
-    default=None,
-    show_default=True,
-)
+# @click.option(
+#     "--seqs_per_probe",
+#     "seqs_per_probe",
+#     help="Output sample table",
+#     type=click.Path(writable=True, path_type=Path),
+#     default=None,
+#     show_default=True,
+# )
 @click.option(
     "--output",
     "output",
-    help="Output sample table",
+    help="Output summary table",
     type=click.Path(writable=True, path_type=Path),
     default="run_stats.csv",
     show_default=True,
@@ -376,8 +379,8 @@ def validate_probes(**kwargs):
     type=click.Path(readable=True, exists=True, path_type=Path),
     required=True,
 )
-@click.command(epilog=summarize_run_msg)
-def summarize_run(**kwargs):
+@click.command(epilog=summarize_msg)
+def summarize(**kwargs):
     """Summarize the results of a NextPyper run"""
 
     run_directory_path = kwargs["rundir"]
@@ -393,9 +396,9 @@ def summarize_run(**kwargs):
 
 
 cli.add_command(run)
-cli.add_command(make_sample_table)
-cli.add_command(validate_probes)
-cli.add_command(summarize_run)
+cli.add_command(gather)
+cli.add_command(validate)
+cli.add_command(summarize)
 cli.add_command(config)
 cli.add_command(citation)
 
