@@ -19,7 +19,7 @@ from summarize_results import summarize_workflow
 
 def snake_base(rel_path):
     """Get the filepath to a Snaketool system file (relative to __main__.py)"""
-    return Path(__file__).resolve().parent / rel_path
+    return (Path(__file__).parent / rel_path).resolve()
 
 
 def get_version():
@@ -39,7 +39,7 @@ def print_citation():
 def default_to_output(ctx, param, value):
     """Callback for click options; places value in output directory unless specified"""
     if param.default == value:
-        return Path(ctx.params["output"]) / value
+        return str(Path(ctx.params["output"]) / value)
     return value
 
 
@@ -76,7 +76,7 @@ def common_options(func):
         ),
         click.option(
             "--conda-prefix",
-            default=snake_base(Path("workflow") / "conda"),
+            default=str(snake_base(Path("workflow") / "conda")),
             help="Custom conda env directory",
             type=click.Path(),
             show_default=False,
@@ -260,6 +260,7 @@ def run(**kwargs):
     """Run NextPyper"""
     # Config to add or update in configfile
     merge_config = {"nextpyper": {"args": kwargs}}
+    print(merge_config)
 
     # run!
     run_snakemake(
