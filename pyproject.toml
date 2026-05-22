@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "NextPyper"
+dynamic = ["version"]
+description = "Recovery of homoeologous loci from target capture data in higher ploidy samples"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Simón Villanueva Corrales", email = "simon.corrales@ibot.cas.cz" },
+    { name = "Yann Bertrand", email = "Yann.Bertrand@ibot.cas.cz" }
+]
+classifiers = [
+    "Environment :: Console",
+    "Environment :: MacOS X",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Other/Proprietary License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "snaketool-utils>=0.0.4",
+    "snakemake>=9.3.1",
+    "pyyaml>=6.0",
+    "Click>=8.1.3",
+    "rich-click>=1.9.7",
+    "pandas>=2.2",
+    "biopython>=1.83",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
+    "scipy>=1.14",
+    "polars>=1.32.3",
+    "intervaltree>=3.1",
+    "kmedoids>=0.5.3.1",
+    "more-itertools>=10.7",
+]
+
+[project.urls]
+Homepage = "https://github.com/M2BL/NextPyper"
+
+[project.scripts]
+nextpyper = "nextpyper.__main__:main"
+
+[tool.setuptools]
+include-package_data = true
+
+[tool.setuptools.dynamic]
+version = {file = ["nextpyper/nextpyper.VERSION"]}
