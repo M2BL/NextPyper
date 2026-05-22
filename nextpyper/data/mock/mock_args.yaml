@@ -1,0 +1,17 @@
+custom_cps: null
+interseeds: sister
+multi_probes: false
+probe_pattern: (.*)
+reasm: true
+ref_cps: Ambtr,Arath,Orysa,UMUL,RQNK
+snake_args:
+- --conda-create-envs-only
+- --quiet
+snake_default:
+- --printshellcmds
+- --nolock
+- --show-failed-logs
+threads: 1
+use_conda: true
+use_ploidy: false
+use_ref_cps: false

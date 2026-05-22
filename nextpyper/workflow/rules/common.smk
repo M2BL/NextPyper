@@ -8,6 +8,7 @@ from snakemake.utils import validate
 from pathlib import Path
 from collections import Counter, defaultdict
 from operator import itemgetter
+from functools import partial
 import yaml
 import json
 import sys
@@ -93,6 +94,21 @@ dtypes = {
 }
 sample_table = pd.read_csv(path_samples, sep="\t", dtype=dtypes)
 validate(sample_table, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
+
+
+# Make paths absolute if they are not already, using the base of the sample table
+def adjust_rel_path(path: str, base: Path) -> Path:
+    """If path is not an absolute, make it absolute using base"""
+    return Path(path) if Path(path).is_absolute() else base / path
+
+
+sample_table["path_forward"] = sample_table["path_forward"].apply(
+    partial(adjust_rel_path, base=path_samples.parent)
+)
+sample_table["path_reverse"] = sample_table["path_reverse"].apply(
+    partial(adjust_rel_path, base=path_samples.parent)
+)
+
 has_ploidy = sample_table.eval("ploidy > 0").any()
 if use_ploidy and not has_ploidy:
     raise WorkflowError(

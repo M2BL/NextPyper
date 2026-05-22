@@ -4,6 +4,7 @@ Entrypoint for NextPyper
 
 from pathlib import Path
 import sys
+import tempfile
 
 import yaml
 import rich_click as click
@@ -115,31 +116,12 @@ def common_options(func):
 )
 @click.version_option(get_version(), "-v", "--version", is_flag=True)
 def cli():
-    """Recovery of homoeologous loci from targeted capture data in higher ploidy samples.
+    """Recovery of homoeologous loci from target capture data in higher ploidy samples.
     \n
     For more options, run:
     nextpyper command --help"""
     pass
 
-
-# help_msg_extra = """
-# \b
-# CLUSTER EXECUTION:
-# nextpyper run ... --profile [profile]
-# For information on Snakemake profiles see:
-# https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles
-# \b
-# RUN EXAMPLES:
-# Required:           nextpyper run --input [file]
-# Specify threads:    nextpyper run ... --threads [threads]
-# Disable conda:      nextpyper run ... --no-use-conda
-# Change defaults:    nextpyper run ... --snake-default="-k --nolock"
-# Add Snakemake args: nextpyper run ... --dry-run --keep-going --touch
-# Specify targets:    nextpyper run ... all print_targets
-# Available targets:
-#     all             Run everything (default)
-#     print_targets   List available targets
-# """
 
 # ToDo: Refine this help message
 gather_msg = """
@@ -155,6 +137,11 @@ validate_msg = """
 # ToDo: Refine this help message
 summarize_msg = """
 
+"""
+
+prepare_msg = """
+By default, the environments will be created in NextPyper's installation folder. 
+Use --conda-prefix to specify a custom location.
 """
 
 
@@ -260,7 +247,6 @@ def run(**kwargs):
     """Run NextPyper"""
     # Config to add or update in configfile
     merge_config = {"nextpyper": {"args": kwargs}}
-    print(merge_config)
 
     # run!
     run_snakemake(
@@ -357,14 +343,6 @@ def validate(**kwargs):
     check_probes(probes_path, pattern, outsummary, outhierarchy)
 
 
-# @click.option(
-#     "--seqs_per_probe",
-#     "seqs_per_probe",
-#     help="Output sample table",
-#     type=click.Path(writable=True, path_type=Path),
-#     default=None,
-#     show_default=True,
-# )
 @click.option(
     "--output",
     "output",
@@ -396,10 +374,45 @@ def summarize(**kwargs):
     #     table.T.to_csv(tab_file, float_format="%.2f")
 
 
+@click.option(
+    "--conda-prefix",
+    default=str(snake_base(Path("workflow") / "conda")),
+    help="Path where to put the conda environments",
+    type=click.Path(),
+    show_default=False,
+)
+@click.command(epilog=prepare_msg)
+def prepare(**kwargs):
+    """Prepare the conda environments to run NextPyper"""
+
+    mock_dir = Path(__file__).parent / "data/mock"
+    kwargs.update(yaml.safe_load((mock_dir / "mock_args.yaml").read_text()))
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        kwargs["system_config"] = str(Path(__file__).parent / "config/config.yaml")
+        kwargs["input"] = str(mock_dir / "sample.tsv")
+        kwargs["probes"] = str(mock_dir / "probes.fasta")
+        kwargs["configfile"] = str(tmpdir / "config.yaml")
+        kwargs["log"] = str(tmpdir / "nextpyper.log")
+        kwargs["output"] = str(tmpdir)
+
+        # Config to add or update in configfile
+        merge_config = {"nextpyper": {"args": kwargs}}
+
+        run_snakemake(
+            # Full path to Snakefile
+            snakefile_path=snake_base(Path("workflow/Snakefile")),
+            merge_config=merge_config,
+            **kwargs
+        )
+
+
 cli.add_command(run)
 cli.add_command(gather)
 cli.add_command(validate)
 cli.add_command(summarize)
+cli.add_command(prepare)
 cli.add_command(config)
 cli.add_command(citation)
 

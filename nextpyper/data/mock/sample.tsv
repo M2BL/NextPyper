@@ -1,0 +1,2 @@
+sample	path_forward	path_reverse	ploidy
+sample1	reads/sample1_R1.fastq	reads/sample1_R2.fastq	0
