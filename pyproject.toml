@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "NextPyper"
 dynamic = ["version"]
+license = { file = "nextpyper/nextpyper.LICENSE" }
 description = "Recovery of homoeologous loci from target capture data in higher ploidy samples"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -16,7 +17,6 @@ classifiers = [
     "Environment :: Console",
     "Environment :: MacOS X",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Other/Proprietary License",
     "Natural Language :: English",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
