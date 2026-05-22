@@ -19,6 +19,7 @@ COMMAND_GROUPS:
         - gather
         - validate
         - summarize
+        - prepare
         - config
         - citation
 

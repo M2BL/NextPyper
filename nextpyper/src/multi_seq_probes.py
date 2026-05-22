@@ -35,7 +35,7 @@ import pandas as pd
 #                FUNCTIONS
 # =============================================================================
 
-PROBE_SCHEMA = (Path(__file__).parent / "../workflow/schemes/probes.yaml").resolve()
+PROBE_SCHEMA = (Path(__file__).parent / "../workflow/schemas/probes.yaml").resolve()
 
 
 class NoGrouping(Exception):

@@ -22,17 +22,11 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio import Entrez
 
-sys.path.append((Path(workflow.basedir) / "../src/").as_posix())
-
-nextpyper_version = "0.0.1"
+sys.path.append((Path(workflow.basedir).parent / "src").as_posix())
 
 from multi_seq_probes import group_probes, NoGrouping
 
-
-report: "../report/workflow.rst"
-
-
-SCHEMES_DIR = Path(workflow.basedir) / "schemes"
+SCHEMAS_DIR = Path(workflow.basedir) / "schemas"
 
 # Read inputs
 probes_path = Path(lookup("args/probes", within=config))
@@ -80,10 +74,10 @@ reg_sep = lookup("region_separation", within=pipeline)
 probes = SeqIO.to_dict(SeqIO.parse(probes_path, "fasta"))
 probes_list = list(probes.keys())
 PROBES = pd.DataFrame({"probe_name": probes_list})
-validate(PROBES, schema=(SCHEMES_DIR / "probes.yaml").resolve())
+validate(PROBES, schema=(SCHEMAS_DIR / "probes.yaml").resolve())
 
 # Validate Sample table
-with open(SCHEMES_DIR / "sample_table.yaml") as file:
+with open(SCHEMAS_DIR / "sample_table.yaml") as file:
     sample_schema = yaml.safe_load(file)
 
 # Build dtypes from the sample schema
@@ -93,7 +87,7 @@ dtypes = {
     for col, spec in sample_schema["properties"].items()
 }
 sample_table = pd.read_csv(path_samples, sep="\t", dtype=dtypes)
-validate(sample_table, schema=(SCHEMES_DIR / "sample_table.yaml").resolve())
+validate(sample_table, schema=(SCHEMAS_DIR / "sample_table.yaml").resolve())
 
 
 # Make paths absolute if they are not already, using the base of the sample table

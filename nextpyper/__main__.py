@@ -10,7 +10,6 @@ import yaml
 import rich_click as click
 from snaketool_utils.cli_utils import run_snakemake, copy_config, echo_click
 
-sys.path.append(str((Path(__file__).parent / "workflow/scripts").resolve()))
 sys.path.append(str((Path(__file__).parent / "src").resolve()))
 
 from sample_table import make_table
@@ -125,7 +124,7 @@ def cli():
 
 # ToDo: Refine this help message
 gather_msg = """
-The data directory is expected to have raw paired reads
+The data directory is expected to have only paired-end read
 files per each sample (forward, reverse).
 """
 
