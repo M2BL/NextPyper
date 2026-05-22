@@ -30,7 +30,7 @@ rule spades_assembly:
     shadow:
         "minimal"
     conda:
-        "../../envs/assembly_spades.yaml"
+        "../../envs/assembly.yaml"
     shell:
         "spades.py -t {threads} {params.extra} -k {params.k} -1 {input.in1} -2 {input.in2} -o {params.out_dir} > {log} 2>&1"
 

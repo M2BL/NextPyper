@@ -1,15 +1,9 @@
-import os
+from pathlib import Path
 from setuptools import setup, find_packages
 
 
 def get_version():
-    with open(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "nextpyper",
-            "nextpyper.VERSION",
-        )
-    ) as f:
+    with open(Path(__file__).resolve().parent / "nextpyper" / "nextpyper.VERSION") as f:
         return f.readline().strip()
 
 
@@ -37,11 +31,11 @@ CLASSIFIERS = [
 ]
 
 setup(
-    name="nextpyper",
+    name="NextPyper",
     packages=find_packages(),
-    url="https://git.sorbus.ibot.cas.cz/m2b_ibot/nextpyper",
+    url="https://github.com/M2BL/NextPyper",
     python_requires=">=3.12",
-    description="Recovery of homologous genes from targeted sequence capture data for higher ploidy samples",
+    description="Recovery of homoeologous loci from target capture data in higher ploidy samples",
     long_description=get_description(),
     long_description_content_type="text/markdown",
     version=get_version(),
