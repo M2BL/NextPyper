@@ -47,7 +47,7 @@ Homepage = "https://github.com/M2BL/NextPyper"
 nextpyper = "nextpyper.__main__:main"
 
 [tool.setuptools]
-include-package_data = true
+include-package-data = true
 
 [tool.setuptools.dynamic]
 version = {file = ["nextpyper/nextpyper.VERSION"]}

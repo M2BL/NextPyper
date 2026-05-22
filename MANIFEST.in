@@ -2,3 +2,4 @@ include nextpyper/nextpyper.LICENSE
 include nextpyper/nextpyper.CITATION
 include nextpyper/nextpyper.VERSION
 recursive-include nextpyper *
+prune nextpyper/workflow/conda
