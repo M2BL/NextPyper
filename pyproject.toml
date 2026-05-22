@@ -5,7 +5,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "NextPyper"
 dynamic = ["version"]
-license = { file = "nextpyper/nextpyper.LICENSE" }
 description = "Recovery of homoeologous loci from target capture data in higher ploidy samples"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,6 +12,8 @@ authors = [
     { name = "Simón Villanueva Corrales", email = "simon.corrales@ibot.cas.cz" },
     { name = "Yann Bertrand", email = "Yann.Bertrand@ibot.cas.cz" }
 ]
+license = "MIT"
+license-files = ["nextpyper/nextpyper.LICENSE"]
 classifiers = [
     "Environment :: Console",
     "Environment :: MacOS X",
