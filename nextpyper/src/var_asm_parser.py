@@ -27,14 +27,13 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from more_itertools import one
 
-
 # =======================================================================================
 #                CONSTANTS
 # =======================================================================================
 
 FIELDS = {
     "seed": str,
-    "probe": int,
+    "probe": str,
     "seed_id": int,
     "seed_len": int,
     "cov": float,

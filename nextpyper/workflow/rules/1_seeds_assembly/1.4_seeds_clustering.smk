@@ -11,7 +11,7 @@ rule distribute_seeds:
     log:
         outdir / "logs/clustering/seed_distribution.log",
     params:
-        pattern=lambda wildcards: r"-(?P<probe>.*?)_",
+        pattern=lambda wildcards: r"-(?P<probe>.*?)_EDGE_",
         probes=probes_list,
         mode="scfs",
     script:
@@ -25,11 +25,11 @@ rule vsearch_clustering:
         outdir / "clustering/cluster_tables/{probe}.tsv",
     log:
         outdir / "logs/clustering/vsearch/{probe}.log",
-    params:
-        "--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both    ",
-    threads: 4
     conda:
         "../../envs/clustering.yaml"
+    threads: 4
+    params:
+        "--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both    ",
     shell:
         """
         vsearch --threads {threads} {params} \

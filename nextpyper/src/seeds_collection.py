@@ -64,7 +64,7 @@ CLUSTER_COLS = [
     "query",
     "centroid",
 ]
-REC_PAT = r"^(.*?)-(.*?)_.*_cov_([\d\.]+)$"
+REC_PAT = r"^(.*?)-(.*?)_EDGE_.*_cov_([\d\.]+)$"
 METABAT_COLS = ("query", "len", "cov", "nu", "var")
 
 # =============================================================================
@@ -359,6 +359,7 @@ def snakemake_call(snakemake):
                     .select(["sample", "query"])
                     .iter_rows()
                 ):
+                    # One sample does not have a given probe. But why is it triggering Key Error?
                     sample_seeds[sample].append(sample_recs[inter_sample][probe][rec])
 
     # Finally, add the probes that were not present in the sample seeds.
