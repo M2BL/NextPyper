@@ -6,7 +6,32 @@ Recovery of homoeologous loci from targeted capture data in higher ploidy sample
 
 ## Installation
 
+Regardless of how you install it, `NextPyper` requires `conda`, to handle and deploy the environments to run the workflow.
 
+### Conda/Mamba
+
+If you already have bioconda set up. You can create a new invinment and simply run:
+
+```bash
+conda install -c bioconda nextpyper 
+```
+
+### Pip
+
+```
+pip install nextpyper
+```
+
+### Manual 
+
+You can also install NextPyper manually with pip. We recommend to create a new environment.
+
+```bash
+# from you new environment with pip
+git clone git@github.com:M2BL/NextPyper.git
+cd NextPyper
+pip install .
+```
 
 ## Basic usage 
 
