@@ -145,7 +145,11 @@ def check_probes(
 
     probes_counts = {probe: len(recs) for probe, recs in probes_dict.items()}
 
-    print("The probes have the following number of members: \n", file=sys.stderr)
+    print(
+        f"The pattern yields {len(probes_dict)} groups from {len(probes)} probe sequences",
+        file=sys.stderr,
+    )
+    # print("The probes have the following number of members: \n", file=sys.stderr)
     # write_summary(probes_counts, sys.stdout)
 
     if out_summary:

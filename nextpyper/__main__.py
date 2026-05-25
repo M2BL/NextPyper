@@ -128,9 +128,8 @@ The data directory is expected to have only paired-end read
 files per each sample (forward, reverse).
 """
 
-# ToDo: Refine this help message
 validate_msg = """
-
+The group summary reports the number of probes per group, whereas the hierarchy details which probes belong to each group.
 """
 
 # ToDo: Refine this help message
@@ -141,6 +140,11 @@ summarize_msg = """
 prepare_msg = """
 By default, the environments will be created in NextPyper's installation folder. 
 Use --conda-prefix to specify a custom location.
+"""
+
+config_msg = """
+Modify the config before running to change the workflow parameters. \n
+Check NextPyper documentation for more details about the config parameters.
 """
 
 
@@ -252,31 +256,12 @@ def run(**kwargs):
         # Full path to Snakefile
         snakefile_path=snake_base(Path("workflow/Snakefile")),
         merge_config=merge_config,
-        **kwargs
+        **kwargs,
     )
 
 
-@click.command()
 @click.option(
-    "--output",
-    help="Output directory",
-    type=click.Path(dir_okay=True, writable=True, readable=True),
-    default="nextpyper.out",
-    show_default=True,
-)
-# @common_options
-def config(configfile, system_config, **kwargs):
-    """Copy the system default config file"""
-    copy_config(configfile, system_config=system_config)
-
-
-@click.command()
-def citation(**kwargs):
-    """Print the citation(s) for this tool"""
-    print_citation()
-
-
-@click.option(
+    "-o",
     "--output",
     help="Output sample table",
     type=click.Path(writable=True, readable=True),
@@ -284,6 +269,7 @@ def citation(**kwargs):
     show_default=True,
 )
 @click.option(
+    "-i",
     "--input",
     "input",
     help="Path to data directory",
@@ -301,7 +287,7 @@ def gather(**kwargs):
 
 
 @click.option(
-    "--write_hierarchy",
+    "--out_hierarchy",
     "hierarchy",
     help="Write grouping hierarchy to this file",
     type=click.Path(writable=True, readable=True),
@@ -309,7 +295,7 @@ def gather(**kwargs):
     # show_default=True,
 )
 @click.option(
-    "--write_summary",
+    "--out_summary",
     "output",
     help="Write summary of grouping to this file",
     type=click.Path(writable=True, readable=True),
@@ -324,6 +310,7 @@ def gather(**kwargs):
     show_default=True,
 )
 @click.option(
+    "-p",
     "--probes",
     "probes",
     help="Path to probes files",
@@ -343,6 +330,7 @@ def validate(**kwargs):
 
 
 @click.option(
+    "-o",
     "--output",
     "output",
     help="Output summary table",
@@ -351,6 +339,7 @@ def validate(**kwargs):
     show_default=True,
 )
 @click.option(
+    "-r",
     "--rundir",
     "rundir",
     help="Path to run directory",
@@ -403,8 +392,29 @@ def prepare(**kwargs):
             # Full path to Snakefile
             snakefile_path=snake_base(Path("workflow/Snakefile")),
             merge_config=merge_config,
-            **kwargs
+            **kwargs,
         )
+
+
+@click.command(epilog=config_msg)
+@click.option(
+    "-o",
+    "--output",
+    help="Output directory",
+    type=click.Path(dir_okay=True, writable=True, readable=True),
+    default="nextpyper.out",
+    show_default=True,
+)
+# @common_options
+def config(configfile, system_config, **kwargs):
+    """Copy the degault config file to modify the workflow parameters before running."""
+    copy_config(configfile, system_config=system_config)
+
+
+@click.command()
+def citation(**kwargs):
+    """Print the citation(s) for this tool"""
+    print_citation()
 
 
 cli.add_command(run)
