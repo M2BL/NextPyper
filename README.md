@@ -54,7 +54,7 @@ pip install .
 
 NextPyper uses [snakemake](https://snakemake.github.io/) to orchestrate and execute the different steps of the workflow, which uses conda to set up the packages and environments required at each stage.
 
-The first time you run nextpyper, this setup will be done automatically at the start of the workflow.
+The first time you run NextPyper, this setup will be done automatically at the start of the workflow.
 
 Alternatively, you can set up these environments beforehand by running:
 
@@ -144,13 +144,13 @@ The sample names are inferred based on the common prefix between the forward and
 
 ### 3. Running NextPyper
 
-Finally, you can simply run NextPyper, for single-probes:
+Finally, use the `run` subcommand to start the workflow. For single-probes you do not need to specify a pattern, so simply provide the inputs we prepared:
 
 ```bash
 nextpyper run --threads 16 --single-probes --input input_samples.tsv --probes custom_probes.fasta --output out_single
 ```
 
-Or for multi-probes, specifying the appropiate pattern:
+For multi-probes, specify the appropiate pattern as well:
 
 ```bash
 nextpyper run --threads 16 --input new_hier_samples.tsv --probes kew_probes.fasta --pattern "(\d+)$" --output out_multi
