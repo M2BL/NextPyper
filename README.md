@@ -9,6 +9,7 @@ Recovery of homoeologous loci from targeted capture data in higher ploidy sample
     - [Conda/Mamba](#condamamba)
     - [Pip](#pip)
     - [Manual](#manual)
+    - [Environments setup (recommended)](#environments-setup-recommended)
   - [Usage](#usage)
     - [1. Preparing your probes](#1-preparing-your-probes)
       - [Single-probe sets](#single-probe-sets)
@@ -43,13 +44,29 @@ pip install nextpyper
 You can also install NextPyper manually with pip. We recommend to create a new environment.
 
 ```bash
-# from you new environment with pip
+# from your new environment with pip
 git clone git@github.com:M2BL/NextPyper.git
 cd NextPyper
 pip install .
 ```
 
+### Environments setup (recommended)
+
+NextPyper uses [snakemake](https://snakemake.github.io/) to orchestrate and execute the different steps of the workflow, which uses conda to set up the packages and environments required at each stage.
+
+The first time you run nextpyper, this setup will be done automatically at the start of the workflow.
+
+Alternatively, you can set up these environments beforehand by running:
+
+```bash
+nextpyper prepare
+```
+
+Which will create the required environemnts in NextPyper's installation path. You can use the option `--conda-prefix` to specify a different path where to store these environemnts.
+
 ## Usage 
+
+NextPyper requires two inputs, a probes file with the targets of your experiment, and a sample table describing where to find the data of your samples.
 
 ### 1. Preparing your probes
 
