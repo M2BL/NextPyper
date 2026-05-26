@@ -83,6 +83,7 @@ rule separate_cds_by_regions:
             / "homolog_prospection/region_separation/separation_output/scfs/{probe}"
         ),
     params:
+        force_global_idt=lookup("enforce_global_idt_threshold", within=reg_sep),
         min_global_identity=lookup("min_global_identity", within=reg_sep),
         min_fragment_cov=lookup("min_fragment_cov", within=reg_sep),
         min_exonic_length=lookup("min_exonic_length", within=reg_sep),

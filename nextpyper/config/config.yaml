@@ -72,6 +72,7 @@ nextpyper:
             min_cov: 0.5
             flatenning_prop: 0.1
         region_separation:
+            enforce_global_idt_threshold: False
             min_global_identity: 0.85
             min_fragment_cov: 0.1
             min_exonic_length: 10

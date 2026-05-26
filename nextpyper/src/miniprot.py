@@ -906,7 +906,14 @@ def snakemake_call(snakemake):
         outdir = Path(snakemake.output[0])
         scfs = Path(snakemake.input.scfs)
         probes = Path(snakemake.input.probes)
-        div_map = json.loads(Path(snakemake.input.div_map).read_bytes())
+        params_dict = dict(snakemake.params)
+
+        ## The divergence map is ignored if desired, falling back to a global idt threhold.
+        div_map = (
+            dict()
+            if params_dict.pop("force_global_idt")
+            else json.loads(Path(snakemake.input.div_map).read_bytes())
+        )
         max_intron_map = json.loads(Path(snakemake.input.max_intron_map).read_bytes())
 
         outdir.mkdir(parents=True, exist_ok=True)
@@ -917,7 +924,7 @@ def snakemake_call(snakemake):
                 min_global_identity_dict=div_map,
                 max_intron_dict=max_intron_map,
                 threads=threads,
-                **snakemake.params,
+                **params_dict,
             )
 
             ## Save scfs
