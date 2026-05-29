@@ -142,7 +142,7 @@ checkpoint tribble_reassembly:
         k1rescale=lookup("saute/reassembly/k1_rescaling", within=pipeline),
         kmers=saute_kmer_expl,
     log:
-        "<logs>/<stage>/233_reassembly_saute/{sample}.log",
+        "<logs>/<stage>/23_tribbles_reassembly/233_saute/{sample}.log",
     threads: 8
     conda:
         "../../envs/saute.yaml"
@@ -204,14 +204,14 @@ rule cap_tribble_variants:
     input:
         "<results>/24_postprocessing/240_merging/{sample}.fasta",
     output:
-        tribble_stats="<results>/24_postprocessing/241_capping/2410_sequences/{sample}.tsv",
+        tribble_stats="<results>/24_postprocessing/241_capping/2410_tribbles/{sample}.tsv",
         normal="<results>/24_postprocessing/241_capping/2411_sequences/{sample}.fasta",
     params:
         mode="cap",
         max_var=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),
         pattern=TARGET_COLLAPSE_PAT,
     log:
-        outdir / "logs/saute/capping/{sample}.log",
+        "<logs>/<stage>/241_capping/{sample}.log",
     script:
         "../../../src/var_asm_parser.py"
 

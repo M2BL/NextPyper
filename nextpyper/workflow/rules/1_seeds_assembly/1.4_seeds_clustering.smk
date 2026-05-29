@@ -68,5 +68,6 @@ rule seeds_collection:
         min_sister_freq=lookup("seeds/min_sister_sample_freq", within=pipeline),
         cov_by_mapping=lookup("seeds/cov_by_mapping", within=pipeline),
         heuristic_params=lookup("saute/heuristic", within=pipeline),
+        sister_samples_dir=outdir / "workflow/2_saute/20_params_and_stats/201_sister_samples",
     script:
         "../../../src/seeds_collection.py"

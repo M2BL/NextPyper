@@ -907,6 +907,7 @@ def snakemake_call(snakemake):
         scfs = Path(snakemake.input.scfs)
         probes = Path(snakemake.input.probes)
         params_dict = dict(snakemake.params)
+        probes_outdir = params_dict.pop("probes_outdir")
 
         ## The divergence map is ignored if desired, falling back to a global idt threhold.
         div_map = (
@@ -932,7 +933,8 @@ def snakemake_call(snakemake):
             olc.save_records(outdir, snakemake.params.min_exonic_length)
 
             ## Save Probes
-            olc.save_best_probe(outdir.parent.parent / f"probes/{probes.name}")
+            if probes_outdir:
+                olc.save_best_probe(probes_outdir / probes.name)
 
 
 def main():

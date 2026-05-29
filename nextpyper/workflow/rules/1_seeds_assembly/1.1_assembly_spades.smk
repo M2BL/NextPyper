@@ -29,7 +29,7 @@ rule spades_assembly:
         out_dir=subpath(output.graph, parent=True),
         extra="--meta --only-assembler",
     log:
-        "<logs>/1_assembly/100_spades/{sample}.log",
+        "<logs>/<stage>/100_spades/{sample}.log",
     threads: 4
     shadow:
         "minimal"

@@ -48,7 +48,7 @@ rule seeds_filtering:
         metrics="<results>/122_filt_seeds/1220_summary_tables/{sample}.tsv",
         scfs="<results>/122_filt_seeds/1221_filtered_scfs/{sample}.fasta",
     log:
-        "<logs>/<stage>/122_seeds_filtering/{sample}.log",
+        "<logs>/<stage>/122_filt_seeds/{sample}.log",
     params:
         min_cov=lookup("scf_min_cov", within=seeds_filt_params),
         min_idt=lookup("scf_min_idt", within=seeds_filt_params),

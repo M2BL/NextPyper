@@ -69,7 +69,7 @@ rule extend_paths:
         table="<results>/110_raw_matching_tables/{sample}.tsv",
         stats="<logs>/0_preprocessing/01_trimming_fastp/{sample}.json",
     output:
-        ext_table="<logs>/<stage>/111_paths_extension/1110_tables/{sample}.tsv",
+        ext_table="<results>/111_paths_extension/1110_tables/{sample}.tsv",
         ext_seqs="<results>/111_paths_extension/1111_sequences/{sample}.fasta",
     params:
         filter_low_dp_comps=lookup("filter_low_dp_comps", within=scf_ext),
@@ -85,6 +85,6 @@ rule extend_paths:
         ),
         probe_pattern=lambda wildcards: probe_pattern,
     log:
-        "<logs>/<stage>/111_extension/{sample}.log",
+        "<logs>/<stage>/111_path_extension/{sample}.log",
     script:
         "../../../src/gfa_graph.py"

@@ -70,8 +70,9 @@ rule separate_cds_by_regions:
         min_exonic_length=lookup("min_exonic_length", within=reg_sep),
         max_intron_length=lookup("max_intron_length", within=reg_sep),
         substitution_matrix=blosum62,
+        probes_outdir=outdir / "workflow/3_homolog_prospection/32_region_separation/321_output/3210_probes",
     log:
-        "<logs>/<results>/321_separation/{probe}.log",
+        "<logs>/<stage>/321_miniprot/{probe}.log",
     threads: 2
     conda:
         "../../envs/clustering.yaml"
@@ -87,7 +88,7 @@ rule align_regions:
     params:
         lookup("mafft_params", within=pipeline),
     log:
-        "<logs>/<stage>/322_alns/{probe}.log",
+        "<logs>/3_homolog_prospection/33_alns/{probe}.log",
     threads: 2
     conda:
         "../../envs/alignment.yaml"
@@ -116,7 +117,7 @@ for kind in ("exons", "genetigs", "supercontigs"):
             f"collect_{kind}"
         input:
             scfs=expand("<results>/321_output/3211_scfs/{probe}", probe=probes_list),
-            tribbles=expand("<workdir>/2_saute/24_postprocessing/241_capping/2410_sequences/{sample}.tsv", sample=sample_list),
+            tribbles=expand("<workdir>/2_saute/24_postprocessing/241_capping/2410_tribbles/{sample}.tsv", sample=sample_list),
             ## Disabled temporarily. See chimera_tagging rule in 3.2 for details.
             # chimera_tags=expand(
             #     outdir

@@ -227,6 +227,7 @@ def snakemake_call(snakemake):
     multi_probes = snakemake.params.is_multi
     interseeds_use = snakemake.params.interseeds_use
     min_sister_freq = snakemake.params.min_sister_freq
+    sister_dir = Path(snakemake.params.sister_samples_dir)
 
     # Params for saute kmer size computation
     cov_by_mapping = snakemake.params.cov_by_mapping
@@ -311,7 +312,7 @@ def snakemake_call(snakemake):
 
     # Subset the inter-seeds with the sister-samples approach
     if interseeds_use == "sister":
-        sister_dir = Path(saute_params[0]).parent.parent / "sister_samples"
+        # sister_dir = Path(saute_params[0]).parent.parent / "sister_samples"
         sister_dir.mkdir(parents=True, exist_ok=True)
 
         sister_samples_counts = infer_sister_samples(probe_tables)
