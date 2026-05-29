@@ -1,15 +1,16 @@
+pathvars:
+    stage="1_assembly/13_clustering",
+    results="<workdir>/<stage>",
+    inter="1_assembly/12_filtering/122_filt_seeds/1221_filtered_scfs"
+
+    
 rule distribute_seeds:
     input:
-        expand(
-            outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
-            sample=sample_list,
-        ),
+        expand("<workdir>/<inter>/{sample}.fasta", sample=sample_list),
     output:
-        expand(
-            outdir / "clustering/sample_merged_input/{probe}.fasta", probe=probes_list
-        ),
+        expand("<results>/130_sample_merged_input/{probe}.fasta", probe=probes_list),
     log:
-        outdir / "logs/clustering/seed_distribution.log",
+        "<logs>/<stage>/seed_distribution.log",
     params:
         pattern=lambda wildcards: r"-(?P<probe>.*?)_EDGE_",
         probes=probes_list,
@@ -20,16 +21,16 @@ rule distribute_seeds:
 
 rule vsearch_clustering:
     input:
-        outdir / "clustering/sample_merged_input/{probe}.fasta",
+        "<results>/130_sample_merged_input/{probe}.fasta"
     output:
-        outdir / "clustering/cluster_tables/{probe}.tsv",
+        "<results>/131_cluster_tables/{probe}.tsv",
     log:
-        outdir / "logs/clustering/vsearch/{probe}.log",
+        "<logs>/<stage>/131_vsearch/{probe}.log",
     conda:
         "../../envs/clustering.yaml"
     threads: 4
     params:
-        "--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both    ",
+        "--id 0.95 --iddef 3 --minseqlength 5 --qmask none --strand both",
     shell:
         """
         vsearch --threads {threads} {params} \
@@ -42,34 +43,29 @@ rule vsearch_clustering:
 rule seeds_collection:
     input:
         probes=probes_path.resolve(),
-        cluster_tables=expand(
-            outdir / "clustering/cluster_tables/{probe}.tsv", probe=probes_list
-        ),
-        samples=expand(
-            outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
-            sample=sample_list,
-        ),
+        cluster_tables=expand("<results>/131_cluster_tables/{probe}.tsv", probe=probes_list),
+        samples=expand("<workdir>/<inter>/{sample}.fasta", sample=sample_list),
         spades_graphs=expand(
-            outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
+            "<workdir>/1_assembly/10_raw_assembly/100_spades/{sample}/assembly_graph_with_scaffolds.gfa",
             sample=sample_list,
         ),
         covs=expand(
-            outdir / "assembled/filtering/coverage/{sample}.metabat",
+            "<workdir>/1_assembly/12_filtering/121_coverage/{sample}.metabat",
             sample=sample_list,
         ),
         read_stats=expand(
-            outdir / "logs/preprocessing/fastp/{sample}.json", sample=sample_list
+            "<logs>/0_preprocessing/01_trimming_fastp/{sample}.json", sample=sample_list
         ),
     output:
-        seeds=expand(outdir / "saute/seeds/{sample}.fasta", sample=sample_list),
-        saute_params=expand(
-            outdir / "logs/saute/kmer_params/{sample}.json", sample=sample_list
-        ),
+        seeds=expand("<workdir>/2_saute/21_seeds/{sample}.fasta", sample=sample_list),
+        saute_params=expand("<workdir>/2_saute/20_params_and_stats/200_kmer_params/{sample}.json", sample=sample_list),
+    log:
+        "<logs>/2_saute/seeds_collection.log",
     params:
-        min_sister_freq=lookup("seeds/min_sister_sample_freq", within=pipeline),
         pattern=probe_pattern,
         is_multi=multi_probes,
         interseeds_use=interseeds_use,
+        min_sister_freq=lookup("seeds/min_sister_sample_freq", within=pipeline),
         cov_by_mapping=lookup("seeds/cov_by_mapping", within=pipeline),
         heuristic_params=lookup("saute/heuristic", within=pipeline),
     script:

@@ -1,24 +1,28 @@
+pathvars:
+    stage="1_assembly/11_extension",
+    results="<workdir>/<stage>",
+
 rule make_diamond_probes_db:
     input:
-        outdir / "translated_probes/longest_cds.fasta",
+        "<workdir>/0_preprocessing/longest_cds.fasta",
     output:
-        db=outdir / "assembled/filtering/probes.dmnd",
+        "<workdir>/1_assembly/probes.dmnd",
     log:
-        outdir / "logs/assembled/filtering/diamond.log",
+        "<logs>/1_assembly/diamond_makedb.log",
     params:
-        db=subpath(output.db, strip_suffix=".dmnd"),
+        subpath(output[0], strip_suffix=".dmnd"),
     conda:
         "../../envs/matching.yaml"
     shell:
-        "diamond makedb --db {params.db} --in {input} > {log} 2>&1"
+        "diamond makedb --db {params} --in {input} > {log} 2>&1"
 
 
 rule raw_assembly_to_probes_matching:
     input:
-        probes=outdir / "assembled/filtering/probes.dmnd",
-        query=outdir / "assembled/scaffolds/{sample}.fasta",
+        probes="<workdir>/1_assembly/probes.dmnd",
+        query="<workdir>/1_assembly/10_raw_assembly/101_scaffolds/{sample}.fasta",
     output:
-        outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
+        "<results>/110_raw_matching_tables/{sample}.tsv",
     params:
         fields=lookup("diamond_matching/fields", within=pipeline),
         sensitivity=lookup("diamond_matching/sensitivity", within=pipeline),
@@ -28,7 +32,7 @@ rule raw_assembly_to_probes_matching:
         frameshift=lookup("diamond_matching/frameshift", within=pipeline),
         min_orf_len=lookup("diamond_matching/min_orf_len", within=pipeline),
     log:
-        outdir / "logs/assembled/filtering/raw_filtering/{sample}.log",
+        "<logs>/<stage>/110_raw_matching_diamond/{sample}.log",
     threads: 4
     conda:
         "../../envs/matching.yaml"
@@ -61,12 +65,12 @@ def get_max_intron_size(wildcards, input):
 
 rule extend_paths:
     input:
-        graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
-        table=outdir / "assembled/filtering/raw_matching_tables/{sample}.tsv",
-        stats=outdir / "logs/preprocessing/fastp/{sample}.json",
+        graph="<workdir>/1_assembly/10_raw_assembly/100_spades/{sample}/assembly_graph_with_scaffolds.gfa",
+        table="<results>/110_raw_matching_tables/{sample}.tsv",
+        stats="<logs>/0_preprocessing/01_trimming_fastp/{sample}.json",
     output:
-        ext_seqs=outdir / "assembled/extension/{sample}.fasta",
-        ext_table=outdir / "logs/assembled/extension/{sample}.tsv",
+        ext_table="<logs>/<stage>/111_paths_extension/1110_tables/{sample}.tsv",
+        ext_seqs="<results>/111_paths_extension/1111_sequences/{sample}.fasta",
     params:
         filter_low_dp_comps=lookup("filter_low_dp_comps", within=scf_ext),
         floor_len=lookup("floor_len_extension", within=scf_ext),
@@ -81,6 +85,6 @@ rule extend_paths:
         ),
         probe_pattern=lambda wildcards: probe_pattern,
     log:
-        outdir / "logs/assembled/extension/{sample}.log",
+        "<logs>/<stage>/111_extension/{sample}.log",
     script:
         "../../../src/gfa_graph.py"

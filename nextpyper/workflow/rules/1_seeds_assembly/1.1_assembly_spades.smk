@@ -1,3 +1,7 @@
+pathvars:
+    stage="1_assembly/10_raw_assembly",
+    results="<workdir>/<stage>",
+
 def select_asm_kmer(wildcards, input):
     spades_k = lookup("spades/k", within=pipeline)
     if spades_k == "auto":
@@ -15,17 +19,17 @@ def select_asm_kmer(wildcards, input):
 
 rule spades_assembly:
     input:
-        in1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
-        in2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
-        json=outdir / "logs/preprocessing/fastp/{sample}.json",
+        in1="<workdir>/0_preprocessing/02_cleaning/{sample}_R1.fastq.gz",
+        in2="<workdir>/0_preprocessing/02_cleaning/{sample}_R2.fastq.gz",
+        json="<logs>/0_preprocessing/01_trimming_fastp/{sample}.json",
     output:
-        graph=outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
+        graph="<results>/100_spades/{sample}/assembly_graph_with_scaffolds.gfa",
     params:
         k=select_asm_kmer,
         out_dir=subpath(output.graph, parent=True),
         extra="--meta --only-assembler",
     log:
-        outdir / "logs/assembled/spades/{sample}.log",
+        "<logs>/1_assembly/100_spades/{sample}.log",
     threads: 4
     shadow:
         "minimal"
@@ -37,8 +41,8 @@ rule spades_assembly:
 
 rule make_assembly_scaffolds:
     input:
-        outdir / "assembled/spades/{sample}/assembly_graph_with_scaffolds.gfa",
+        "<results>/100_spades/{sample}/assembly_graph_with_scaffolds.gfa",
     output:
-        outdir / "assembled/scaffolds/{sample}.fasta",
+        "<results>/101_scaffolds/{sample}.fasta",
     script:
         "../../../src/gfa2fasta.py"

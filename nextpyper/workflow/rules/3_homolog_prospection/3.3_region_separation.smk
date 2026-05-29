@@ -1,14 +1,16 @@
+pathvars:
+    stage="3_homolog_prospection/32_region_separation",
+    results="<workdir>/<stage>",
+    inter="3_homolog_prospection/31_homologs_filtering/312_filt_homologs",
+
+
 rule estimate_divergence:
     input:
-        expand(
-            outdir
-            / "homolog_prospection/homologs_filtering/homolog_filt_tables/{sample}.tsv",
-            sample=sample_list,
-        ),
+        expand("<workdir>/<inter>/3120_summary_tables/{sample}.tsv", sample=sample_list),
     output:
-        outdir / "homolog_prospection/region_separation/divergence_thresholds.json",
+        "<results>/divergence_thresholds.json",
     log:
-        outdir / "logs/homolog_prospection/region_separation/divergence_estimates.tsv",
+        "<logs>/<stage>/divergence_estimates.tsv",
     params:
         min_idt=lookup("scf_min_idt", within=homologs_filt_params),
         min_cov=lookup("divergence_estimation/min_cov", within=pipeline),
@@ -19,9 +21,9 @@ rule estimate_divergence:
 
 rule estimate_intron_ceiling:
     input:
-        expand(outdir / "logs/preprocessing/fastp/{sample}.json", sample=sample_list),
+        expand("<logs>/0_preprocessing/01_trimming_fastp/{sample}.json", sample=sample_list),
     output:
-        outdir / "homolog_prospection/region_separation/intron_ceilings.json",
+        "<results>/intron_ceilings.json",
     run:
         max_intron = {
             file.stem: read_insert_size(file) * 2 for file in map(Path, input)
@@ -31,38 +33,23 @@ rule estimate_intron_ceiling:
 
 use rule distribute_seeds as per_probe_scaffold_grouping with:
     input:
-        expand(
-            outdir
-            / "homolog_prospection/homologs_filtering/filtered_scfs/{sample}.fasta",
-            sample=sample_list,
-        ),
+        expand("<workdir>/<inter>/3121_sequences/{sample}.fasta", sample=sample_list),
     output:
-        expand(
-            outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
-            probe=probes_list,
-        ),
+        expand("<results>/320_inputs/3201_scfs/{probe}.fasta", probe=probes_list),
     log:
-        outdir / "logs/homolog_prospection/region_separation/scfs_grouping.log",
+        "<logs>/<stage>/scfs_grouping.log",
     params:
         pattern=lambda wildcards: SAUTE_POST_FIX_PAT,
 
 
 use rule distribute_seeds as split_matching_probes with:
     input:
-        probes=outdir / "homolog_prospection/matching_probes.fasta",
-        tables=expand(
-            outdir
-            / "homolog_prospection/homologs_filtering/homolog_filt_tables/{sample}.tsv",
-            sample=sample_list,
-        ),
+        probes="<workdir>/3_homolog_prospection/matching_probes.fasta",
+        tables=expand("<workdir>/<inter>/3120_summary_tables/{sample}.tsv", sample=sample_list),
     output:
-        expand(
-            outdir
-            / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
-            probe=probes_list,
-        ),
+        expand("<results>/320_inputs/3200_probes/{probe}.fasta", probe=probes_list),
     log:
-        outdir / "logs/homolog_prospection/region_separation/probe_grouping.log",
+        "<logs>/<stage>/probe_grouping.log",
     params:
         pattern=lambda wildcards: probe_pattern,
         mode="multi_probes" if multi_probes else "single_probes",
@@ -70,18 +57,12 @@ use rule distribute_seeds as split_matching_probes with:
 
 rule separate_cds_by_regions:
     input:
-        probes=outdir
-        / "homolog_prospection/region_separation/input_probes/{probe}.fasta",
-        scfs=outdir / "homolog_prospection/region_separation/input_scfs/{probe}.fasta",
-        div_map=outdir
-        / "homolog_prospection/region_separation/divergence_thresholds.json",
-        max_intron_map=outdir
-        / "homolog_prospection/region_separation/intron_ceilings.json",
+        probes="<results>/320_inputs/3200_probes/{probe}.fasta",
+        scfs="<results>/320_inputs/3201_scfs/{probe}.fasta",
+        div_map="<results>/divergence_thresholds.json",
+        max_intron_map="<results>/intron_ceilings.json",
     output:
-        directory(
-            outdir
-            / "homolog_prospection/region_separation/separation_output/scfs/{probe}"
-        ),
+        directory("<results>/321_output/3211_scfs/{probe}"),
     params:
         force_global_idt=lookup("enforce_global_idt_threshold", within=reg_sep),
         min_global_identity=lookup("min_global_identity", within=reg_sep),
@@ -90,7 +71,7 @@ rule separate_cds_by_regions:
         max_intron_length=lookup("max_intron_length", within=reg_sep),
         substitution_matrix=blosum62,
     log:
-        outdir / "logs/homolog_prospection/region_separation/separation/{probe}.log",
+        "<logs>/<results>/321_separation/{probe}.log",
     threads: 2
     conda:
         "../../envs/clustering.yaml"
@@ -100,15 +81,13 @@ rule separate_cds_by_regions:
 
 rule align_regions:
     input:
-        outdir / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
+        "<results>/321_output/3211_scfs/{probe}",
     output:
-        directory(
-            outdir / "homolog_prospection/region_separation/alns/{probe}",
-        ),
+        directory("<workdir>/3_homolog_prospection/33_alns/{probe}"),
     params:
         lookup("mafft_params", within=pipeline),
     log:
-        outdir / "logs/homolog_prospection/region_separation/alns/{probe}.log",
+        "<logs>/<stage>/322_alns/{probe}.log",
     threads: 2
     conda:
         "../../envs/alignment.yaml"
@@ -136,14 +115,8 @@ for kind in ("exons", "genetigs", "supercontigs"):
         name:
             f"collect_{kind}"
         input:
-            scfs=expand(
-                outdir
-                / "homolog_prospection/region_separation/separation_output/scfs/{probe}",
-                probe=probes_list,
-            ),
-            tribbles=expand(
-                outdir / "logs/saute/tribbles/{sample}.tsv", sample=sample_list
-            ),
+            scfs=expand("<results>/321_output/3211_scfs/{probe}", probe=probes_list),
+            tribbles=expand("<workdir>/2_saute/24_postprocessing/241_capping/2410_sequences/{sample}.tsv", sample=sample_list),
             ## Disabled temporarily. See chimera_tagging rule in 3.2 for details.
             # chimera_tags=expand(
             #     outdir
@@ -151,14 +124,9 @@ for kind in ("exons", "genetigs", "supercontigs"):
             #     sample=sample_list,
             # ),
         output:
-            expand(
-                outdir
-                / f"homolog_prospection/region_separation/consolidated/per_sample/{kind}/{{sample}}.fasta",
-                sample=sample_list,
-            ),
+            expand(f"<workdir>/3_homolog_prospection/34_collating_homologs/340_per_sample/{kind}/{{sample}}.fasta", sample=sample_list),
         log:
-            outdir
-            / f"logs/homolog_prospection/region_separation/consolidated/grouping/{kind}.log",
+            f"<logs>/3_homolog_prospection/34_collating_homologs/340_grouping/{kind}.log",
         params:
             pattern=lambda wildcards: COMP_FINAL_PAT,
             probes=probes_list,
@@ -170,20 +138,16 @@ for kind in ("exons", "genetigs", "supercontigs"):
         name:
             f"{kind}_coverage"
         input:
-            scfs=outdir
-            / f"homolog_prospection/region_separation/consolidated/per_sample/{kind}/{{sample}}.fasta",
-            clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
-            clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
+            scfs=f"<workdir>/3_homolog_prospection/34_collating_homologs/340_per_sample/{kind}/{{sample}}.fasta",
+            clean1="<workdir>/0_preprocessing/02_cleaning/{sample}_R1.fastq.gz",
+            clean2="<workdir>/0_preprocessing/02_cleaning/{sample}_R2.fastq.gz",
         output:
-            counts=outdir
-            / f"homolog_prospection/region_separation/consolidated/coverage/{kind}/{{sample}}.counts",
-            metabat=outdir
-            / f"homolog_prospection/region_separation/consolidated/coverage/{kind}/{{sample}}.metabat",
+            counts=f"<workdir>/3_homolog_prospection/34_collating_homologs/341_coverage/{kind}/{{sample}}.counts",
+            metabat=f"<workdir>/3_homolog_prospection/34_collating_homologs/341_coverage/{kind}/{{sample}}.metabat",
         params:
             extra="--proper-pairs-only --exclude-supplementary",
         log:
-            outdir
-            / f"logs/homolog_prospection/region_separation/consolidated/coverage/{kind}/{{sample}}.log",
+            f"<logs>/3_homolog_prospection/34_collating_homologs/341_coverage/{kind}/{{sample}}.log",
         threads: 4
         shadow:
             "shallow"

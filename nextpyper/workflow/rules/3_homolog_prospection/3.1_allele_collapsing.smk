@@ -1,10 +1,14 @@
+pathvars:
+    stage="3_homolog_prospection/30_allele_collapsing",
+    results="<workdir>/<stage>",
+
 rule allele_clustering:
     input:
-        outdir / "saute/final/merged/{sample}.fasta",
+        "<workdir>/2_saute/24_postprocessing/242_reheading/{sample}.fasta",
     output:
-        outdir / "homolog_prospection/allele_collapsing/{sample}.fasta",
+        "<results>/{sample}.fasta",
     log:
-        outdir / "logs/homolog_prospection/allele_collapsing/{sample}.log",
+        "<logs>/<stage>/{sample}.log",
     params:
         "--id 0.99 --minseqlength 5 --qmask none",
     threads: 4

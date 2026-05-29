@@ -1,25 +1,30 @@
+pathvars:
+    stage="1_assembly/12_filtering",
+    results="<workdir>/<stage>",
+    inter="1_assembly/11_extension/111_paths_extension/1111_sequences"
+
 use rule raw_assembly_to_probes_matching as seeds_to_probes_matching with:
     input:
-        probes=outdir / "assembled/filtering/probes.dmnd",
-        query=outdir / "assembled/extension/{sample}.fasta",
+        probes="<workdir>/1_assembly/probes.dmnd",
+        query="<workdir>/<inter>/{sample}.fasta",
     output:
-        outdir / "assembled/filtering/matching_tables/{sample}.tsv",
+        "<results>/120_matching_tables/{sample}.tsv",
     log:
-        outdir / "logs/assembled/filtering/diamond/{sample}.log",
+        "<logs>/<stage>/120_matching_diamond/{sample}.log",
 
 
 rule seeds_coverage:
     input:
-        scfs=outdir / "assembled/extension/{sample}.fasta",
-        clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
-        clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
+        scfs="<workdir>/<inter>/{sample}.fasta",
+        clean1="<workdir>/0_preprocessing/02_cleaning/{sample}_R1.fastq.gz",
+        clean2="<workdir>/0_preprocessing/02_cleaning/{sample}_R2.fastq.gz",
     output:
-        counts=outdir / "assembled/filtering/coverage/{sample}.counts",
-        metabat=outdir / "assembled/filtering/coverage/{sample}.metabat",
+        counts="<results>/121_coverage/{sample}.counts",
+        metabat="<results>/121_coverage/{sample}.metabat",
     params:
         extra="--proper-pairs-only --exclude-supplementary",
     log:
-        outdir / "logs/assembled/filtering/coverage/{sample}.log",
+        "<logs>/<stage>/121_coverage/{sample}.log",
     threads: 4
     shadow:
         "shallow"
@@ -36,14 +41,14 @@ rule seeds_coverage:
 
 rule seeds_filtering:
     input:
-        scfs=outdir / "assembled/extension/{sample}.fasta",
-        hits=outdir / "assembled/filtering/matching_tables/{sample}.tsv",
-        covs=outdir / "assembled/filtering/coverage/{sample}.metabat",
+        scfs="<workdir>/<inter>/{sample}.fasta",
+        hits="<results>/120_matching_tables/{sample}.tsv",
+        covs="<results>/121_coverage/{sample}.metabat",
     output:
-        scfs=outdir / "assembled/filtering/filtered_scfs/{sample}.fasta",
-        metrics=outdir / "assembled/filtering/seeds_filt_tables/{sample}.tsv",
+        metrics="<results>/122_filt_seeds/1220_summary_tables/{sample}.tsv",
+        scfs="<results>/122_filt_seeds/1221_filtered_scfs/{sample}.fasta",
     log:
-        outdir / "logs/assembled/filtering/seeds_filtering/{sample}.log",
+        "<logs>/<stage>/122_seeds_filtering/{sample}.log",
     params:
         min_cov=lookup("scf_min_cov", within=seeds_filt_params),
         min_idt=lookup("scf_min_idt", within=seeds_filt_params),

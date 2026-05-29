@@ -247,7 +247,7 @@ Check NextPyper documentation for more details about the config parameters.
 )
 @common_options
 def run(**kwargs):
-    """Run NextPyper"""
+    """Run NextPyper's workflow"""
     # Config to add or update in configfile
     merge_config = {"nextpyper": {"args": kwargs}}
 
@@ -407,13 +407,13 @@ def prepare(**kwargs):
 )
 # @common_options
 def config(configfile, system_config, **kwargs):
-    """Copy the degault config file to modify the workflow parameters before running."""
+    """Copy the default config to modify the workflow parameters before running."""
     copy_config(configfile, system_config=system_config)
 
 
 @click.command()
 def citation(**kwargs):
-    """Print the citation(s) for this tool"""
+    """Print the citation(s) for NextPyper"""
     print_citation()
 
 

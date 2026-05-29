@@ -146,6 +146,10 @@ else:
             f"Error: pattern {probe_pattern} does not match all probes:\n{"\n".join(names)}"
         )
 
+pathvars:
+    rundir=outdir.as_posix(),
+    workdir="<rundir>/workflow",
+    logs="<rundir>/logs",
 
 wildcard_constraints:
     sample=r"\w+",

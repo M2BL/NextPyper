@@ -9,9 +9,9 @@
 #       All rights reserved.
 
 
-"""Parse saute assembly and do multiple operations on them, including collapsing the alleles,
-optionally limiting the number of variants per component too, and Splitting into well behaved
-and "explosive" components."""
+"""Parse saute assembly and do multiple operations on them, including collapsing alleles,
+limiting the number of variants per component, and splitting into well behaved "normal"
+and tribble components."""
 
 __version__ = "0.1"
 
@@ -99,25 +99,25 @@ def collapse_records(recs: list[SeqRecord], df: pl.DataFrame) -> list[SeqRecord]
     return [rec for rec in recs if rec.id in set(df["query"])]
 
 
-def split_explosive_probes(
-    df: pl.DataFrame, explosive_limit: int
+def split_tribble_probes(
+    df: pl.DataFrame, tribble_limit: int
 ) -> tuple[list[SeqRecord], list[SeqRecord]]:
 
     allele_df = collapse_alleles_df(df)
     var_df = collapse_variants_df(allele_df)
 
-    explosive_probes = (
-        var_df.filter(pl.col("var_count") >= explosive_limit).select("probe").unique()
+    tribble_probes = (
+        var_df.filter(pl.col("var_count") >= tribble_limit).select("probe").unique()
     )
 
-    print(f"Total probes: {var_df["probe"].n_unique()}. Setting {explosive_limit=}")
-    print(f"Normal probes: {var_df["probe"].n_unique() - len(explosive_probes)}")
-    print(f"Explosive probes: {len(explosive_probes)}")
+    print(f"Total probes: {var_df["probe"].n_unique()}. Setting {tribble_limit=}")
+    print(f"Normal probes: {var_df["probe"].n_unique() - len(tribble_probes)}")
+    print(f"Tribble probes: {len(tribble_probes)}")
 
-    normal_df = df.join(explosive_probes, on="probe", how="anti")
-    expl_df = df.join(explosive_probes, on="probe")
+    normal_df = df.join(tribble_probes, on="probe", how="anti")
+    tribble_df = df.join(tribble_probes, on="probe")
 
-    return normal_df, expl_df
+    return normal_df, tribble_df
 
 
 def snakemake_call(snakemake):
@@ -126,8 +126,8 @@ def snakemake_call(snakemake):
 
         records_path = Path(snakemake.input[0])
         out_path = Path(snakemake.output.normal)
-        expl_out_path = snakemake.output.get("expl")
         tribbles_path = snakemake.output.get("tribbles")
+        tribble_stats_path = snakemake.output.get("tribble_stats")
 
         # Mandatory parameters
         pattern = snakemake.params.get("pattern", TARGET_PAT)
@@ -167,33 +167,31 @@ def snakemake_call(snakemake):
                 SeqIO.write(new_recs, out_path, "fasta")
 
             case "split" | "cap":
-                if mode == "split" and expl_out_path is None:
+                if mode == "split" and tribbles_path is None:
                     raise ValueError(f"For {mode=}, two outputs have to be specified.")
 
-                print(
-                    f"Splitting into normal and explosive sequence sets ({max_vars=})"
-                )
-                normal_df, explosive_df = split_explosive_probes(df, max_vars)
+                print(f"Splitting into normal and tribble sequence sets ({max_vars=})")
+                normal_df, tribble_df = split_tribble_probes(df, max_vars)
 
                 print(f"Sequences in normal set: {len(normal_df)}")
-                print(f"Sequences in explosive set: {len(explosive_df)}")
-                expl_allele_df = collapse_alleles_df(explosive_df)
+                print(f"Sequences in tribble set: {len(tribble_df)}")
+                tribble_allele_df = collapse_alleles_df(tribble_df)
                 print(
-                    f"Sequences in explosive set (allele collapsed): {len(expl_allele_df)}"
+                    f"Sequences in tribble set (allele collapsed): {len(tribble_allele_df)}"
                 )
 
                 if mode == "cap":
-                    expl_var_df = collapse_variants_df(expl_allele_df, max_vars)
+                    tribble_var_df = collapse_variants_df(tribble_allele_df, max_vars)
                     print(
-                        f"Sequences in explosive set (after capping to {max_vars=}): {len(expl_var_df)}"
+                        f"Sequences in tribble set (after capping to {max_vars=}): {len(tribble_var_df)}"
                     )
-                    if tribbles_path is not None:
-                        expl_allele_df.select(
+                    if tribble_stats_path is not None:
+                        tribble_allele_df.select(
                             "probe", "seed", "seed_id", "comp"
-                        ).unique().write_csv(tribbles_path, separator="\t")
+                        ).unique().write_csv(tribble_stats_path, separator="\t")
 
                     final_df = normal_df.select("query").vstack(
-                        expl_var_df.select("query")
+                        tribble_var_df.select("query")
                     )
                     final_recs = collapse_records(recs, final_df)
 
@@ -201,10 +199,10 @@ def snakemake_call(snakemake):
                 else:
 
                     normal_recs = collapse_records(recs, normal_df)
-                    explosive_recs = collapse_records(recs, expl_allele_df)
+                    tribble_recs = collapse_records(recs, tribble_allele_df)
 
                     SeqIO.write(normal_recs, out_path, "fasta")
-                    SeqIO.write(explosive_recs, Path(expl_out_path), "fasta")
+                    SeqIO.write(tribble_recs, Path(tribbles_path), "fasta")
 
             case _:
                 raise NotImplementedError(f"{mode=} not implemented.")

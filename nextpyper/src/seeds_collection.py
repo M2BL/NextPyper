@@ -206,8 +206,8 @@ def infer_sister_samples(
     return sister_samples
 
 
+# ToDo: Add logging to this function.
 def snakemake_call(snakemake):
-
     # Read inputs for seed collection
     cluster_tables_dir = snakemake.input.cluster_tables
     sample_probes_dir = snakemake.input.samples

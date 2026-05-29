@@ -1,14 +1,18 @@
+pathvars:
+    stage="0_preprocessing",
+    results="<workdir>/<stage>",
+
 rule fastp_pe:
     input:
         in1=lookup(query="sample=='{sample}'", cols="path_forward", within=sample_table),
         in2=lookup(query="sample=='{sample}'", cols="path_reverse", within=sample_table),
     output:
-        trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
-        trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
-        html=outdir / "logs/preprocessing/fastp/{sample}.html",
-        json=outdir / "logs/preprocessing/fastp/{sample}.json",
+        trim1="<results>/01_trimming/{sample}_R1.fastq.gz",
+        trim2="<results>/01_trimming/{sample}_R2.fastq.gz",        
+        html="<logs>/<stage>/01_trimming_fastp/{sample}.html",
+        json="<logs>/<stage>/01_trimming_fastp/{sample}.json",
     log:
-        outdir / "logs/preprocessing/fastp/{sample}.log",
+        "<logs>/<stage>/01_trimming_fastp/{sample}.log",
     params:
         trim_qual=lookup("preprocessing/trim_qual", within=pipeline),
         trim_min_len=lookup("preprocessing/min_len", within=pipeline),
@@ -29,9 +33,9 @@ rule fastp_pe:
 
 checkpoint prepare_cps:
     output:
-        outdir / "preprocessed/ref_cps.fasta",
+        "<results>/ref_cps.fasta",
     log:
-        outdir / "logs/preprocessing/cps.log",
+        "<logs>/<stage>/cps.log",
     params:
         cp_refs_map=cp_refs_map,
         custom=lookup("args/custom_cps", within=config),
@@ -59,14 +63,14 @@ checkpoint prepare_cps:
 
 rule reads_cp_cleaning:
     input:
-        ref=outdir / "preprocessed/ref_cps.fasta",
-        trim1=outdir / "preprocessed/trimmed/{sample}_R1.fastq.gz",
-        trim2=outdir / "preprocessed/trimmed/{sample}_R2.fastq.gz",
+        ref="<results>/ref_cps.fasta",
+        trim1="<results>/01_trimming/{sample}_R1.fastq.gz",
+        trim2="<results>/01_trimming/{sample}_R2.fastq.gz",   
     output:
-        clean1=outdir / "preprocessed/cleaned/{sample}_R1.fastq.gz",
-        clean2=outdir / "preprocessed/cleaned/{sample}_R2.fastq.gz",
+        clean1="<results>/02_cleaning/{sample}_R1.fastq.gz",
+        clean2="<results>/02_cleaning/{sample}_R2.fastq.gz",
     log:
-        outdir / "logs/preprocessing/cleaning/{sample}.log",
+        "<logs>/<stage>/02_cleaning/{sample}.log",
     conda:
         "../../envs/preprocessing.yaml"
     threads: 4
