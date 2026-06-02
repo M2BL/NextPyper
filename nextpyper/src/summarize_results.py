@@ -57,7 +57,6 @@ import polars as pl
 import pandas as pd
 import numpy as np
 
-
 # =======================================================================================
 #               CONSTANTS
 # =======================================================================================
@@ -112,17 +111,27 @@ class AsmLoc:
 
 
 ASM_PATHS = {
-    "seeds": AsmLoc("seeds", Path("assembled/filtering/filtered_scfs"), "flat"),
+    "seeds": AsmLoc(
+        "seeds",
+        Path("1_assembly/12_filtering/122_filt_seeds/1221_filtered_scfs"),
+        "flat",
+    ),
     "assembly": AsmLoc(
-        "assembly", Path("saute/target_assembly"), "nested", "fixed_vars.fasta"
+        "assembly", Path("2_saute/24_postprocessing/242_reheading"), "flat"
+    ),
+    "alleles": AsmLoc(
+        "alleles", Path("3_homolog_prospection/30_allele_collapsing"), "flat"
     ),
     "homologs": AsmLoc(
-        "homologs", Path("homolog_prospection/homologs_filtering/filtered_scfs"), "flat"
+        "homologs",
+        Path(
+            "3_homolog_prospection/31_homologs_filtering/312_filt_homologs/3121_sequences"
+        ),
+        "flat",
     ),
-    "alleles": AsmLoc("alleles", "homolog_prospection/allele_collapsing", "flat"),
     "separation": AsmLoc(
         "separation",
-        Path("homolog_prospection/region_separation/separation_output/scfs"),
+        Path("3_homolog_prospection/32_region_separation/321_output/3211_scfs"),
         "miniprot",
     ),
 }
@@ -134,23 +143,25 @@ ASM_PATHS = {
 
 
 def _get_raw_and_trimmed_reads(sample: str, rootdir: Path) -> int:
-    with (rootdir / f"logs/preprocessing/fastp/{sample}.json").open() as file:
+    with (
+        rootdir / f"logs/0_preprocessing/01_trimming_fastp/{sample}.json"
+    ).open() as file:
         report = json.load(file)
         raw_reads = report["summary"]["before_filtering"]["total_reads"]
         trimmed_reads = report["summary"]["after_filtering"]["total_reads"]
         return raw_reads, trimmed_reads
 
 
-def _get_matched_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
-    """Extract from bbduk logs the number of input and output reads. Depending on the
-    pattern, the output would be tha matching (contaminants) or non matching (clean reads).
-    """
+# def _get_matched_reads(sample: str, rootdir: Path, pat: str) -> tuple[int, int]:
+#     """Extract from bbduk logs the number of input and output reads. Depending on the
+#     pattern, the output would be tha matching (contaminants) or non matching (clean reads).
+#     """
 
-    read_ext = re.compile(pat)
-    with (
-        rootdir / f"logs/preprocessing/bbduk_probe_matching/{sample}.log"
-    ).open() as file:
-        return tuple(int(match[2]) for line in file if (match := read_ext.match(line)))
+#     read_ext = re.compile(pat)
+#     with (
+#         rootdir / f"logs/preprocessing/bbduk_probe_matching/{sample}.log"
+#     ).open() as file:
+#         return tuple(int(match[2]) for line in file if (match := read_ext.match(line)))
 
 
 def _get_len_probes(file: Path) -> int:
@@ -246,14 +257,19 @@ def summarize_workflow(results_dir: Path) -> pd.DataFrame:
     """
 
     ## Get the samples processed
+    if results_dir.name != "workflow":
+        results_dir = results_dir / "workflow"
+
     samples = sorted(
-        sample.name for sample in (Path(results_dir) / "assembled/spades").iterdir()
+        sample.name
+        for sample in (results_dir / "1_assembly/10_raw_assembly/100_spades").iterdir()
     )
     stats = pd.DataFrame(index=samples)
 
     ## Get the raw reads
     trimmed_stats = {
-        sample: _get_raw_and_trimmed_reads(sample, results_dir) for sample in samples
+        sample: _get_raw_and_trimmed_reads(sample, results_dir.parent)
+        for sample in samples
     }
 
     stats["raw_reads"] = {sample: raw for sample, (raw, trim) in trimmed_stats.items()}

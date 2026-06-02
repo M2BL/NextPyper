@@ -350,16 +350,11 @@ def validate(**kwargs):
 def summarize(**kwargs):
     """Summarize the results of a NextPyper run"""
 
-    run_directory_path = kwargs["rundir"]
+    run_directory_path = Path(kwargs["rundir"])
     out_table_path = kwargs["output"]
-    tab_file = kwargs["seqs_per_probe"]
 
-    # df, table = summarize_workflow(run_directory_path)
     df = summarize_workflow(run_directory_path)
     df.to_csv(out_table_path, index=False)
-
-    # if tab_file:
-    #     table.T.to_csv(tab_file, float_format="%.2f")
 
 
 @click.option(
