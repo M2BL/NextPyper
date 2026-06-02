@@ -42,7 +42,7 @@ rule all:
 onsuccess:
     (outdir / "outputs").mkdir(exist_ok=True)
     Path(outdir / "outputs/alignments").symlink_to("../workflow/3_homolog_prospection/33_alns", target_is_directory=True)
-    Path(outdir / "outputs/seqs_per_loci").symlink_to("../workflow/3_homolog_prospection/32_region_separation/321_output/3211_scfs", target_is_directory=True)
+    Path(outdir / "outputs/seqs_per_locus").symlink_to("../workflow/3_homolog_prospection/32_region_separation/321_output/3211_scfs", target_is_directory=True)
     Path(outdir / "outputs/seqs_per_sample").symlink_to("../workflow/3_homolog_prospection/34_collating_homologs/340_per_sample", target_is_directory=True)
     print("Workflow finished, without error")
     shell(f"cp {{log}} {outdir/ 'execution.log'}")

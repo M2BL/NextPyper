@@ -138,7 +138,7 @@ def check_probes(
     except NoGrouping as err:
         print(err, file=sys.stderr)
         print(
-            "Either this is a single-probe set or the pattern is not appropiate for multi-probe mode",
+            "Either this is a single-probe set or the pattern is not appropriate for multi-probe mode",
             file=sys.stderr,
         )
         return
