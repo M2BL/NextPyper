@@ -211,7 +211,7 @@ rule cap_tribble_variants:
         max_var=lookup(query="sample=='{sample}'", cols="homologs", within=sample_table),
         pattern=TARGET_COLLAPSE_PAT,
     log:
-        "<logs>/<stage>/241_capping/{sample}.log",
+        "<logs>/<stage>/24_postprocessing/241_capping/{sample}.log",
     script:
         "../../../src/var_asm_parser.py"
 
