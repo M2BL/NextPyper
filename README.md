@@ -1,5 +1,5 @@
 # NextPyper
-Recovery of homoeologous loci from targeted capture data in higher ploidy samples.
+Recovery of homoeologous loci from target capture data in higher ploidy samples.
 
 ## Table of contents
 
@@ -73,15 +73,15 @@ NextPyper requires two inputs, a probes file with the targets of your experiment
 NextPyper expects a nucleotide fasta file with the sequences of the targeted loci, what we call the probe set. Probe sets can be divided into two categories:
 
 - **Multi probe sets**: Contains multiple sequences per locus/gene (*e.g.* Angiosperms353).
-- **Single probe sets**: Contains a single sequence per locus. Usually, custom probe sets designed from a single reference genome are in this category.
+- **Single probe sets**: Contains a single sequence per locus. Usually, custom probe sets designed from a single reference genome fall in this category.
 
 Sequence names in the probe set are required to be simple (letters, numbers and underscore, characters only). Additionally no duplicated names are allowed.
 
-Currently, only coding regions are supported.
+Currently, only coding regions that can be translated are supported.
 
 #### Single-probe sets
 
-If you are using a single-probe set, only need to worry sticking to the naming conventions described above. To check your probes, you can use `nextpyper validate`:
+If you are using a single-probe set, you only need to worry about sticking to the naming conventions described above. To check your probes, you can use `nextpyper validate`:
 
 ```bash
 $ nextpyper validate --probes probes.fasta 
@@ -119,11 +119,13 @@ $ nextpyper validate --probes kew_probes.fasta --pattern "(\d+)$"
 # The pattern yields 353 groups from 4781 probe sequences
 ```
 
-Use the options `--out_summary` and `out_hierarchy` to get more details about the grouping.
+Use the options `--out_summary` and `--out_hierarchy` to get more details about the grouping.
 
 ### 2. Preparing your samples
 
 NextPyper expects a 4-column table that defines the identity and ploidy of your samples, and where to find their associated data.
+
+Knowledge about your samples' ploidy is not required to run NextPyper. Simply set it to 0, if you do not know it, or do not want to take it into account.
 
 The table requires a header with 4 columns (see an example here):
 
