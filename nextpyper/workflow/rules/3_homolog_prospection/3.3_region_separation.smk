@@ -21,7 +21,10 @@ rule estimate_divergence:
 
 rule estimate_intron_ceiling:
     input:
-        expand("<logs>/0_preprocessing/01_trimming_fastp/{sample}.json", sample=sample_list),
+        expand(
+            "<logs>/0_preprocessing/01_trimming_fastp/{sample}.json",
+            sample=sample_list,
+        ),
     output:
         "<results>/intron_ceilings.json",
     run:
@@ -29,6 +32,28 @@ rule estimate_intron_ceiling:
             file.stem: read_insert_size(file) * 2 for file in map(Path, input)
         }
         Path(output[0]).write_text(json.dumps(max_intron, indent=4))
+
+
+rule gather_tribbles:
+    input:
+        expand(
+            "<workdir>/2_saute/24_postprocessing/241_capping/2410_tribbles/{sample}.tsv",
+            sample=sample_list,
+        ),
+    output:
+        "<results>/tribbles_summary.tsv",
+    log:
+        "<logs>/<stage>/tribbles_summary.log",
+    run:
+        dfs = (
+            pl.read_csv(sample, separator="\t").with_columns(
+                sample=pl.lit(sample.stem)
+            )
+            for sample in map(Path, input)
+        )
+        pl.concat(df for df in dfs if not df.is_empty()).write_csv(
+            output[0], separator="\t"
+        )
 
 
 use rule distribute_seeds as per_probe_scaffold_grouping with:
@@ -45,7 +70,9 @@ use rule distribute_seeds as per_probe_scaffold_grouping with:
 use rule distribute_seeds as split_matching_probes with:
     input:
         probes="<workdir>/3_homolog_prospection/matching_probes.fasta",
-        tables=expand("<workdir>/<inter>/3120_summary_tables/{sample}.tsv", sample=sample_list),
+        tables=expand(
+            "<workdir>/<inter>/3120_summary_tables/{sample}.tsv", sample=sample_list
+        ),
     output:
         expand("<results>/320_inputs/3200_probes/{probe}.fasta", probe=probes_list),
     log:
@@ -61,8 +88,14 @@ rule separate_cds_by_regions:
         scfs="<results>/320_inputs/3201_scfs/{probe}.fasta",
         div_map="<results>/divergence_thresholds.json",
         max_intron_map="<results>/intron_ceilings.json",
+        tribbles="<results>/tribbles_summary.tsv",
     output:
         directory("<results>/321_output/3211_scfs/{probe}"),
+    log:
+        "<logs>/<stage>/321_miniprot/{probe}.log",
+    conda:
+        "../../envs/clustering.yaml"
+    threads: 2
     params:
         force_global_idt=lookup("enforce_global_idt_threshold", within=reg_sep),
         min_global_identity=lookup("min_global_identity", within=reg_sep),
@@ -70,12 +103,9 @@ rule separate_cds_by_regions:
         min_exonic_length=lookup("min_exonic_length", within=reg_sep),
         max_intron_length=lookup("max_intron_length", within=reg_sep),
         substitution_matrix=blosum62,
-        probes_outdir=outdir / "workflow/3_homolog_prospection/32_region_separation/321_output/3210_probes",
-    log:
-        "<logs>/<stage>/321_miniprot/{probe}.log",
-    threads: 2
-    conda:
-        "../../envs/clustering.yaml"
+        pattern=COMP_FINAL_PAT,
+        probes_outdir=outdir
+        / "workflow/3_homolog_prospection/32_region_separation/321_output/3210_probes",
     script:
         "../../../src/miniprot.py"
 
@@ -85,13 +115,13 @@ rule align_regions:
         "<results>/321_output/3211_scfs/{probe}",
     output:
         directory("<workdir>/3_homolog_prospection/33_alns/{probe}"),
-    params:
-        lookup("mafft_params", within=pipeline),
     log:
         "<logs>/3_homolog_prospection/33_alns/{probe}.log",
-    threads: 2
     conda:
         "../../envs/alignment.yaml"
+    threads: 2
+    params:
+        lookup("mafft_params", within=pipeline),
     shell:
         """
         rm -f {log}
@@ -102,10 +132,10 @@ rule align_regions:
             nseqs=$(grep -c "^>" $file)
 
             if [ "$nseqs" -gt 1 ]; then
-                mafft --thread {threads} {params} $file > {output}/$name 2>> {log}
+                mafft --thread {threads} {params} $file >{output}/$name 2>>{log}
             else
                 cp $file {output}/$name
-            fi 
+            fi
         done
         """
 
@@ -117,15 +147,11 @@ for kind in ("exons", "genetigs", "supercontigs"):
             f"collect_{kind}"
         input:
             scfs=expand("<results>/321_output/3211_scfs/{probe}", probe=probes_list),
-            tribbles=expand("<workdir>/2_saute/24_postprocessing/241_capping/2410_tribbles/{sample}.tsv", sample=sample_list),
-            ## Disabled temporarily. See chimera_tagging rule in 3.2 for details.
-            # chimera_tags=expand(
-            #     outdir
-            #     / "homolog_prospection/homologs_filtering/chimera_tagging/{sample}.tsv",
-            #     sample=sample_list,
-            # ),
         output:
-            expand(f"<workdir>/3_homolog_prospection/34_collating_homologs/340_per_sample/{kind}/{{sample}}.fasta", sample=sample_list),
+            expand(
+                f"<workdir>/3_homolog_prospection/34_collating_homologs/340_per_sample/{kind}/{{sample}}.fasta",
+                sample=sample_list,
+            ),
         log:
             f"<logs>/3_homolog_prospection/34_collating_homologs/340_grouping/{kind}.log",
         params:
@@ -145,19 +171,19 @@ for kind in ("exons", "genetigs", "supercontigs"):
         output:
             counts=f"<workdir>/3_homolog_prospection/34_collating_homologs/341_coverage/{kind}/{{sample}}.counts",
             metabat=f"<workdir>/3_homolog_prospection/34_collating_homologs/341_coverage/{kind}/{{sample}}.metabat",
-        params:
-            extra="--proper-pairs-only --exclude-supplementary",
         log:
             f"<logs>/3_homolog_prospection/34_collating_homologs/341_coverage/{kind}/{{sample}}.log",
-        threads: 4
         shadow:
             "shallow"
         conda:
             "../../envs/preprocessing.yaml"
+        threads: 4
+        params:
+            extra="--proper-pairs-only --exclude-supplementary",
         shell:
             """
-            minimap2 -t {threads} -ax sr {input.scfs} {input.clean1} {input.clean2} 2> {log} | \
-            samtools sort -u -@ {threads} > tmp_{wildcards.sample}.bam 2>> {log}
-            coverm contig -m count {params.extra} -b tmp_{wildcards.sample}.bam  > {output.counts} 2>> {log}
-            coverm contig -m metabat {params.extra} -b tmp_{wildcards.sample}.bam  > {output.metabat} 2>> {log}
+            minimap2 -t {threads} -ax sr {input.scfs} {input.clean1} {input.clean2} 2>{log} \
+                | samtools sort -u -@ {threads} >tmp_{wildcards.sample}.bam 2>>{log}
+            coverm contig -m count {params.extra} -b tmp_{wildcards.sample}.bam >{output.counts} 2>>{log}
+            coverm contig -m metabat {params.extra} -b tmp_{wildcards.sample}.bam >{output.metabat} 2>>{log}
             """

@@ -49,8 +49,9 @@ from dataclasses import dataclass, field
 from collections import defaultdict, namedtuple
 from io import StringIO
 import json
-from operator import attrgetter, add
+from operator import attrgetter, add, itemgetter
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -60,6 +61,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from Bio.Seq import Seq
 from intervaltree import Interval, IntervalTree
+import polars as pl
 
 from gff_parser import Cds
 from exon_intron import Exon
@@ -70,7 +72,8 @@ MAX_EXPANSION_INTERVAL = (
     10  # on scaffold size of flanking region on each side of the probe hits,
 )
 # used to find the common region that matches a given probe across multiple scaffolds.
-
+SCF_PATTERN = r"^(?P<sample1>.*?)\|(?P<sample2>.*?)-(?P<probe>.*?)_EDGE_(?P<seed_id>\d+)_length_(?P<len>\d+)_cov_(?P<cov>[\w.]+):(?P<comp>\d+):(?P<ctg1>\d+):(?P<ctg2>\d+):(?P<kmers>\d+)$"
+TRIB_ATTS = ("probe", "sample2", "seed_id", "comp", "sample1")
 
 # =======================================================================================
 #               FUNCTIONS
@@ -525,6 +528,7 @@ class OverlappingCds(MiniprotInit):
         discarding sequences without matches
     -non_overlapping: list of OverlappingSeqs objects that keep track of overlapping sequences and position on probe.
     -best_probe: name of the probe version that has the overall best mapping score.
+    -tribble_set: set with information about the tribble components of samples, expected as ("probe", "seed_sample2", "seed_id", "comp", "sample1").
     """
 
     user_probe: str = field(default=None)
@@ -532,6 +536,7 @@ class OverlappingCds(MiniprotInit):
     min_global_identity: float = field(default=0.85)
     max_intron_length: int = field(default=1000)
     max_intron_dict: dict[str, int] = field(default_factory=dict)
+    tribble_set: set[str] = field(default_factory=set)
 
     miniprot_out: Optional[defaultdict[str, dict[str, StringIO]]] = field(
         init=False, repr=False, default_factory=lambda: defaultdict(dict)
@@ -759,6 +764,17 @@ class OverlappingCds(MiniprotInit):
                         identity = extended_cds.global_identity
                         score = extended_cds.get_global_score()
                         description = f"[query={self.best_probe}] [cover={probe_cov/probe_length:.2f}] [ident={identity}] [score={score}]"
+                        if "SCF_PATTERN" in globals():
+                            get_comp = itemgetter(TRIB_ATTS)
+                            scf_pat = re.compile(SCF_PATTERN)
+                            tag = (
+                                "positive"
+                                if get_comp(scf_pat.search(scaffold_name))
+                                in self.tribble_set
+                                else "negative"
+                            )
+                            description += f" [tribble={tag}]"
+
                         print(
                             f"{scaffold_name},  {probe_cov/probe_length} {identity} {score}"
                         )
@@ -906,8 +922,10 @@ def snakemake_call(snakemake):
         outdir = Path(snakemake.output[0])
         scfs = Path(snakemake.input.scfs)
         probes = Path(snakemake.input.probes)
+        tribbles = snakemake.input.get("tribbles")
         params_dict = dict(snakemake.params)
         probes_outdir = params_dict.pop("probes_outdir")
+        SCF_PATTERN = re.compile(params_dict.pop("pattern"))
 
         ## The divergence map is ignored if desired, falling back to a global idt threhold.
         div_map = (
@@ -917,6 +935,11 @@ def snakemake_call(snakemake):
         )
         max_intron_map = json.loads(Path(snakemake.input.max_intron_map).read_bytes())
 
+        if tribbles:
+            tribble_set = set(
+                pl.read_csv(tribbles, separator="\t").cast(str).iter_rows()
+            )
+
         outdir.mkdir(parents=True, exist_ok=True)
         if scfs.stat().st_size > 0:
             olc = OverlappingCds(
@@ -925,6 +948,7 @@ def snakemake_call(snakemake):
                 min_global_identity_dict=div_map,
                 max_intron_dict=max_intron_map,
                 threads=threads,
+                tribble_set=tribble_set if tribbles else set(),
                 **params_dict,
             )
 

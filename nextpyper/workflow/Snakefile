@@ -23,7 +23,9 @@ include: Path(workflow.basedir) / "rules/3_homolog_prospection/3.3_region_separa
 ## List of outputs
 targets = []
 
-targets.append(expand("<workdir>/3_homolog_prospection/33_alns/{probes}", probes=probes_list))
+targets.append(
+    expand("<workdir>/3_homolog_prospection/33_alns/{probes}", probes=probes_list)
+)
 targets.append(
     expand(
         "<workdir>/3_homolog_prospection/34_collating_homologs/341_coverage/{kind}/{sample}.metabat",
@@ -40,10 +42,17 @@ rule all:
 
 
 onsuccess:
+    # Make final output directory and link the main results
     (outdir / "outputs").mkdir(exist_ok=True)
-    Path(outdir / "outputs/alignments").symlink_to("../workflow/3_homolog_prospection/33_alns", target_is_directory=True)
-    Path(outdir / "outputs/seqs_per_locus").symlink_to("../workflow/3_homolog_prospection/32_region_separation/321_output/3211_scfs", target_is_directory=True)
-    Path(outdir / "outputs/seqs_per_sample").symlink_to("../workflow/3_homolog_prospection/34_collating_homologs/340_per_sample", target_is_directory=True)
+    shell(
+        f"ln -sf ../workflow/3_homolog_prospection/33_alns {outdir / 'outputs/alignments'}"
+    )
+    shell(
+        f"ln -sf ../workflow/3_homolog_prospection/32_region_separation/321_output/3211_scfs {outdir / 'outputs/seqs_per_locus'}"
+    )
+    shell(
+        f"ln -sf ../workflow/3_homolog_prospection/34_collating_homologs/340_per_sample {outdir / 'outputs/seqs_per_sample'}"
+    )
     print("Workflow finished, without error")
     shell(f"cp {{log}} {outdir/ 'execution.log'}")
 
