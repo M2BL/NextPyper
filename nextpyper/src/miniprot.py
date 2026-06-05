@@ -765,7 +765,7 @@ class OverlappingCds(MiniprotInit):
                         score = extended_cds.get_global_score()
                         description = f"[query={self.best_probe}] [cover={probe_cov/probe_length:.2f}] [ident={identity}] [score={score}]"
                         if "SCF_PATTERN" in globals():
-                            get_comp = itemgetter(TRIB_ATTS)
+                            get_comp = itemgetter(*TRIB_ATTS)
                             scf_pat = re.compile(SCF_PATTERN)
                             tag = (
                                 "positive"
@@ -925,7 +925,6 @@ def snakemake_call(snakemake):
         tribbles = snakemake.input.get("tribbles")
         params_dict = dict(snakemake.params)
         probes_outdir = params_dict.pop("probes_outdir")
-        SCF_PATTERN = re.compile(params_dict.pop("pattern"))
 
         ## The divergence map is ignored if desired, falling back to a global idt threhold.
         div_map = (

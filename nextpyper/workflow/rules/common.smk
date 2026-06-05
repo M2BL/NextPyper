@@ -108,6 +108,9 @@ if use_ploidy and not has_ploidy:
     raise WorkflowError(
         "Ploidy information is expected but no useful ploidy information was found in the sample table."
     )
+elif not use_ploidy and has_ploidy:
+    sample_table["ploidy"] = 0
+    
 sample_list = sample_table["sample"].to_list()
 
 # Compute number of homologs expected according to ploidy information

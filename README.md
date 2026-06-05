@@ -3,20 +3,20 @@ Recovery of homoeologous loci from target capture data in higher ploidy samples.
 
 ## Table of contents
 
-- [NextPyper](#nextpyper)
-  - [Table of contents](#table-of-contents)
-  - [Installation](#installation)
-    - [Conda/Mamba](#condamamba)
-    - [Pip](#pip)
-    - [Manual](#manual)
-    - [Environments setup (recommended)](#environments-setup-recommended)
-  - [Usage](#usage)
-    - [1. Preparing your probes](#1-preparing-your-probes)
-      - [Single-probe sets](#single-probe-sets)
-      - [Multi-probe sets](#multi-probe-sets)
-    - [2. Preparing your samples](#2-preparing-your-samples)
-    - [3. Running NextPyper](#3-running-nextpyper)
-  - [Output](#output)
+- [Installation](#installation)
+  - [Conda/Mamba](#condamamba)
+  - [Pip](#pip)
+  - [Manual](#manual)
+- [Environments setup (recommended)](#environments-setup-recommended)
+- [Usage](#usage)
+  - [1. Preparing your probes](#1-preparing-your-probes)
+    - [Single-probe sets](#single-probe-sets)
+    - [Multi-probe sets](#multi-probe-sets)
+  - [2. Preparing your samples](#2-preparing-your-samples)
+  - [3. Running NextPyper](#3-running-nextpyper)
+- [Output](#output)
+  - [Sequence versions](#sequence-versions)
+  - [Output structure](#output-structure)
 
 
 ## Installation
@@ -50,7 +50,7 @@ cd NextPyper
 pip install .
 ```
 
-### Environments setup (recommended)
+## Environments setup (recommended)
 
 NextPyper uses [snakemake](https://snakemake.github.io/) to orchestrate and execute the different steps of the workflow, which uses conda to set up the packages and environments required at each stage.
 
@@ -161,6 +161,8 @@ nextpyper run --threads 16 --input new_hier_samples.tsv --probes kew_probes.fast
 
 ## Output
 
+### Sequence versions
+
 The main output of NextPyper are the samples' homologous sequences for each targeted locus. We generate 3 versions of these sequences, depending on the final postprocessing:
 
 - **Exons**: includes only the exonic part of the sequence.
@@ -169,7 +171,9 @@ The main output of NextPyper are the samples' homologous sequences for each targ
 
 The exons are the shorter and more conserved version of the output sequences, while the supercontigs are longer and include all discovered variation (which can be a bit noisy). Genetigs usually provide a good balance, containing more signal than the exons without it being overwhelming. You may want to explore which type of sequence suits better your purposes.
 
-NextPyper organizes these outputs in the following fashion:
+### Output structure
+
+NextPyper organizes its main outputs in the following fashion:
 
 - Homologous sequences per sample: `<outdir>/outputs/seqs_per_sample`
 - Homologous sequences per locus: `<outdir>/outputs/seqs_per_locus`

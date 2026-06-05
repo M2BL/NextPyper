@@ -45,12 +45,12 @@ rule gather_tribbles:
     log:
         "<logs>/<stage>/tribbles_summary.log",
     run:
-        dfs = (
+        dfs = [
             pl.read_csv(sample, separator="\t").with_columns(
                 sample=pl.lit(sample.stem)
             )
             for sample in map(Path, input)
-        )
+        ]
         pl.concat(df for df in dfs if not df.is_empty()).write_csv(
             output[0], separator="\t"
         )
@@ -103,7 +103,7 @@ rule separate_cds_by_regions:
         min_exonic_length=lookup("min_exonic_length", within=reg_sep),
         max_intron_length=lookup("max_intron_length", within=reg_sep),
         substitution_matrix=blosum62,
-        pattern=COMP_FINAL_PAT,
+        # pattern=COMP_FINAL_PAT,
         probes_outdir=outdir
         / "workflow/3_homolog_prospection/32_region_separation/321_output/3210_probes",
     script:
