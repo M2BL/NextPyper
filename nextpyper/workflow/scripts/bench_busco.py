@@ -250,14 +250,17 @@ def find_busco_category(
 
     # Case complete single copy
     if len(itree) == 1:
-        if interval_0.data.tcov >= min_length_percent:
+        if (
+            interval_0.data.tcov >= min_length_percent
+            and interval_0.data.idt >= min_idt
+        ):
             return 0
         return 3
 
     longest = max(itree, key=lambda i: (i.data.tcov, i.data.idt))
 
     # Case either complete single copy or multiple copies
-    if longest.data.tcov >= min_length_percent:
+    if longest.data.tcov >= min_length_percent and longest.data.idt >= min_idt:
         itree.remove(longest)
         if get_longest_path(itree, overlap_threshold, min_idt) >= length_threshold:
             return 1
