@@ -8,8 +8,14 @@
 #
 #       All rights reserved.
 
-# ToDo: Add docstring explaining the classification of simulated target sequences into categories.
 """
+Computes target-centric categories for a sample based on magicblast hits from a given assembly
+and the reference targets, and vsearch chimera detection tables.
+
+If batch mode is enabled, the script expects the hits, chimeras and targets
+to be folders containing files with the same names, which will be processed as separate samples,
+and will output a unified table with the categories for all samples.
+
 Category codes are defined as:
 
 0: Complete single copy
@@ -17,10 +23,11 @@ Category codes are defined as:
 2: Fragmented (single or multiple copies all fragmented)
 3: Missing
 4: Recovered chimera (The query is chimeric but still meets acceptance criteria)
-5: Failed chimera (The query is chimeric and does not meet acceptance criteria)
 
-An additional pseudo-category is computed as:
-6: Noise sequences (count of all the query sequences that were not matched to any targets)
+Additional Assembly-centric metrics are computed:
+- Chimeras (Number of chimeric sequences found)
+- Noise sequences (count of all the query sequences that were not matched to any targets)
+- Total number of sequences in the assembly
 
 """
 

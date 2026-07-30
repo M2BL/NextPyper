@@ -6,7 +6,6 @@ IFS=$'\n\t'
 ## This script computes the categories benchmark for a run comparing a set of queries 
 ## (a program output) and a set of targets (a gold standard). The categorization is further
 ## explained in bench_busco.py.  
-## Keeping hits with at least 25% coverage
 
 ## REQUIREMENTS:
 ## Magicblast, Vsearch, GNU parallel, python>=3.10 (with Biopython, polars and intervaltree) 
@@ -20,7 +19,7 @@ IFS=$'\n\t'
 ## 4. Max threads to use (the number of concurrent jobs will threads/4)
 
 ## EXAMPLE OF USAGE:
-## mmseqs_bench.sh <targets_dir> <queries_dir> <tables_dir> <max_threads>
+## categories_bench.sh <targets_dir> <queries_dir> <tables_dir> <max_threads>
 
 targets_dir=$1
 queries_dir=$2
@@ -76,13 +75,12 @@ mkdir -p "${tables_dir}/vsearch"
 orig_targets_dir="${targets_dir}"
 array=($(find ${targets_dir} -mindepth 1 -maxdepth 1 -type f -name "*.ndb"))
 if [ "${#array[@]}" -eq 0 ]; then
-    # We need to created the mmeseqs2 dbs
+    # We need to created the dbs
     mkdir -p "${targets_dir}_dbs"
 
     array=($(find ${targets_dir}_dbs -mindepth 1 -maxdepth 1 -type f -name "*.ndb"))
     if [ "${#array[@]}" -eq 0 ]; then
         # The dbs really do not exist
-        # parallel "mmseqs_create_db {} {//}_dbs/{/.}" ::: "${targets_dir}"/*.fasta
         parallel "blast_create_db {} {//}_dbs/{/.}" ::: "${targets_dir}"/*.fasta
     fi
 
