@@ -1,6 +1,10 @@
 # NextPyper
 Recovery of homoeologous loci from target capture data in higher ploidy samples.
 
+## Documentation
+
+Please refer to the [official documentation](https://m2bl.github.io/NextPyper/), which is more complete.
+
 ## Table of contents
 
 - [Installation](#installation)
