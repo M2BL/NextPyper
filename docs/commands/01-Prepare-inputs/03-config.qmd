@@ -1,0 +1,60 @@
+---
+title: "[config]{.doc-object-name .doc-function .doc-label .doc-label-cli}"
+tags: [Commands]
+toc: false
+# body-classes: doc-api-page
+# sidebar: cli-reference
+# page-navigation: false
+engine: jupyter
+# html-table-processing: none
+---
+
+# [nextpyper config]{.doc-object-name .doc-function .doc-label .doc-label-cli}
+
+::: {.doc-subject}
+Copy the default config to modify the workflow parameters before running.
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```bash
+nextpyper config [OPTIONS]
+```
+:::
+
+::: {.details summary="Full --help output"}
+
+::: {.cli-manpage}
+
+```{python}
+#| results: asis
+#| source-code: mock
+nextpyper config --help 
+# ---
+import subprocess
+
+result = subprocess.run(["nextpyper", "config", "-h"], capture_output=True, text=True)
+print(result.stdout)
+```
+
+
+:::
+
+:::
+
+## Options {.doc-parameters}
+
+::: {.doc-definition-items}
+<code><span class="doc-parameter-name">-o, &#45;&#45;output</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">nextpyper.out</span></code>
+:   Output directory
+
+:::
+
+
+<style>
+/* Target the code block inside your specific class wrapper */
+.cli-manpage pre, 
+.cli-manpage code {
+  line-height: 0.75 !important;
+  margin-bottom: 0 !important;
+}
+</style>

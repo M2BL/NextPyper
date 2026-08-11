@@ -1,0 +1,71 @@
+---
+title: "Preparing your probes"
+guide-section: "Getting Started"
+---
+
+# Preparing your probes
+
+NextPyper expects a nucleotide fasta file with the sequences of the targeted loci, what we call the *probe set*. Probe sets can be divided into two categories:
+
+- **Multi probe sets**: Contains multiple sequences per locus/gene (*e.g.* Angiosperms353).
+- **Single probe sets**: Contains a single sequence per locus. Usually, custom probe sets designed from a single reference genome fall in this category.
+
+Sequence names in the probe set are required to be simple (letters, numbers and underscore, characters only). Additionally no duplicated names are allowed.
+
+Currently, only coding regions that can be translated are supported.
+
+## Single-probe sets
+
+If you are using a single-probe set, you only need to worry about sticking to the naming conventions described above. To check your probes, you can use [`nextpyper validate`](../../docs/commands/01-Prepare-inputs/02-validate.qmd):
+
+::: {.terminal-block}
+
+
+```bash
+nextpyper validate --probes probes.fasta 
+```
+
+```text
+Probe sequence names comply with naming convention.
+Pattern (.*) yielded no grouping of the sequences.
+Either this is a single-probe set or the pattern is not appropriate for multi-probe mode
+```
+
+:::
+
+If you get the message above, your probe set is well formatted to run in single-probes mode.
+
+## Multi-probe sets
+
+If using a multi-probe set, NextPyper needs to know which sequences target the same locus. The option `--pattern` expects a RegEx (with one capture group) that will inform about that hierarchy based on the name of the probes. 
+
+For instance, for the Angiosperms353 probe set with sequence names:
+
+```text
+AJFN_probe4471
+Ambtr_probe4471
+BERS_probe4527
+ZENX_probe4527
+Arath_probe4691
+QUTB_probe4691
+```
+
+We can use `--pattern "(\d+)$"`, which will group the sequences by the number at the end of the sequence name (which is the LocusID).
+
+You can use the `validate` subcommand to check if your pattern groups your probes:
+
+::: {.terminal-block}
+
+```bash
+nextpyper validate --probes kew_probes.fasta --pattern "(\d+)$"
+```
+
+```text
+Probe sequence names comply with naming convention.
+The pattern yields 353 groups from 4781 probe sequences
+```
+
+:::
+
+Use the options `--out_summary` and `--out_hierarchy` to get more details about the grouping.
+

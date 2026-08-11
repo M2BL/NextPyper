@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 authors = [
     { name = "Simón Villanueva Corrales", email = "simon.corrales@ibot.cas.cz" },
-    { name = "Yann Bertrand", email = "Yann.Bertrand@ibot.cas.cz" }
+    { name = "Yann J.K. Bertrand", email = "Yann.Bertrand@ibot.cas.cz" }
 ]
 license = "MIT"
 license-files = ["nextpyper/nextpyper.LICENSE"]
@@ -43,12 +43,15 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/M2BL/NextPyper"
+Documentation = "https://m2bl.github.io/NextPyper"
 
 [project.scripts]
 nextpyper = "nextpyper.__main__:main"
+my-cli = "nextpyper.src:cli"
 
 [tool.setuptools]
 include-package-data = true
+packages = ["nextpyper"]
 
 [tool.setuptools.dynamic]
 version = {file = ["nextpyper/nextpyper.VERSION"]}

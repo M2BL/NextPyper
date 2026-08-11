@@ -1,0 +1,50 @@
+---
+title: "[citation]{.doc-object-name .doc-function .doc-label .doc-label-cli}"
+tags: [Commands]
+toc: false
+body-classes: doc-api-page
+sidebar: cli-reference
+page-navigation: false
+html-table-processing: none
+---
+
+# [nextpyper citation]{.doc-object-name .doc-function .doc-label .doc-label-cli}
+
+::: {.doc-subject}
+Print the citation(s) for NextPyper
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```bash
+nextpyper citation
+```
+:::
+
+::: {.details summary="Full --help output"}
+
+::: {.cli-manpage}
+
+```{python}
+#| results: asis
+#| source-code: mock
+nextpyper citation --help 
+# ---
+import subprocess
+
+result = subprocess.run(["nextpyper", "citation", "-h"], capture_output=True, text=True)
+print(result.stdout)
+```
+
+:::
+
+:::
+
+
+<style>
+/* Target the code block inside your specific class wrapper */
+.cli-manpage pre, 
+.cli-manpage code {
+  line-height: 0.75 !important;
+  margin-bottom: 0 !important;
+}
+</style>

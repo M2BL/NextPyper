@@ -1,0 +1,60 @@
+---
+title: "[gather]{.doc-object-name .doc-function .doc-label .doc-label-cli}"
+tags: [Commands]
+toc: false
+body-classes: doc-api-page
+sidebar: cli-reference
+page-navigation: false
+html-table-processing: none
+---
+
+# [nextpyper gather]{.doc-object-name .doc-function .doc-label .doc-label-cli}
+
+::: {.doc-subject}
+Generate a sample table given a data directory
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```bash
+nextpyper gather [OPTIONS]
+```
+:::
+
+::: {.details summary="Full --help output"}
+
+::: {.cli-manpage}
+
+```{python}
+#| results: asis
+#| source-code: mock
+nextpyper gather --help 
+# ---
+import subprocess
+
+result = subprocess.run(["nextpyper", "gather", "-h"], capture_output=True, text=True)
+print(result.stdout)
+```
+
+:::
+
+:::
+
+## Options {.doc-parameters}
+
+::: {.doc-definition-items}
+<code><span class="doc-parameter-name">-i, &#45;&#45;input</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span></code>
+:   **Required.** Path to data directory
+
+<code><span class="doc-parameter-name">-o, &#45;&#45;output</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">sample.tsv</span></code>
+:   Output sample table
+
+:::
+
+<style>
+/* Target the code block inside your specific class wrapper */
+.cli-manpage pre, 
+.cli-manpage code {
+  line-height: 0.75 !important;
+  margin-bottom: 0 !important;
+}
+</style>

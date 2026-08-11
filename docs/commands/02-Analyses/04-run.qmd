@@ -1,0 +1,121 @@
+---
+title: "[run]{.doc-object-name .doc-function .doc-label .doc-label-cli}"
+tags: [Commands]
+toc: false
+body-classes: doc-api-page
+sidebar: cli-reference
+page-navigation: false
+html-table-processing: none
+---
+
+# [nextpyper run]{.doc-object-name .doc-function .doc-label .doc-label-cli}
+
+::: {.doc-subject}
+Run NextPyper's workflow
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```bash
+nextpyper run [OPTIONS] [SNAKE_ARGS]...
+```
+:::
+
+::: {.details summary="Full --help output"}
+
+::: {.cli-manpage}
+
+```{python}
+#| results: asis
+#| source-code: mock
+nextpyper run --help 
+# ---
+import subprocess
+
+result = subprocess.run(["nextpyper", "run", "-h"], capture_output=True, text=True)
+print(result.stdout)
+```
+
+:::
+
+:::
+
+## Arguments {.doc-parameters}
+
+::: {.doc-definition-items}
+<code><span class="doc-parameter-name">SNAKE_ARGS</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">TEXT</span></code>
+:   Optional.
+
+:::
+
+## Options {.doc-parameters}
+
+::: {.doc-definition-items}
+<code><span class="doc-parameter-name">&#45;&#45;input</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span></code>
+:   **Required.** Input sample table
+
+<code><span class="doc-parameter-name">&#45;&#45;output</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">nextpyper.out</span></code>
+:   Output directory
+
+<code><span class="doc-parameter-name">&#45;&#45;probes</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span></code>
+:   **Required.** Probes used in the experiment (fasta)
+
+<code><span class="doc-parameter-name">&#45;&#45;pattern</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">TEXT</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">(.*)</span></code>
+:   For multi-probes, pattern used to group the probe sequences (RegEx). It needs one capture group.
+
+<code><span class="doc-parameter-name">&#45;&#45;multi-probes, &#45;&#45;single-probes</span></code>
+:   Whether the probe set has multiple or a single sequence per probe
+
+<code><span class="doc-parameter-name">&#45;&#45;no-ploidy, &#45;&#45;use-ploidy</span></code>
+:   Whether to use the ploidy information from the samples. An extra
+ploidy column is expected in the input sample table. Ploidy is 
+used to inform the expected number of homologs.
+
+<code><span class="doc-parameter-name">&#45;&#45;interseeds</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">CHOICE</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">sister</span></code>
+:   Which inter-sample seeds to use for SAUTE assembly. Interseeds 
+help to boost probe recovery at the expense of higher 
+computation time during assembly. The default `sister` infers 
+sister-samples that are likely the most informative to 
+get inter-sample seeds from.
+
+<code><span class="doc-parameter-name">&#45;&#45;no-reasm, &#45;&#45;reasm-complex-probes</span></code>
+:   Whether to reassemble the most complex ("explosive") probes found in
+each sample. This second assembly is tailored to better resolve such 
+complexity.
+
+<code><span class="doc-parameter-name">&#45;&#45;no-ref-cps, &#45;&#45;use-ref-cps</span></code>
+:   Download reference chloroplasts for cpDNA filtering.
+
+<code><span class="doc-parameter-name">&#45;&#45;ref-cps</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">TEXT</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">Ambtr,Arath,Orysa,UMUL,RQNK</span></code>
+:   Comma separated list of reference chloroplasts to download for
+cp filtering. Check cps_seqids.csv for a full list of values.
+
+<code><span class="doc-parameter-name">&#45;&#45;custom-cps</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span></code>
+:   Custom cps to use for cpDNA filtering (fasta). 
+These cps are used in addition to the ref cps.
+
+<code><span class="doc-parameter-name">&#45;&#45;configfile</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">TEXT</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">config.yaml</span></code>
+:   Custom config file [default: (outputDir)/config.yaml]
+
+<code><span class="doc-parameter-name">&#45;&#45;threads</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">INTEGER</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">1</span></code>
+:   Number of threads to use
+
+<code><span class="doc-parameter-name">&#45;&#45;use-conda, &#45;&#45;no-use-conda</span></code>
+:   Use conda for Snakemake rules
+
+<code><span class="doc-parameter-name">&#45;&#45;conda-prefix</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">/home/sivico/Documents/Projects/Ibot/M2B_IBOT/NextPyper/nextpyper/workflow/conda</span></code>
+:   Custom conda env directory
+
+<code><span class="doc-parameter-name">&#45;&#45;snake-default</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">TEXT</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">['--printshellcmds', '--nolock', '--show-failed-logs']</span></code>
+:   Customise Snakemake runtime args
+
+:::
+
+
+<style>
+/* Target the code block inside your specific class wrapper */
+.cli-manpage pre, 
+.cli-manpage code {
+  line-height: 0.75 !important;
+  margin-bottom: 0 !important;
+}
+</style>
