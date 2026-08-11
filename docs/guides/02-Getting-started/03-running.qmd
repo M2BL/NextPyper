@@ -11,7 +11,7 @@ At its most basic usage, you need to provide NextPyper the following arguments:
 - The probes (via `--probes`).
 - An output directory (via `--output`).
 - And whether we are dealing with `--single-probes` or `--multi-probes`.
-  - For `--multi-probes`, you must specify an appropriate ReGex pattern (via `--pattern`) the same you used to [prepare your probes](01-prep_probes.qmd).
+  - For `--multi-probes`, you must specify an appropriate ReGex pattern (via `--pattern`), the same you used to [prepare your probes](01-prep_probes.qmd).
   - For `--single-probes` you don't need to specify a pattern.
 
 ::: {.panel-tabset}
@@ -31,7 +31,7 @@ nextpyper run --threads 16 --input input_samples.tsv --probes kew_probes.fasta -
 :::
 
 
-Since `NextPyper` uses [snakemake](https://snakemake.readthedocs.io) to manage the workflow, you can pass additional snakemake arguments as extra arguments. 
+Since `NextPyper` uses [snakemake](https://snakemake.readthedocs.io) to orchestrate the workflow, you can pass additional snakemake arguments as extra arguments. 
 For instance, a very useful snakemake argument to use is `--dry-run`, which allows to test if `NextPyper` workflow will run succesfully without actually starting the heavy computation.
 
 ```bash

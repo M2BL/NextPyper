@@ -1,0 +1,53 @@
+---
+title: "Run options"
+guide-section: "Advanced usage"
+---
+
+## Plastid cleaning
+
+Before starting the assembly, `NextPyper` preprocess and cleans the reads from plastids by mapping them to a selected set of references. You can control what references are used with `--ref-cps`. 
+
+For convinience, NextPyper uses the [1KP sampleIDs](https://sites.google.com/a/ualberta.ca/onekp/home-page?authuser=0), to quickly select one or multiple plastids to use. You can explore the list of 1KP and NCBI plastid seqids in the table below:
+
+::: {.details summary="1KP IDs" icon="database"}
+
+```{python}
+#| echo: false
+import polars as pl
+from great_docs import tbl_explorer
+
+# Read the TSV from your repo
+df = pl.read_csv("../../../nextpyper/data/cps_seqids.csv")
+tbl_explorer(df)
+``` 
+
+:::
+
+You can use any comma-separated list of 1KP IDs you prefer using `--ref-cps`. By default, the set of `Ambtr,Arath,Orysa,UMUL,RQNK` is used, which covers the major Angiosperms clades.
+
+If none of the plastid reference on the above list convinces you, you can provide your own plastid references using `--custom-cps`.
+
+::: {.callout-caution}
+
+Since the cleaning step is reference agnostic, you could also use `--custom-cps` to give *any* sequences you want to filter your samples with (_e.g._ rRNA). However, the impact this may have in your samples comes at your own risk.
+
+Part of `NextPyper` secret to achieve high sensitivity is to consider ~~almost~~ all reads at assembly, and then keep only the components that are on target. We believe excluding data prior to this stage, with less resolution, is more likely to lead to undesired data loss.
+:::
+
+You can also turn off this mapping filtering step entirely by using `--no-ref-cps`.
+
+## Interseeds
+
+- None
+- sister
+- all
+
+
+## Reassembly
+
+To mitigate tribble generation, after SAUTE assembly,  `NextPyper` evaluates the probes that created tribbles and proceeds to isolate and reassemble them with more stringent assembly parameters. This allows to better resolve and/or simplify many of the tribbles originally found. 
+
+You can turn off this feature by using the `--no-reasm` option. This will make the workflow to run faster, at the expense of getting more sequences coming from tribbles, [which could be chimeric](). 
+
+
+## Ploidy

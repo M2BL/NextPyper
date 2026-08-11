@@ -24,8 +24,7 @@ nextpyper gather --input reads/ --output sample.tsv
 
 Which will take the `reads/` and write the sample table to use with `NextPyper` in `sample.tsv`.
 
-<details>
-<summary> Example of <b>reads/</b> </summary> 
+::: {.details summary="Example of reads/" icon="folder"}
 
 ```{.default}
 reads/
@@ -37,21 +36,19 @@ reads/
 └── sample3_R2.fastq
 ```
 
-</details>
+:::
 
 Your sample table will look similar to this:
 
 ```{python}
 #| echo: false
 #| output-title: sample.tsv
-import pandas as pd
-from IPython.display import Markdown
+import polars as pl
+from great_docs import tbl_preview
 
 # Read the TSV from your repo
-df = pd.read_csv("../../../nextpyper/data/mock/sample.tsv", sep="\t")
-
-# Display it dynamically as a clean markdown table
-Markdown(df.to_markdown(index=False))
+df = pl.read_csv("../../../nextpyper/data/mock/sample.tsv", separator="\t")
+tbl_preview(df)
 ``` 
 
 ::: {.callout-note}

@@ -86,24 +86,7 @@ site_url: "https://m2bl.github.io/NextPyper"
 # file frontmatter if needed for special cases.
 jupyter: python3
 
-# CLI Documentation
-# -----------------
-# cli:
-#   enabled: true              # Enable CLI documentation
-#   module: nextpyper.src.cli  # Module containing Click commands
-#   name: cli                  # Name of the Click command object
-#   desc: These are all the commands and subcommands for NextPyper.
-#   sections:
-# - title: Prepare inputs
-#   desc: Commands that help you prepare your inputs to run NextPyper.
-#   contents: [gather, validate, config]
-# - title: Analyses
-#   desc: Commands to run and analyze your data.
-#   contents: [run, summarize]
-# - title: Setup and others
-#   desc: Other commands.
-#   contents: [prepare, citation]
-
+homepage: user_guide
 user_guide: docs/guides
 
 sections:

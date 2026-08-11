@@ -212,9 +212,9 @@ Check NextPyper documentation for more details about the config parameters.
     show_default=True,
 )
 @click.option(
-    "--reasm-complex-probes/--no-reasm",
+    "--reasm-tribble-probes/--no-reasm",
     "reasm",
-    help="""Whether to reassemble the most complex ("explosive") probes found in
+    help="""Whether to reassemble the most complex ("tribble-inducing") probes found in
             each sample. This second assembly is tailored to better resolve such 
             complexity.""",
     default=True,
@@ -223,14 +223,14 @@ Check NextPyper documentation for more details about the config parameters.
 @click.option(
     "--use-ref-cps/--no-ref-cps",
     "use_ref_cps",
-    help="""Download reference chloroplasts for cpDNA filtering.""",
+    help="""Download plastid references for cpDNA filtering.""",
     default=True,
     show_default=True,
 )
 @click.option(
     "--ref-cps",
     "ref_cps",
-    help="""Comma separated list of reference chloroplasts to download for
+    help="""Comma separated list of reference plastids to download for
             cp filtering. Check cps_seqids.csv for a full list of values.""",
     type=str,
     default="Ambtr,Arath,Orysa,UMUL,RQNK",

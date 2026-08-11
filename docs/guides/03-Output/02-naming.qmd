@@ -33,20 +33,20 @@ outdir/outputs/seqs_per_locus
 
 Here, we have 2 loci (`LocusID=4793`, and `LocusID=4796`), where the first one recovered a single long fragment, whereas the second one was recovered in two shorter fragments. 
 
-## Sequence header
+## Sequence header metadata
 
-`NextPyper` final sequence headers contain plenty metadata about the sequence. We can divide the header into `Sequence name` and `Sequence description`, which are separated by a space `><seqID> <seq_description>`. For instance:
+`NextPyper` final sequence headers contain plenty metadata about the sequence. In the fasta format, we can divide the header into `Sequence name` and `Sequence description`, which are separated by a space `><seq_name> <seq_description>`. For instance:
 
-```text
+```{.default}
 >H1_F8|H1_B11-probe_10211_EDGE_145_length_674_cov_14.4421:1:8:8:9734 [query=probe_10211] [cover=0.38] [ident=0.9408] [score=741] [length=674] [chimeric=normal]
 TGGTATTGGACTTGGGATACCTGGTCTGGCATGTGTTCTCCTAATAGGATTCTGTGTGTT
 TGCAAGGTACAAGTCCAATGGTATTACAAATAACCTTAGACATATTGAAGCATCTTCAAC
 TGTATTACCCCAGCCACACCTTTTTGTAGTGGGACTTGATGAATCCGTAATACAATCTTA
 ```
 
-### Sequence name metadata
+### Sequence name
 
-Seqeunce name is comprised of the following fields:
+The sequence name is comprised of the following fields:
 
 `<sample_name>|<sample_seed>-<probe>_EDGE_<seed_id>_length_<len>_cov_<cov>:<comp>:<node1>:<node2>:<kmers>'`
 
@@ -64,10 +64,9 @@ Seqeunce name is comprised of the following fields:
 
 
 ::: {.callout-note}
-attributes `node1` and `node2` are only meaningful in the context of parsing SAUTE's graph assembly, and can be safely ignored otherwise. 
+Attributes `node1` and `node2` are only meaningful in the context of parsing SAUTE's graph assembly, and can be safely ignored otherwise. 
 
-<details>
-<summary> SAUTE's parsing explanation </summary> 
+::: {.details summary="SAUTE's parsing explanation" icon="sparkles"}
 
 SAUTE main output is the assembly graph, which is then parsed to generate the output sequences that `NextPyper` uses downstream. 
 
@@ -75,13 +74,13 @@ For each component in the graph, SAUTE iterates all the graph elements (nodes an
 
 The identity of the graph element linked to the parsed sequence is recorded in the `node1` and `node2` attributes. If `node1 == node2` the graph element was a node with the reported nodeID, whereas if `node1 != node2` the graph element was the edge that conected the reported nodes.
 
-</details>
+:::
 
 :::
 
 
 
-### Sequence description metadata
+### Sequence description
 
 Inspired by [Captus](https://edgardomortiz.github.io/captus.docs/assembly/extract/output/#fasta-headers-explanation), several attributes are added in the sequence description in brackets (`[]`). Those attributes are the following:
 
