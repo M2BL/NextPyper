@@ -182,3 +182,8 @@ nav_icons:
   navbar:
     User Guide: book-open
     Commands: terminal
+
+agents:
+  enabled: false
+  generate_skills: false
+  link_in_nav: false
