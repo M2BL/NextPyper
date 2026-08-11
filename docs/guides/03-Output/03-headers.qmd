@@ -1,4 +1,0 @@
----
-title: "Seq. Headers"
-guide-section: "Output"
----
