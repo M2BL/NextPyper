@@ -1,0 +1,21 @@
+---
+title: "Parameters"
+guide-section: "Advanced usage"
+---
+
+
+
+```{python}
+#| echo: false
+#| output: asis
+from pathlib import Path
+
+# Read the YAML file contents
+yaml_path = Path("../../../nextpyper/config/config.yaml")
+yaml_content = yaml_path.read_text()
+
+# Format as a Markdown code block
+markdown_snippet = f"```yaml\n{yaml_content}\n```"
+
+print(markdown_snippet)
+```

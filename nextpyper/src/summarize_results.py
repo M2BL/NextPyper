@@ -206,15 +206,23 @@ def compute_Nx(lens: np.ndarray[np.int64], x: float) -> int:
 
 
 def contiguity_stats(
-    recs: list[SeqRecord],
+    recs: list[SeqRecord] | list[int],
     Nx: tuple[int] = (25, 50, 75, 90),
     cutoffs: tuple[int] = (500, 750, 1000, 1500, 2000, 3000),
 ) -> dict[str, int]:
     "Compute basic contiguity stats of a given assembly/ set of sequences"
 
-    lens = np.fromiter(sorted(map(len, recs)), np.int64)
-    lens.sort()
+    match recs:
+        case list() if all(isinstance(x, SeqRecord) for x in recs):
+            lens = np.fromiter(map(len, recs), np.int64)
+        case list() if all(isinstance(x, int) for x in recs):
+            lens = np.array(recs, np.int64)
+        case _:
+            raise ValueError(
+                f"Expected a list of SeqRecord or a list of int, got {type(recs[0])} with {len(recs)} elements."
+            )
 
+    lens.sort()
     stats = {
         "num_seqs": lens.size,
         "sum": int(lens.sum()),

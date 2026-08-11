@@ -1,0 +1,67 @@
+---
+title: "[validate]{.doc-object-name .doc-function .doc-label .doc-label-cli}"
+tags: [Commands]
+toc: false
+body-classes: doc-api-page
+sidebar: cli-reference
+# page-navigation: false
+html-table-processing: none
+---
+
+# [nextpyper validate]{.doc-object-name .doc-function .doc-label .doc-label-cli} {#commands-validate}
+
+::: {.doc-subject}
+Validate a probes file for running NextPyper
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```bash
+nextpyper validate [OPTIONS]
+```
+:::
+
+::: {.details summary="Full --help output"}
+
+::: {.cli-manpage}
+
+```{python}
+#| results: asis
+#| source-code: mock
+nextpyper validate --help 
+# ---
+import subprocess
+
+result = subprocess.run(["nextpyper", "validate", "-h"], capture_output=True, text=True)
+print(result.stdout)
+```
+
+:::
+
+:::
+
+## Options {.doc-parameters}
+
+::: {.doc-definition-items}
+<code><span class="doc-parameter-name">-p, &#45;&#45;probes</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span></code>
+:   **Required.** Path to probes files
+
+<code><span class="doc-parameter-name">&#45;&#45;pattern</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">TEXT</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">(.*)</span></code>
+:   Pattern used to group the probes (RegEx)
+
+<code><span class="doc-parameter-name">&#45;&#45;out_summary</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default"></span></code>
+:   Write summary of grouping to this file
+
+<code><span class="doc-parameter-name">&#45;&#45;out_hierarchy</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default"></span></code>
+:   Write grouping hierarchy to this file
+
+:::
+
+
+<style>
+/* Target the code block inside your specific class wrapper */
+.cli-manpage pre, 
+.cli-manpage code {
+  line-height: 0.75 !important;
+  margin-bottom: 0 !important;
+}
+</style>

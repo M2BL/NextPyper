@@ -1,0 +1,20 @@
+---
+title: "Environments setup"
+guide-section: "Setup"
+---
+
+# Environments setup
+
+NextPyper uses [snakemake](https://snakemake.github.io/) to orchestrate and execute the different steps of the workflow, which uses conda to set up the packages and environments required at each stage.
+
+The first time you run NextPyper, this setup will be done automatically at the start of the workflow.
+
+Alternatively, you can set up these environments beforehand by running:
+
+```bash
+nextpyper prepare
+```
+
+Which will create all the neccesary environments, and install the packages `NextPyper` will need to run the whole workflow.
+
+By default, the environments will be created in `NextPyper`'s installation folder. You can use `--conda-prefix` to specify a different location. If so, you will need to specify `--conda-prefix` when [running nextpyper](../02-Getting-started/03-running.qmd).

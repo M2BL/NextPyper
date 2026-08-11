@@ -1,0 +1,53 @@
+---
+title: "Installation"
+guide-section: "Setup"
+---
+
+# Installation
+
+Regardless of the installation method, `NextPyper` requires `conda` in your PATH, to manage and deploy workflow environments.
+
+## Conda/Mamba and Pip
+
+If you already have [bioconda](https://bioconda.github.io/) set up, you can create a new environment and simply run:
+
+::: {.panel-tabset}
+
+### conda 
+
+```bash
+conda install nextpyper
+```
+
+### mamba
+
+```bash
+mamba install nextpyper
+```
+
+### Pip
+
+```bash
+pip install nextpyper
+```
+
+:::
+
+<!-- ```bash
+conda install nextpyper # or mamba
+``` -->
+
+## Manual 
+
+You can also install NextPyper manually by cloning the [repository]("https://github.com/M2BL/NextPyper") and installing it locally. We recommend to create a new environment.
+
+```bash
+git clone git@github.com:M2BL/NextPyper.git
+cd NextPyper
+pip install .
+```
+
+::: {.callout-tip}
+We highly recommend to [setup NextPyper environments](02-env_setup.qmd) after installation to complete the setup.
+:::
+

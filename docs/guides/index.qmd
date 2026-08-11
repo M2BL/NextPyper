@@ -1,0 +1,36 @@
+---
+title: "Welcome"
+guide-section: "Setup"
+---
+
+# NextPyper
+
+Recovery of homoeologous loci from target capture data in higher ploidy samples.
+
+*Brief description*
+
+
+
+To get started, first [install](user-guide/01-Setup/01-installation.qmd) and [setup](user-guide/01-Setup/02-env_setup.qmd) NextPyper environments.
+
+To run `NextPyper`, you will need to [prepare your probes](user-guide/02-Getting-started/01-prep_probes.qmd), and [prepare your samples](user-guide/02-Getting-started/02-prep_samples.qmd). Afterwards, You can proceed to [run NextPyper](user-guide/02-Getting-started/03-running.qmd) workflow.
+
+You may want to familiarize with `NextPyper`'s [output](user-guide/03-Output/01-folder_structure.qmd), and check their [naming conventions and metadata](user-guide/03-Output/02-naming.qmd). To have an overview of your results, you can summarize them by computing [stats]() of the run.
+
+
+- Output
+  - Structure
+  - Naming
+  - Stats
+- Concepts
+  - Seeds (SATs)
+  - Tribbles
+- Workflow
+  - Diagram
+  - Folder structure
+- Advanced usage
+  - NextPyper run Options
+    - Chloroplast 
+    - Interseeds
+    - Reassembly
+  - Workflow parameters

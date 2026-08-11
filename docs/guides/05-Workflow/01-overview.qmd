@@ -1,0 +1,6 @@
+---
+title: "Overview"
+guide-section: "Workflow"
+---
+
+![Diagram](../assets/NextPyper_diagram.svg)

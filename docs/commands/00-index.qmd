@@ -1,0 +1,87 @@
+---
+title: "[nextpyper]{.doc-object-name .doc-function .doc-label .doc-label-cli-group}"
+body-classes: doc-api-page
+sidebar: cli-reference
+page-navigation: false
+html-table-processing: none
+---
+
+# [nextpyper]{.doc-object-name .doc-function .doc-label .doc-label-cli-group}
+
+::: {.doc-subject}
+Recovery of homoeologous loci from target capture data in higher ploidy samples.
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```bash
+nextpyper [OPTIONS] COMMAND [ARGS]...
+```
+:::
+
+::: {.doc-text}
+For more options, run: nextpyper command --help
+
+:::
+
+::: {.details summary="Full --help output"}
+
+::: {.cli-manpage}
+
+```{python}
+#| results: asis
+#| source-code: mock
+nextpyper --help
+# ---
+import subprocess
+
+result = subprocess.run(["nextpyper", "-h"], capture_output=True, text=True)
+print(result.stdout)
+```
+
+:::
+
+:::
+
+## Options {.doc-parameters}
+
+::: {.doc-definition-items}
+<code><span class="doc-parameter-name">-v, &#45;&#45;version</span></code>
+:   Show the version and exit.
+
+:::
+
+## Commands {.doc-parameters}
+
+::: {.doc-definition-items}
+<code>[run]{.doc-parameter-name}</code>
+:   [Run NextPyper's workflow](run.qmd)
+
+<code>[gather]{.doc-parameter-name}</code>
+:   [Generate a sample table given a data directory](gather.qmd)
+
+<code>[validate]{.doc-parameter-name}</code>
+:   [Validate a probes file for running NextPyper](validate.qmd)
+
+<code>[summarize]{.doc-parameter-name}</code>
+:   [Summarize the results of a NextPyper run](summarize.qmd)
+
+<code>[prepare]{.doc-parameter-name}</code>
+:   [Prepare the conda environments to run NextPyper](prepare.qmd)
+
+<code>[config]{.doc-parameter-name}</code>
+:   [Copy the default config to modify the workflow parameters before running.](config.qmd)
+
+<code>[citation]{.doc-parameter-name}</code>
+:   [Print the citation(s) for NextPyper](citation.qmd)
+
+:::
+
+
+<style>
+/* Target the code block inside your specific class wrapper */
+.cli-manpage pre, 
+.cli-manpage code {
+  line-height: 0.75 !important;
+  margin-bottom: 0 !important;
+}
+</style>

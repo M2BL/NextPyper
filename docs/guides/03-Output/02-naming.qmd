@@ -1,0 +1,92 @@
+---
+title: "Naming and metadata"
+guide-section: "Output"
+---
+
+# Naming conventions and metadata
+
+## Output files
+
+For both `seqs_per_locus/` and `alignments/` output folders, you will find the sequences organized per locus, in separate folders, following the naming convention: `<LocusID>_<frag_start>_<frag_end>_<seq_version>.fasta`, where: 
+
+- **LocusID**: identifier for the Locus.
+- **frag_start**: Start position of the sequence (relative to the probe).
+- **frag_start**: End position of the sequence (relative to the probe).
+- **seq_version**: Either exons, genetigs, or supercontigs version of the sequences.
+
+For instance, a part of an output directory can look like this:
+
+```{.default}
+outdir/outputs/seqs_per_locus
+├── 4793
+│   ├── 4793_18_540_exons.fasta
+│   ├── 4793_18_540_genetigs.fasta
+│   └── 4793_18_540_supercontigs.fasta
+└── 4796
+    ├── 4796_0_158_exons.fasta
+    ├── 4796_0_158_genetigs.fasta
+    ├── 4796_0_158_supercontigs.fasta
+    ├── 4796_179_237_exons.fasta
+    ├── 4796_179_237_genetigs.fasta
+    └── 4796_179_237_supercontigs.fasta
+```
+
+Here, we have 2 loci (`LocusID=4793`, and `LocusID=4796`), where the first one recovered a single long fragment, whereas the second one was recovered in two shorter fragments. 
+
+## Sequence header metadata
+
+`NextPyper` final sequence headers contain plenty metadata about the sequence. In the fasta format, we can divide the header into `Sequence name` and `Sequence description`, which are separated by a space `><seq_name> <seq_description>`. For instance:
+
+```{.default}
+>H1_F8|H1_B11-probe_10211_EDGE_145_length_674_cov_14.4421:1:8:8:9734 [query=probe_10211] [cover=0.38] [ident=0.9408] [score=741] [length=674] [chimeric=normal]
+TGGTATTGGACTTGGGATACCTGGTCTGGCATGTGTTCTCCTAATAGGATTCTGTGTGTT
+TGCAAGGTACAAGTCCAATGGTATTACAAATAACCTTAGACATATTGAAGCATCTTCAAC
+TGTATTACCCCAGCCACACCTTTTTGTAGTGGGACTTGATGAATCCGTAATACAATCTTA
+```
+
+### Sequence name
+
+The sequence name is comprised of the following fields:
+
+`<sample_name>|<sample_seed>-<probe>_EDGE_<seed_id>_length_<len>_cov_<cov>:<comp>:<node1>:<node2>:<kmers>'`
+
+- **sample_name**: Name of the sample this sequence belongs to. 
+- **sample_seed**: Name of the sample whose seed was used to retrieve this sequence.
+- **probe**: name of the probe/locus this sequence belongs to. It does not have to match the probe sequenceID.
+- **seed_id**: ID assigned to the seed used to retrieve this sequence. For traceability purposes.
+- **len**: Length of the sequence *after* SAUTE assembly. It will match the supercontig length, but not the exons nor genetig length.
+- **cov**: *Kmer* coverage computed from SAUTE's reported kmers and the sequence's *len*.
+- From the SAUTEs assembly:
+  - **comp**: Component ID. In combination with *sample_seed*, *probe*, and *seed_id* it allows to trace the sequence to its component of origin in the SAUTE's assembly graph.
+  - **node1**: ID of the first parsing node in the component the sequence was taken from. 
+  - **node2**: ID of the second parsing node in the component the sequence was taken from.
+  - **kmers**: Number of Kmers covering the sequence
+
+
+::: {.callout-note}
+Attributes `node1` and `node2` are only meaningful in the context of parsing SAUTE's graph assembly, and can be safely ignored otherwise. 
+
+::: {.details summary="SAUTE's parsing explanation" icon="sparkles"}
+
+SAUTE main output is the assembly graph, which is then parsed to generate the output sequences that `NextPyper` uses downstream. 
+
+For each component in the graph, SAUTE iterates all the graph elements (nodes and edges) and computes which path that traverses the current element has the highest score (kmer count). If it is not already present, the found path is added to the set of sequences to be generated for that component. 
+
+The identity of the graph element linked to the parsed sequence is recorded in the `node1` and `node2` attributes. If `node1 == node2` the graph element was a node with the reported nodeID, whereas if `node1 != node2` the graph element was the edge that conected the reported nodes.
+
+:::
+
+:::
+
+
+
+### Sequence description
+
+Inspired by [Captus](https://edgardomortiz.github.io/captus.docs/assembly/extract/output/#fasta-headers-explanation), several attributes are added in the sequence description in brackets (`[]`). Those attributes are the following:
+
+- **query**: sequenceID of the *probe* that match this sequence. 
+- **cover**: How much the sequence covers the probe (% of bases).
+- **ident**: identity relative to the probe.
+- **score**: miniprot match score of the sequence to the probe.
+- **tribble**: Whether the sequence stems from a [tribble](). It can be `positive` or `negative`.
+- **length**: *Actual* length of the sequence. Different from the \<len> reported in the sequence name.

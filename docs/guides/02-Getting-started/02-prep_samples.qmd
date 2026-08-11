@@ -1,0 +1,56 @@
+---
+title: "Preparing your samples"
+guide-section: "Getting Started"
+---
+
+# Preparing your samples
+
+NextPyper expects a 4-column table that defines the identity and ploidy of your samples, and where to find their associated data.
+
+The table requires a header with 4 columns (see an example here):
+
+- **sample:** the name of the sample.
+- **path_forward:** absolute path to the forward reads. It can be .gz compressed.
+- **path_reverse:** absolute path to the reverse reads. It can be .gz compressed.
+- **ploidy:** the ploidy of the sample. If 0, ploidy won't be taken into account to process the sample.
+
+Knowledge about your samples' ploidy is not required to run `NextPyper`. Simply set it to 0, if you do not know it, or do not want to take it into account.
+
+You can use [`nextpyper gather`](../../docs/commands/Prepare-inputs/gather.qmd) to help you create the sample table. From a data folder with only the paired-end data (forward and reverse files), you can run:
+
+```bash
+nextpyper gather --input reads/ --output sample.tsv
+```
+
+Which will take the `reads/` and write the sample table to use with `NextPyper` in `sample.tsv`.
+
+::: {.details summary="Example of reads/" icon="folder"}
+
+```{.default}
+reads/
+├── sample1_R1.fastq
+├── sample1_R2.fastq
+├── sample2_R1.fastq
+├── sample2_R2.fastq
+├── sample3_R1.fastq
+└── sample3_R2.fastq
+```
+
+:::
+
+Your sample table will look similar to this:
+
+```{python}
+#| echo: false
+#| output-title: sample.tsv
+import polars as pl
+from great_docs import tbl_preview
+
+# Read the TSV from your repo
+df = pl.read_csv("../../../nextpyper/data/mock/sample.tsv", separator="\t")
+tbl_preview(df)
+``` 
+
+::: {.callout-note}
+Sample names are inferred based on the common prefix between the forward and reverse files. 
+:::

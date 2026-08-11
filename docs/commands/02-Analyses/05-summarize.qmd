@@ -1,0 +1,61 @@
+---
+title: "[summarize]{.doc-object-name .doc-function .doc-label .doc-label-cli}"
+tags: [Commands]
+toc: false
+body-classes: doc-api-page
+sidebar: cli-reference
+page-navigation: false
+html-table-processing: none
+---
+
+# [nextpyper summarize]{.doc-object-name .doc-function .doc-label .doc-label-cli}
+
+::: {.doc-subject}
+Summarize the results of a NextPyper run
+:::
+
+::: {.doc-signature .doc-Kind.FUNCTION}
+```bash
+nextpyper summarize [OPTIONS]
+```
+:::
+
+::: {.details summary="Full --help output"}
+
+::: {.cli-manpage}
+
+```{python}
+#| results: asis
+#| source-code: mock
+nextpyper summarize --help 
+# ---
+import subprocess
+
+result = subprocess.run(["nextpyper", "summarize", "-h"], capture_output=True, text=True)
+print(result.stdout)
+```
+
+:::
+
+:::
+
+## Options {.doc-parameters}
+
+::: {.doc-definition-items}
+<code><span class="doc-parameter-name">-r, &#45;&#45;rundir</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span></code>
+:   **Required.** Path to run directory
+
+<code><span class="doc-parameter-name">-o, &#45;&#45;output</span><span class="doc-parameter-annotation-sep">:</span> <span class="doc-parameter-annotation">PATH</span> <span class="doc-parameter-default-sep op">=</span> <span class="doc-parameter-default">run_stats.csv</span></code>
+:   Output summary table
+
+:::
+
+
+<style>
+/* Target the code block inside your specific class wrapper */
+.cli-manpage pre, 
+.cli-manpage code {
+  line-height: 0.75 !important;
+  margin-bottom: 0 !important;
+}
+</style>

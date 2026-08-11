@@ -1,0 +1,6 @@
+---
+title: "Tribbles"
+guide-section: "Concepts"
+---
+
+![tribbles](../assets/tribbles.svg)
