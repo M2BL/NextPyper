@@ -12,7 +12,9 @@ NextPyper expects a nucleotide fasta file with the sequences of the targeted loc
 
 Sequence names in the probe set are required to be simple (letters, numbers and underscore, characters only). Additionally no duplicated names are allowed.
 
-Currently, only coding regions that can be translated are supported.
+:::{callout-warning}
+Currently, only coding regions that can be translated into aminoacids are supported. 
+:::
 
 ## Single-probe sets
 
@@ -50,7 +52,7 @@ Arath_probe4691
 QUTB_probe4691
 ```
 
-We can use `--pattern "(\d+)$"`, which will group the sequences by the number at the end of the sequence name (which is the LocusID).
+We can use `--pattern "(\d+)$"`, which will group the sequences by the number at the end of the sequence name (which then becomes the [LocusID](../03-Concepts/folder_structure.qmd#output-files)).
 
 You can use the `validate` subcommand to check if your pattern groups your probes:
 

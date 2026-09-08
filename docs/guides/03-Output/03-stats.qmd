@@ -1,4 +1,0 @@
----
-title: "Stats"
-guide-section: "Output"
----

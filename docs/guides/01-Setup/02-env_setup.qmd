@@ -5,9 +5,9 @@ guide-section: "Setup"
 
 # Environments setup
 
-NextPyper uses [snakemake](https://snakemake.github.io/) to orchestrate and execute the different steps of the workflow, which uses conda to set up the packages and environments required at each stage.
+`NextPyper` uses [snakemake](https://snakemake.github.io/) to orchestrate and execute the different steps of the workflow, which uses conda to set up the packages and environments required at each stage.
 
-The first time you run NextPyper, this setup will be done automatically at the start of the workflow.
+The first time you run `NextPyper`, this setup will be done automatically at the start of the workflow.
 
 Alternatively, you can set up these environments beforehand by running:
 

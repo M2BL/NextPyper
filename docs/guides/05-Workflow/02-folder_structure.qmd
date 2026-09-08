@@ -1,6 +1,0 @@
----
-title: "Folder structure"
-guide-section: "Workflow"
----
-
-WIP

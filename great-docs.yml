@@ -130,60 +130,21 @@ navigation:
 tags:
   enabled: true
 
-# sidebar:
-#   - title: "Getting Started"
-#     contents:
-#       - index.qmd
-#       # - installation.qmd (if you have it)
-
-#   - title: "CLI Reference"
-#     contents:
-#       - reference/cli/index.qmd
-#       - reference/cli/*.qmd            # You can use a wildcard to capture all the multi-file CLI sub-commands
-
-# navbar:
-#   background: primary    # Optional: sets the theme color background
-#   search: true           # Optional: includes a search bar in the navbar
-#   left:
-#     - text: "Home"
-#       file: index.qmd
-
-#     - text: "CLI Reference"
-#       menu:
-#         - text: "Overview"
-#           file: reference/cli/index.qmd
-#         - text: "Commands"
-#           file: reference/cli/*.qmd   # Captures the rest of the generated CLI sub-pages
-
-# API Reference Structure
-# -----------------------
-# Auto-discovery couldn't determine your package's public API.
-# You can manually specify which items to document here.
-#
-# Uncomment and customize the reference section below:
-#
-# reference:
-#   - title: Commands
-#     desc: NextPyper commands.
-#     contents:
-#       - reference/cli/index.qmd
-#       - reference/cli/*.qmd
-
-# - title: Classes
-#   desc: Main classes for working with the package
-#   contents:
-#     - name: MyClass
-#       members: false       # Don't document methods inline
-#     - SimpleClass          # Methods documented inline (default)
-#
-# After editing, run 'great-docs build' to generate your documentation.
-
 nav_icons:
   navbar:
     User Guide: book-open
     Commands: terminal
 
-agents:
+format:
+  html:
+    grid:
+      sidebar-width: 150px    # Left panel width (default: 250px)
+      body-width: 1200px      # Center content width (default: 800px)
+      margin-width: 220px     # Right panel / TOC width (default: 250px)
+      gutter-width: 0.5rem   # Space between the columns (default: 1.5rem)
+
+
+skill:
   enabled: false
   generate_skills: false
   link_in_nav: false

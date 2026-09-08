@@ -3,16 +3,25 @@ title: "Welcome"
 guide-section: "Setup"
 ---
 
-# NextPyper
+# Welcome to NextPyper
 
-Recovery of homoeologous loci from target capture data in higher ploidy samples.
+**Recovery of homoeologous loci from target capture data in higher-ploidy samples.**
 
-*Brief description*
+`NextPyper` is a bioinformatics pipeline specifically designed to disentangle and recover distinct homoeologs, paralogs, and even ohnologs from polyploid target capture datasets.
 
+### Key Features
 
+- **Built for polyploids**: Handles polyploid samples across a wide range of ploidal levels (from diploids to 10x+ polyploids) without requiring high-quality parental reference genomes.
+- **Uncompromised sensitivity**: Strives to recover all distinct homologs (homoeologs, paralogs, and even ohnologs) present in your data.
+- **Inter-sample seed borrowing**: Rescues targeted loci in low-coverage or diverged samples by leveraging homologous sequences from related samples.
+- **Automated graph complexity resolution**: Automatically identifies dense assembly graph components ("tribbles"), re-assembles complex loci with adaptive parameters, and flags putative chimeric sequences.
+- **Streamlined workflow**: Simple command-line interface powered by [Snakemake](https://snakemake.github.io/), offering automatic environment management, parallel processing, and seamless execution.
 
-To get started, first [install](user-guide/01-Setup/01-installation.qmd) and [setup](user-guide/01-Setup/02-env_setup.qmd) NextPyper environments.
+---
 
-To run `NextPyper`, you will need to [prepare your probes](user-guide/02-Getting-started/01-prep_probes.qmd), and [prepare your samples](user-guide/02-Getting-started/02-prep_samples.qmd). Afterwards, You can proceed to [run NextPyper](user-guide/02-Getting-started/03-running.qmd) workflow.
+### Getting Started
 
-You may want to familiarize with `NextPyper`'s [output](user-guide/03-Output/01-folder_structure.qmd), and check their [naming conventions and metadata](user-guide/03-Output/02-naming.qmd). To have an overview of your results, you can summarize them by computing [stats]() of the run.
+1. **Setup**: Follow the [installation guide](user-guide/Setup/installation.qmd) and [environment setup](user-guide/Setup/env_setup.qmd).
+2. **Inputs**: Learn how to [prepare your probes](user-guide/Getting-started/prep_probes.qmd) and [prepare your sample table](user-guide/Getting-started/prep_samples.qmd).
+3. **Execution**: Learn how to [run NextPyper](user-guide/Getting-started/running.qmd).
+4. **Outputs & Analysis**: Explore the [output](user-guide/Output/folder_structure.qmd) or compute run [summary statistics](user-guide/Output/stats.qmd).

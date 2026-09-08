@@ -1,9 +1,33 @@
 ---
 title: "Parameters"
-guide-section: "Advanced usage"
+guide-section: "Workflow"
 ---
 
+# Workflow parameters
 
+`NextPyper`'s internal parameters are governed by a central YAML configuration file (`config.yaml`). While default settings should work well for most target capture datasets, advanced users can customize them to their needs. 
+
+---
+
+## Modifying the configuration
+
+To modify default parameters:
+
+1. Generate a copy of the default configuration file in your project directory using [`nextpyper config`](../../docs/commands/Prepare-inputs/config.qmd):
+   ```bash
+   nextpyper config --output my_outdir
+   ```
+2. Edit `my_outdir/config.yaml` with your desired parameter adjustments.
+3. Specify `--output my_outdir` when running  `NextPyper` to use your custom config file:
+   ```bash
+   nextpyper run --output my_outdir ...
+   ```
+
+---
+
+## Default `config.yaml` reference
+
+Below is the active default configuration template used by `NextPyper`:
 
 ```{python}
 #| echo: false

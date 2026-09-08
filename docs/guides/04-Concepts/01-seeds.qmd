@@ -1,6 +1,60 @@
 ---
-title: "Seeds"
+title: "Seeds & Interseeds"
 guide-section: "Concepts"
 ---
 
-WIP
+# Seeds & Interseeds
+
+Target capture datasets often feature uneven sequencing coverage across loci and samples. Rather than relying solely on raw target probes, which may be evolutionarily distant from the sample being assembled, `NextPyper` generates sample-specific *seeds* (intraseeds) to guide the assembly of the loci.
+
+---
+
+## How seeds are generated
+
+1. **Preliminary de novo assembly**: Reads from each sample are first assembled with MetaSPAdes, which excels at producing accurate contigs under uneven coverage.
+2. **Probe matching**: Identifies scaffolds matching target probes, whose origin is traced back to components in the assembly graph. 
+3. **Path extension**: Scaffolds (paths on the assembled graph components) are extended across the graph topology following the matched probes generating sample-specific seeds (intraseeds).
+
+---
+
+## Inter-sample seeds (interseeds)
+
+When analyzing polyploids or non-model organisms, low sequencing depth, uneven coverage, or significant sequence divergence, can cause some samples to fail to generate seeds for certain targeted loci when processed in isolation.
+
+To mitigate this, `NextPyper` introduces **inter-sample seeds** (or **interseeds**). By harvesting seeds across multiple samples, `NextPyper` can "borrow" high-quality seeds from well-sequenced related samples to guide the assembly of low-coverage or complex loci in other samples.
+
+### Interseeds Modes
+
+You can control how seeds are shared across samples using the `--interseeds` option when running `nextpyper run`:
+
+::: {.panel-tabset}
+
+### `sister`
+
+```bash
+nextpyper run --interseeds sister ...
+```
+
+In `sister` mode, `NextPyper` automatically infers "sister" samples (genetically or compositionally similar samples) and shares seeds among them. This provides a good balance between maximizing target recovery and maintaining computational efficiency.
+
+### `all`
+
+```bash
+nextpyper run --interseeds all ...
+```
+
+In `all` mode, seeds collected from every sample in the dataset are pooled together to guide assembly in all samples. This mode offers maximum sensitivity for rescuing difficult loci, though it drastically increases computation time.
+
+### `none`
+
+```bash
+nextpyper run --interseeds none ...
+```
+
+In `none` mode, each sample is assembled using its own seeds only (intraseeds). Use this mode if you want completely independent sample processing or wish to minimize runtime on very large datasets.
+
+:::
+
+::: {.callout-tip}
+Using `--interseeds sister` (the default) is particularly recommended for runs containing polyploid accessions alongside related samples, such as their parental or ancestral accessions.
+:::

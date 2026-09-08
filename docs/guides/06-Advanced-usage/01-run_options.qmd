@@ -1,6 +1,6 @@
 ---
 title: "Run options"
-guide-section: "Advanced usage"
+guide-section: "Workflow"
 ---
 
 ## Plastid cleaning
@@ -25,7 +25,7 @@ tbl_explorer(df)
 
 You can use any comma-separated list of 1KP IDs you prefer using `--ref-cps`. By default, the set of `Ambtr,Arath,Orysa,UMUL,RQNK` is used, which covers the major Angiosperms clades.
 
-If none of the plastid reference on the above list convinces you, you can provide your own plastid references using `--custom-cps`.
+If none of the plastid reference on the above list suits your dataset, you can provide your own plastid references using `--custom-cps`.
 
 ::: {.callout-caution}
 
@@ -38,16 +38,36 @@ You can also turn off this mapping filtering step entirely by using `--no-ref-cp
 
 ## Interseeds
 
-- None
-- sister
-- all
+You can control how seeds are shared across samples using `--interseeds <mode>`:
+
+- **`sister`** (Default): Automatically infers sister samples and shares high-quality seeds among genetically close accessions. Recommended for balancing sensitivity and speed.
+- **`all`**: Pools seeds collected across all dataset samples. Offers maximum sensitivity for rescuing low-coverage loci in difficult samples.
+- **`none`**: Disables inter-sample seed gathering. Each sample is assembled strictly using its own seeds.
+
+For a detailed explanation of seed harvesting, see [Seeds & Interseeds](../04-Concepts/01-seeds.qmd).
 
 
 ## Reassembly
 
-To mitigate tribble generation, after SAUTE assembly,  `NextPyper` evaluates the probes that created tribbles and proceeds to isolate and reassemble them with more stringent assembly parameters. This allows to better resolve and/or simplify many of the tribbles originally found. 
+To mitigate tribble generation, after SAUTE assembly,  `NextPyper` evaluates the probes that created [tribbles](../04-Concepts/02-tribbles.qmd#What-is-a-Tribble) and proceeds to isolate and reassemble them with more stringent assembly parameters. This allows to better resolve and/or simplify many of the tribbles originally found. 
 
-You can turn off this feature by using the `--no-reasm` option. This will make the workflow to run faster, at the expense of getting more sequences coming from tribbles, [which could be chimeric](). 
-
+You can turn off this feature by using the `--no-reasm` option. This will make the workflow to run faster, at the expense of getting more sequences coming from tribbles, [which could be chimeric](../04-Concepts/02-tribbles.qmd#Tribbles-and-Chimeric-Sequence-Formation). 
 
 ## Ploidy
+
+By default, `NextPyper` operates in a ploidy-agnostic manner to retrieve sample sequences. However, ploidy information can be provided to adjust the number of homologs that are expected to be present in a sample. This will affect the threshold to determine which components are considered tribbles, and how many sequences to keep when capping those components.
+
+Sample ploidy information can be provided in the 4th column of your [sample table](../02-Getting-started/02-prep_samples.qmd). 
+
+- **`--use-ploidy`**: Takes into account the expected ploidy level of each sample to guide the maximum number of expected homoeologous variants retained during variant capping.
+- **`--no-ploidy`** (Default): Ignores sample ploidy column information. `NextPyper` will use the [parameter](../06-Advanced-usage/02-parameters.qmd) `max_variants` to determine what components are tribbles and the threshold to cap them. 
+
+Setting ploidy to `0` implies that the sample has no ploidy information and will be treated as in the ploidy-agnostic setting. You can mix samples with `0` with samples with known ploidy if you want to treat them differently.
+
+::: {.callout-warning}
+
+Default `NextPyper` settings strive for maximum sensitivity, so that the user gets all the sample homologs even at the expense of some noise (*e.g.* uninformative allelic variants). In other words, default `NextPyper` settings strive to minimize false negatives. We believe it is easier for the user to remove this noise downstream, than trying to recover homologs that remained unassembled.
+
+Since ploidy information affects what components are considered tribbles and the threshold to cap them (see [tribbles](../04-Concepts/02-tribbles.qmd#What-is-a-Tribble)), using it will affect the sequences that are output. 
+
+:::

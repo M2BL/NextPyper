@@ -7,7 +7,7 @@ guide-section: "Getting Started"
 
 NextPyper expects a 4-column table that defines the identity and ploidy of your samples, and where to find their associated data.
 
-The table requires a header with 4 columns (see an example here):
+The table requires a header with 4 columns:
 
 - **sample:** the name of the sample.
 - **path_forward:** absolute path to the forward reads. It can be .gz compressed.
@@ -16,7 +16,7 @@ The table requires a header with 4 columns (see an example here):
 
 Knowledge about your samples' ploidy is not required to run `NextPyper`. Simply set it to 0, if you do not know it, or do not want to take it into account.
 
-You can use [`nextpyper gather`](../../docs/commands/Prepare-inputs/gather.qmd) to help you create the sample table. From a data folder with only the paired-end data (forward and reverse files), you can run:
+You can use [`nextpyper gather`](../../docs/commands/Prepare-inputs/gather.qmd) to help you create the sample table. From a data folder with *only* the paired-end data (forward and reverse files), you can run:
 
 ```bash
 nextpyper gather --input reads/ --output sample.tsv

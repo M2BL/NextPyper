@@ -1,0 +1,60 @@
+---
+title: "Summary statistics"
+guide-section: "Output"
+---
+
+# Run summary statistics
+
+After running `NextPyper`, you can compute comprehensive summary statistics across all samples and pipeline stages using the `nextpyper summarize` command:
+
+```bash
+nextpyper summarize --rundir <outdir> --output summary_stats.tsv
+```
+
+This generates a tab-separated file (`summary_stats.tsv`) reporting read counts, targeted probe recovery, and sequence yields across each stage of the workflow.
+
+---
+
+## Summary table metrics
+
+The summary table contains the following 13 metrics:
+
+### Sample & read quality metrics
+
+| Column Name | Description |
+| :--- | :--- |
+| **`samples`** | Name of the sample. |
+| **`raw_reads`** | Total number of raw sequencing read pairs provided as input. |
+| **`trimmed_reads`** | Number of high-quality read pairs remaining after quality and adapter trimming (and plastid cleaning if enabled). |
+
+---
+
+### Locus discovery metrics (probes recovered per stage)
+
+These columns track the total number of distinct target loci/probes for which sequence data was successfully recovered at key stages of the workflow:
+
+| Column Name | Description |
+| :--- | :--- |
+| **`probes_in_seeds`** | Number of targeted probes matching intraseeds. |
+| **`probes_in_assembly`** | Number of targeted probes that have at least a sequence variant after SAUTE assembly. |
+| **`probes_in_alleles`** | Number of targeted probes left after allele selection. |
+| **`probes_in_homologs`** | Number of targeted probes left after homolog filtering. |
+| **`probes_in_separation`** | Final number of targeted probes found after region separation (final sequences). |
+
+---
+
+### Sequence yield metrics (median sequences per probe)
+
+These columns report the median number of recovered sequences per targeted locus at each stage of the pipeline, providing insight into subgenome copy numbers and sample complexity:
+
+| Column Name | Description |
+| :--- | :--- |
+| **`median_seqs_per_probe_in_seeds`** | Median number of intraseeds recovered per probe. |
+| **`median_seqs_per_probe_in_assembly`** | Median number of sequence variants per probe after SAUTE assembly. |
+| **`median_seqs_per_probe_in_alleles`** | Median number of sequences per probe after allele selection. |
+| **`median_seqs_per_probe_in_homologs`** | Median number of sequences per probe after homolog filtering. |
+| **`median_seqs_per_probe_in_separation`** | Median number of sequences per probe after region separation (final sequences). |
+
+::: {.callout-tip}
+Comparing `probes_in_seeds` with `probes_in_separation` allows you to evaluate overall pipeline sensitivity, while tracking `median_seqs_per_probe_in_separation` gives a quick diagnostic of ploidy-level or gene copy number yielded across your samples.
+:::
