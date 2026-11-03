@@ -9,10 +9,10 @@ Regardless of the installation method, `NextPyper` requires `conda` in your PATH
 
 ::: {.callout-important}
 
-While we finish the Publication process in the official repositories, please install `NextPyper` through pip, using the package release available in [testPyPi](https://test.pypi.org/project/NextPyper/0.1.3/). In other words, in a fresh conda environment:
+While we finish the Publication process in Bioconda, please install `NextPyper` through pip:
 
 ```bash
-pip install -i https://test.pypi.org/simple/ NextPyper==0.1.3
+pip install NextPyper
 ```
 
 :::

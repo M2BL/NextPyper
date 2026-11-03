@@ -400,5 +400,5 @@ Inspired by [Captus](https://edgardomortiz.github.io/captus.docs/assembly/extrac
 - **cover**: How much the sequence covers the probe (% of bases).
 - **ident**: identity relative to the probe.
 - **score**: miniprot match score of the sequence to the probe.
-- **tribble**: Whether the sequence stems from a [tribble](). It can be `positive` or `negative`.
+- **tribble**: Whether the sequence stems from a [tribble](../04-Concepts/02-tribbles.qmd). It can be `positive` or `negative`.
 - **length**: *Actual* length of the sequence. Different from the \<len> reported in the sequence name.
