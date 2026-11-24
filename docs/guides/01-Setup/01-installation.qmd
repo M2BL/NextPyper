@@ -7,16 +7,6 @@ guide-section: "Setup"
 
 Regardless of the installation method, `NextPyper` requires `conda` in your PATH, to manage and deploy workflow environments.
 
-::: {.callout-important}
-
-While we finish the Publication process in Bioconda, please install `NextPyper` through pip:
-
-```bash
-pip install NextPyper
-```
-
-:::
-
 
 ## Conda/Mamba and Pip
 
